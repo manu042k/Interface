@@ -1,0 +1,24 @@
+{
+  "$schema": "./allowlist.schema.json",
+  "description": "Per-tenant allowlist. Default is DENY: anything not listed is blocked.",
+  "tenants": {
+    "default": {
+      "domains": ["127.0.0.1", "localhost"],
+      "routes": [
+        "^/$",
+        "^/search$",
+        "^/members(\\?.*)?$",
+        "^/member/[0-9]+$",
+        "^/member/[0-9]+\\?ack=1$",
+        "^/member/[0-9]+/sub-account/new(\\?.*)?$",
+        "^/member/[0-9]+/sub-account/create$"
+      ],
+      "action_types": ["click", "type", "select", "navigate", "wait_for", "extract", "assert_state"],
+      "risk_policy": {
+        "risky_irreversible": "require_confirmation",
+        "risky_route_patterns": ["/sub-account/create$"],
+        "risky_action_types": []
+      }
+    }
+  }
+}

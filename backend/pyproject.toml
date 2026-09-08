@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cua"
+version = "0.1.0"
+description = "Computer-Use Automation System: LLM-driven discovery + deterministic replay for legacy banking apps"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "playwright>=1.47",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.9",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+    "jsonschema>=4.23",
+    "typer>=0.12",
+    "rich>=13.8",
+    "flask>=3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-timeout>=2.3",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+cua = "cua.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cua", "src/mockbank"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+timeout = 90
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B017", "B011"]
+"src/mockbank/app.py" = ["UP031"]

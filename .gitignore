@@ -6,13 +6,14 @@
 .idea/
 *.swp
 
-# Env / secrets
+# --- Secrets / env ---
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 
-# Python
+# --- Python (backend) ---
 __pycache__/
 *.py[cod]
 .venv/
@@ -20,13 +21,17 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-
-# Node
-node_modules/
-dist/
+*.egg-info/
 build/
+dist/
+backend/.data/
+backend/playwright-report/
+
+# --- Node (frontend) ---
+node_modules/
+frontend/dist/
+frontend/.vite/
 *.log
 
-# Local artifacts / evidence
-/evidence/
-/artifacts-local/
+# --- Local run artifacts ---
+/evidence-local/
