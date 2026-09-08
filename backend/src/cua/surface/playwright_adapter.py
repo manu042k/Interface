@@ -204,6 +204,39 @@ class PlaywrightAdapter(SurfaceAdapter):
         except Exception:  # noqa: BLE001
             return False
 
+    async def try_strategy(
+        self, session_handle: str, kind: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Resolve one LocatorStrategy against the live page for the Locator
+        Resolution Engine. Strict — no lenient fall-through between strategies
+        (that is the engine's job, by rank). Returns {matched, count, visible,
+        describe, reason}."""
+        sess = self._sess(session_handle)
+        target = _strategy_to_desc(kind, params)
+        try:
+            loc, describe = _strict_locate(sess.page, kind, params, target)
+        except Exception as exc:  # noqa: BLE001
+            return {"matched": False, "count": 0, "visible": False, "describe": None, "reason": str(exc).splitlines()[0]}
+        if loc is None:
+            return {"matched": False, "count": 0, "visible": False, "describe": describe, "reason": "strategy not applicable to params"}
+        try:
+            count = await loc.count()
+        except Exception as exc:  # noqa: BLE001
+            return {"matched": False, "count": 0, "visible": False, "describe": describe, "reason": str(exc).splitlines()[0]}
+        if count == 0:
+            return {"matched": False, "count": 0, "visible": False, "describe": describe, "reason": "no element matched"}
+        if count > 1:
+            return {"matched": False, "count": count, "visible": False, "describe": describe, "reason": f"ambiguous: {count} matches"}
+        visible = False
+        try:
+            visible = await loc.first.is_visible()
+        except Exception:  # noqa: BLE001
+            pass
+        return {
+            "matched": True, "count": 1, "visible": visible, "describe": describe,
+            "reason": None, "target": target,
+        }
+
     # -- ST-007: primitive actions ---------------------------------------
     async def execute(self, session_handle: str, action: Action) -> ActionResult:
         sess = self._sess(session_handle)
@@ -342,6 +375,72 @@ class PlaywrightAdapter(SurfaceAdapter):
         # A real browser CDP handoff endpoint is wired in Phase 8; the mechanism
         # (operator connects to the SAME context) is the point, not the transport.
         return None
+
+
+def _strict_locate(page: Page, kind: str, params: dict[str, Any], target: dict[str, Any]) -> tuple[Locator | None, str]:
+    """One strategy, matched strictly. Returns (locator | None, describe)."""
+    p = {k: v for k, v in params.items() if not k.startswith("_")}
+    if kind == "role_name":
+        role, name = p.get("role"), p.get("name")
+        if role and name:
+            return page.get_by_role(role, name=name, exact=False), f"role={role} name={name!r}"
+        if role:
+            return page.get_by_role(role), f"role={role}"
+        return None, "role_name: no role"
+    if kind == "label":
+        if p.get("label"):
+            return page.get_by_label(p["label"], exact=False), f"label={p['label']!r}"
+        if p.get("placeholder"):
+            return page.get_by_placeholder(p["placeholder"], exact=False), f"placeholder={p['placeholder']!r}"
+        return None, "label: no label/placeholder"
+    if kind == "text":
+        if p.get("text"):
+            return page.get_by_text(p["text"], exact=False), f"text={p['text']!r}"
+        return None, "text: no text"
+    if kind == "relative_to_landmark":
+        near = p.get("near")
+        if not near:
+            return None, "relative_to_landmark: no anchor"
+        anchor = page.get_by_text(near, exact=True)
+        row = anchor.first.locator("xpath=ancestor::tr[1]")
+        ctrl = row.locator("input, select, textarea, button, a")
+        return ctrl.first if _sync_hint(ctrl) else row.locator("td").last, f"near={near!r}"
+    if kind in {"dom_anchor", "test_id"}:
+        if p.get("css"):
+            return page.locator(p["css"]), f"css={p['css']}"
+        if p.get("test_id"):
+            return page.locator(f'[data-testid="{p["test_id"]}"]'), f"testid={p['test_id']}"
+        if p.get("xpath"):
+            return page.locator(f"xpath={p['xpath']}"), f"xpath={p['xpath']}"
+        return None, "dom_anchor: no css/xpath"
+    return None, f"unknown kind {kind}"
+
+
+def _sync_hint(_loc: Locator) -> bool:
+    # We can't await here; prefer the value-cell fallback deterministically by
+    # returning False. The row's last <td> is the robust choice for read steps,
+    # and control steps carry a role_name/label strategy ahead of this one.
+    return False
+
+
+def _strategy_to_desc(kind: str, params: dict[str, Any]) -> dict[str, Any]:
+    """Map a recorded LocatorStrategy to the resolver's target-description dict."""
+    p = {k: v for k, v in params.items() if not k.startswith("_")}
+    if kind == "role_name":
+        return {"role": p.get("role"), "name": p.get("name")}
+    if kind == "label":
+        return {"label": p.get("label"), "placeholder": p.get("placeholder")}
+    if kind == "relative_to_landmark":
+        return {"near": p.get("near")}
+    if kind == "text":
+        return {"text": p.get("text")}
+    if kind in {"dom_anchor", "test_id"}:
+        if p.get("css"):
+            return {"css": p["css"]}
+        if p.get("test_id"):
+            return {"css": f'[data-testid="{p["test_id"]}"]'}
+        return dict(p)
+    return dict(p)
 
 
 def _coerce_shape(raw: str, shape: str) -> tuple[Any, str | None]:
