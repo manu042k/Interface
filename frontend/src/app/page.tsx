@@ -1,15 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, Radio } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -18,13 +19,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 const EXAMPLES = [
-  "look up member 12345 and read their current savings balance",
-  "open a new Holiday Club sub-account for member 12345 and reach the confirmation screen",
+  {
+    label: "Read a savings balance",
+    goal: "look up member 12345 and read their current savings balance",
+    params: [{ k: "member_id", v: "12345" }],
+    name: "read_savings_balance",
+  },
+  {
+    label: "Open a sub-account → confirmation",
+    goal: "open a new Holiday Club sub-account for member 12345 and reach the confirmation screen",
+    params: [{ k: "member_id", v: "12345" }],
+    name: "open_sub_account",
+  },
 ];
 
 export default function NewRunPage() {
   const router = useRouter();
-  const [goal, setGoal] = useState(EXAMPLES[0]);
+  const [goal, setGoal] = useState(EXAMPLES[0].goal);
   const [target, setTarget] = useState(
     "http://host.docker.internal:8799/search",
   );
@@ -34,6 +45,18 @@ export default function NewRunPage() {
   ]);
   const [confirmRisky, setConfirmRisky] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  const { data: active } = useQuery({
+    queryKey: ["active-run"],
+    queryFn: api.activeRun,
+    refetchInterval: 3000,
+  });
+
+  function applyExample(ex: (typeof EXAMPLES)[number]) {
+    setGoal(ex.goal);
+    setName(ex.name);
+    setParams(ex.params.map((p) => ({ ...p })));
+  }
 
   async function submit() {
     setBusy(true);
@@ -47,7 +70,7 @@ export default function NewRunPage() {
         capability_name: name || undefined,
         confirm_risky: confirmRisky,
       });
-      toast.success("Discovery run started");
+      toast.success("Discovery run started — watch it live");
       router.push(`/runs/${run_id}`);
     } catch (e) {
       toast.error(String((e as Error).message));
@@ -56,41 +79,50 @@ export default function NewRunPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Start a discovery run
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Give the agent a goal and an entry point. It drives the real UI, and
-          you watch it live.
-        </p>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Start a discovery run
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Give the agent a goal and an entry point. It drives the real UI and
+            you watch it live.
+          </p>
+        </div>
+        {active && (
+          <Button asChild variant="outline">
+            <Link href={`/runs/${active.run_id}`}>
+              <Radio className="text-primary mr-1.5 h-4 w-4 animate-pulse" />
+              View current run
+            </Link>
+          </Button>
+        )}
       </header>
 
       <Card>
         <CardHeader>
-          <CardTitle>Goal</CardTitle>
-          <CardDescription>
-            Plain language. The run is recorded as a replayable capability.
-          </CardDescription>
+          <CardTitle className="text-base">Goal</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="goal">Goal</Label>
             <Textarea
               id="goal"
               rows={2}
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
+              className="resize-none"
+              placeholder="e.g. look up member 12345 and read their current savings balance"
             />
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex flex-wrap gap-2">
               {EXAMPLES.map((ex) => (
                 <button
-                  key={ex}
-                  onClick={() => setGoal(ex)}
-                  className="text-muted-foreground hover:text-foreground border-border rounded-full border px-2.5 py-1 text-xs"
+                  key={ex.name}
+                  type="button"
+                  onClick={() => applyExample(ex)}
+                  className="text-muted-foreground hover:border-primary hover:text-foreground border-input rounded-full border px-3 py-1 text-xs transition-colors"
                 >
-                  {ex.length > 54 ? ex.slice(0, 54) + "…" : ex}
+                  {ex.label}
                 </button>
               ))}
             </div>
@@ -104,10 +136,6 @@ export default function NewRunPage() {
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
               />
-              <p className="text-muted-foreground text-xs">
-                The sandbox reaches your host via{" "}
-                <code>host.docker.internal</code>.
-              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="name">Capability name</Label>
@@ -115,15 +143,19 @@ export default function NewRunPage() {
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                placeholder="read_savings_balance"
               />
             </div>
           </div>
+          <p className="text-muted-foreground -mt-2 text-xs">
+            The sandbox reaches your host via <code>host.docker.internal</code>.
+          </p>
 
           <div className="space-y-2">
             <Label>Typed parameters</Label>
             <div className="space-y-2">
               {params.map((row, i) => (
-                <div key={i} className="flex gap-2">
+                <div key={i} className="flex items-center gap-2">
                   <Input
                     placeholder="key"
                     value={row.k}
@@ -149,11 +181,12 @@ export default function NewRunPage() {
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="text-muted-foreground shrink-0"
                     onClick={() =>
                       setParams((p) => p.filter((_, j) => j !== i))
                     }
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <X className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
@@ -172,15 +205,23 @@ export default function NewRunPage() {
               type="checkbox"
               checked={confirmRisky}
               onChange={(e) => setConfirmRisky(e.target.checked)}
-              className="accent-primary h-4 w-4"
+              className="accent-primary h-4 w-4 rounded"
             />
             Pre-authorize risky / irreversible steps for this goal
           </label>
 
-          <Button onClick={submit} disabled={busy} size="lg">
-            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Run discovery
-          </Button>
+          <div className="flex items-center gap-3 pt-1">
+            <Button onClick={submit} disabled={busy || !goal.trim()} size="lg">
+              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Run discovery
+            </Button>
+            <Link
+              href="/runs"
+              className="text-muted-foreground hover:text-foreground text-sm"
+            >
+              past runs
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

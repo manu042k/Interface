@@ -136,6 +136,30 @@ def create_app(config: Config | None = None) -> FastAPI:
         app.state.tasks[run.run_id] = asyncio.create_task(_execute())
         return StartRunResponse(run_id=run.run_id, status=run.status)
 
+    @app.get("/runs")
+    async def list_runs(limit: int = 50) -> list[dict[str, Any]]:
+        runs = sorted(app.state.runs.values(), key=lambda r: r.started_at, reverse=True)
+        return [
+            {
+                "run_id": r.run_id, "mode": r.mode, "status": r.status, "goal": r.goal,
+                "started_at": r.started_at, "ended_at": r.ended_at,
+                "step_count": r.step_count, "artifact_id": r.artifact_id,
+                "has_sandbox": bool(r.sandbox_container),
+            }
+            for r in runs[: max(1, min(limit, 200))]
+        ]
+
+    @app.get("/runs/active")
+    async def active_run() -> dict[str, Any] | None:
+        live = [
+            r for r in app.state.runs.values()
+            if r.status in {RunStatus.PENDING, RunStatus.RUNNING, RunStatus.STUCK}
+        ]
+        if not live:
+            return None
+        r = max(live, key=lambda x: x.started_at)
+        return {"run_id": r.run_id, "status": r.status, "goal": r.goal, "mode": r.mode}
+
     @app.get("/runs/{run_id}", response_model=RunView)
     async def get_run(run_id: str) -> RunView:
         run = app.state.runs.get(run_id)

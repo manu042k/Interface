@@ -110,6 +110,24 @@ export const api = {
       body: JSON.stringify(body),
     }),
   run: (id: string) => j<RunView>(`/runs/${id}`),
+  runs: () =>
+    j<
+      Array<{
+        run_id: string;
+        mode: string;
+        status: string;
+        goal: string | null;
+        started_at: number;
+        ended_at: number | null;
+        step_count: number;
+        artifact_id: string | null;
+        has_sandbox: boolean;
+      }>
+    >("/runs"),
+  activeRun: () =>
+    j<{ run_id: string; status: string; goal: string | null; mode: string } | null>(
+      "/runs/active",
+    ),
   report: (id: string) => j<RunReport>(`/runs/${id}/report`),
   reportMdUrl: (id: string) => `${API_BASE}/runs/${id}/report.md`,
 
