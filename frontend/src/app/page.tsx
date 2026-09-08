@@ -8,12 +8,7 @@ import { Plus, X, Loader2, Radio } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +21,6 @@ export default function NewRunPage() {
   const [target, setTarget] = useState(
     "http://host.docker.internal:8799/search",
   );
-  const [name, setName] = useState("");
   const [params, setParams] = useState<{ k: string; v: string }[]>([
     { k: "member_id", v: "12345" },
   ]);
@@ -48,7 +42,6 @@ export default function NewRunPage() {
         goal,
         target,
         params: p,
-        capability_name: name || undefined,
         confirm_risky: confirmRisky,
       });
       toast.success("Discovery run started — watch it live");
@@ -159,21 +152,6 @@ export default function NewRunPage() {
                 <Plus className="mr-1 h-4 w-4" /> Add parameter
               </Button>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-muted-foreground">
-              Capability name <span className="font-normal">(optional)</span>
-            </Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="auto — a slug of the goal"
-            />
-            <p className="text-muted-foreground text-xs">
-              The name the recorded capability is stored and invoked under.
-            </p>
           </div>
 
           <label className="flex items-center gap-2 text-sm">
