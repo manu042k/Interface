@@ -54,7 +54,7 @@ class Provider(Protocol):
 
 
 class OpenAICompatProvider:
-    def __init__(self, name: str, base_url: str, api_key: str, model: str, *, timeout: float = 45.0) -> None:
+    def __init__(self, name: str, base_url: str, api_key: str, model: str, *, timeout: float = 75.0) -> None:
         self.name = name
         self._base = base_url.rstrip("/")
         self._key = api_key
@@ -71,6 +71,9 @@ class OpenAICompatProvider:
             "tools": tools,
             "tool_choice": "required",
             "temperature": 0,
+            # cap the reservation — a tool call is small; also avoids OpenRouter
+            # reserving the model's full context and 402-ing on a thin balance.
+            "max_tokens": 1200,
         }
         headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"}
         try:
@@ -82,8 +85,12 @@ class OpenAICompatProvider:
         if resp.status_code == 429:
             ra = resp.headers.get("retry-after")
             raise RateLimited(f"{self.name}: 429", status=429, retry_after=_parse_retry_after(ra))
-        if resp.status_code in {402, 403} and "quota" in resp.text.lower():
-            raise RateLimited(f"{self.name}: quota exceeded", status=resp.status_code)
+        if resp.status_code in {402, 403}:
+            # payment / quota / credits — not going to recover this run; treat as
+            # a rotate-and-cool signal so the router moves to the next provider.
+            raise RateLimited(
+                f"{self.name}: {resp.status_code} {resp.text[:160]}", status=resp.status_code
+            )
         if resp.status_code >= 500:
             raise ProviderUnavailable(f"{self.name}: {resp.status_code}", status=resp.status_code)
         if resp.status_code >= 400:

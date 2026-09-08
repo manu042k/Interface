@@ -46,7 +46,7 @@ class SandboxManager:
         image: str = "cua-sandbox:latest",
         host: str = "localhost",
         screen: tuple[int, int] = (1366, 768),
-        ready_timeout_s: float = 40.0,
+        ready_timeout_s: float = 90.0,
     ) -> None:
         self._image = image
         self._host = host

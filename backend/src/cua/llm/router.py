@@ -78,16 +78,22 @@ class LLMRouter:
         self._default_cooldown = default_cooldown
         self._degrade_rate = degrade_error_rate
         self._log = logger
+        self._run_log: Any | None = None
 
     @property
     def health(self) -> dict[str, ProviderHealth]:
         return self._health
 
     def _emit(self, event: str, **fields: Any) -> None:
-        if self._log is not None:
-            self._log.event(None, event, **fields)
+        for lg in (self._log, self._run_log):
+            if lg is not None:
+                lg.event(None, event, **fields)
 
-    async def call(self, system: str, user: str, tools: list[dict[str, Any]]) -> ModelResponse:
+    async def call(
+        self, system: str, user: str, tools: list[dict[str, Any]], *, logger: Any | None = None
+    ) -> ModelResponse:
+        # per-turn provider is logged into the caller's run log too (TDD §1.5)
+        self._run_log = logger
         now = time.time()
         tried: list[str] = []
         last_exc: Exception | None = None

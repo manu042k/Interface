@@ -40,7 +40,15 @@ class Perception:
     ) -> SurfaceState:
         raw = await adapter.snapshot(session_handle)
         ax_summary = _summarize_ax(raw.ax_tree, self._max_ax)
-        dom_excerpt = _dom_outline(raw.html, self._max_dom)
+        outline = _dom_outline(raw.html, self._max_dom)
+        parts: list[str] = []
+        if raw.visible_text:
+            parts.append("VISIBLE PAGE TEXT:\n" + raw.visible_text)
+        fields = _summarize_fields(raw.form_values)
+        if fields:
+            parts.append(fields)
+        parts.append("DOM OUTLINE:\n" + outline)
+        dom_excerpt = "\n\n".join(parts)
         fingerprint = _fingerprint(raw)
 
         screenshot_ref: str | None = None
@@ -80,6 +88,20 @@ class Perception:
 
 
 # ---------------------------------------------------------------------------
+
+
+def _summarize_fields(values: list[dict[str, Any]]) -> str:
+    """A compact 'what the form controls currently hold' block — the serialized
+    DOM doesn't reflect typed values, so without this the agent re-types fields."""
+    if not values:
+        return ""
+    lines = ["CURRENT FORM FIELD VALUES (already entered — do not re-type if correct):"]
+    for f in values[:25]:
+        who = f.get("label") or f.get("name") or f.get("id") or f.get("type") or f["tag"]
+        val = f.get("value")
+        shown = f'"{val}"' if val else "(empty)"
+        lines.append(f"  - {who}: {shown}")
+    return "\n".join(lines)
 
 
 def _summarize_ax(ax_tree: list[dict[str, Any]], max_lines: int) -> str:

@@ -195,6 +195,16 @@ class PlaywrightAdapter(SurfaceAdapter):
         if desc.get("xpath"):
             return page.locator(f"xpath={desc['xpath']}").first, f"xpath={desc['xpath']}"
 
+        # 1b. bare form-control name / id (legacy markup exposes these in the outline)
+        if desc.get("name") and not desc.get("role"):
+            loc = page.locator(f'[name="{desc["name"]}"]')
+            if await loc.count():
+                return loc.first, f'name="{desc["name"]}"'
+        if desc.get("id"):
+            loc = page.locator(f'#{desc["id"]}')
+            if await loc.count():
+                return loc.first, f'id={desc["id"]}'
+
         role, name = desc.get("role"), desc.get("name")
         near = desc.get("near")
         text = desc.get("text")
@@ -416,12 +426,37 @@ class PlaywrightAdapter(SurfaceAdapter):
             png = await page.screenshot(full_page=False)
         except Exception:  # noqa: BLE001
             pass
+        visible_text = ""
+        try:
+            visible_text = await page.evaluate(
+                "() => (document.body ? document.body.innerText : '').replace(/\\n{3,}/g, '\\n\\n').trim().slice(0, 4000)"
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        form_values: list[dict[str, Any]] = []
+        try:
+            form_values = await page.evaluate(
+                """() => [...document.querySelectorAll('input, select, textarea')]
+                    .filter(e => e.type !== 'hidden' && e.offsetParent !== null)
+                    .map(e => ({
+                        tag: e.tagName.toLowerCase(),
+                        type: e.type || null,
+                        name: e.name || null,
+                        id: e.id || null,
+                        label: (e.labels && e.labels[0] && e.labels[0].innerText.trim()) || null,
+                        value: (e.value || '').slice(0, 120),
+                    }))"""
+            )
+        except Exception:  # noqa: BLE001
+            pass
         return RawSnapshot(
             url=page.url,
             title=await page.title(),
             ax_tree=[ax] if ax else [],
             html=html,
             screenshot_png=png,
+            visible_text=visible_text,
+            form_values=form_values,
         )
 
     async def cdp_endpoint(self, session_handle: str) -> str | None:

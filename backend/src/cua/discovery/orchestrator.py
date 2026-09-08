@@ -277,11 +277,12 @@ class Orchestrator:
     async def _decide_with_backoff(
         self, goal, state, history, step, step_budget, params, note, ceiling, log
     ) -> ToolCall | None:
-        backoff = 1.0
+        backoff = 3.0
         for attempt in range(ceiling):
             try:
                 return await self.agent.decide(
-                    goal, state, history, steps_left=step_budget - step, params=params, note=note
+                    goal, state, history, steps_left=step_budget - step, params=params,
+                    note=note, logger=log,
                 )
             except AllProvidersExhausted as exc:
                 log.event(step, "all_providers_exhausted", attempt=attempt + 1, backoff_s=backoff, detail=str(exc))
@@ -289,6 +290,9 @@ class Orchestrator:
                     return None
                 await asyncio.sleep(backoff)
                 backoff *= 2
+                # a run-level pause: re-arm every provider for a fresh attempt
+                # (a lone provider's transient blip should not strand the run).
+                self.router.reset()
         return None
 
     @staticmethod

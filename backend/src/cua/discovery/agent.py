@@ -77,6 +77,12 @@ Rules:
 - Never enter real credentials or invent data. Use only values from the goal/params.
 - Bounded waits only. If a control is missing or the screen is unexpected and you cannot safely proceed, call stuck with a clear reason.
 - When the goal's success condition is visibly true, call assert_state to check it, then done with the extracted outputs.
+
+Progress discipline (important):
+- Check "CURRENT FORM FIELD VALUES" and the ACTION HISTORY before each step. If a field already holds the value you need, DO NOT type it again — move to the next control (e.g. click the submit/search button).
+- Never repeat the same action twice in a row. If your last action succeeded, the next action must advance the flow (submit, navigate, open a result, extract).
+- One field per type call; after filling the inputs a form needs, click its submit control.
+- If an unexpected modal / notice / interstitial blocks the flow (e.g. a "Session Notice", cookie banner, confirmation dialog), dismiss it via its own continue/OK/acknowledge control — do NOT click site navigation to escape it.
 """
 
 
@@ -93,9 +99,10 @@ class DiscoveryAgent:
         steps_left: int,
         params: dict[str, Any] | None = None,
         note: str | None = None,
+        logger: Any | None = None,
     ) -> ToolCall:
         user = self._render_user(goal, state, history, steps_left, params, note)
-        resp = await self._router.call(SYSTEM_PROMPT, user, TOOL_SCHEMA)
+        resp = await self._router.call(SYSTEM_PROMPT, user, TOOL_SCHEMA, logger=logger)
         call = self._coerce(resp.tool, resp.args, resp.reasoning)
         if call is not None:
             return call
@@ -105,7 +112,7 @@ class DiscoveryAgent:
             f"\n\nYOUR LAST RESPONSE WAS INVALID (tool={resp.tool!r}). "
             f"Respond with exactly one tool call from the allowed set: {sorted(VOCAB)}."
         )
-        resp2 = await self._router.call(SYSTEM_PROMPT, retry_user, TOOL_SCHEMA)
+        resp2 = await self._router.call(SYSTEM_PROMPT, retry_user, TOOL_SCHEMA, logger=logger)
         call = self._coerce(resp2.tool, resp2.args, resp2.reasoning)
         if call is not None:
             return call

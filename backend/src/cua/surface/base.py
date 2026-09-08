@@ -51,6 +51,12 @@ class RawSnapshot(BaseModel):
     ax_tree: list[dict[str, Any]] = Field(default_factory=list)
     html: str = ""
     screenshot_png: bytes | None = None
+    # visible page text (innerText, trimmed) — the most reliable signal on hostile
+    # legacy markup where the AX tree is empty and tags are non-semantic.
+    visible_text: str = ""
+    # live values of visible form controls — the serialized DOM does not reflect
+    # what has been typed, so the agent can't otherwise tell a field is filled.
+    form_values: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class SurfaceAdapter(abc.ABC):

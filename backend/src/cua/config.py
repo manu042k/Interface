@@ -98,13 +98,21 @@ _PROVIDER_ENV = {
 }
 
 
-def load_config(dotenv_path: str | os.PathLike[str] | None = None, *, strict: bool = True) -> Config:
+def load_config(
+    dotenv_path: str | os.PathLike[str] | None = None,
+    *,
+    strict: bool = True,
+    use_dotenv: bool = True,
+) -> Config:
     """Load configuration from environment (+ optional .env file).
 
     strict=False skips provider-key validation — used by unit tests that never
-    call a live model.
+    call a live model. use_dotenv=False skips reading a project .env entirely —
+    used by tests that assert on env-only config behaviour.
     """
-    if dotenv_path is not None:
+    if not use_dotenv:
+        pass
+    elif dotenv_path is not None:
         load_dotenv(dotenv_path, override=False)
     else:
         # Load backend/.env if present, quietly.

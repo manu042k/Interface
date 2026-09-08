@@ -52,6 +52,7 @@ def offline_config(tmp_path, monkeypatch):
     from cua.config import load_config
 
     monkeypatch.setenv("CUA_LLM_PROVIDERS", "scripted")
+    monkeypatch.setenv("CUA_USE_SANDBOX", "0")  # isolate from a local .env
     monkeypatch.setenv("CUA_DB_PATH", str(tmp_path / "cua.db"))
     monkeypatch.setenv("CUA_EVIDENCE_ROOT", str(tmp_path / "evidence"))
     monkeypatch.setenv("CUA_ALLOWLIST_PATH", os.path.join(os.path.dirname(__file__), "..", "config", "allowlist.example.json"))

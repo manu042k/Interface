@@ -42,6 +42,7 @@ from ..redaction import redact_text
 
 _ACTIONABLE = {"click", "type", "select", "navigate", "wait_for", "extract", "assert_state"}
 _RISKY_URL_RE = re.compile(r"/(create|submit|confirm|delete|remove|transfer|post|approve)(/|$|\?)", re.I)
+_TOKEN_RE = re.compile(r"[a-z][a-z0-9_\-]{0,20}")  # looks like a name/id attr, not a label
 _SECRETISH_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{8,}$")  # mixed alnum, 8+ — conservative
 # Interstitials are runtime-variable: they belong in recoverable_rules, not the
 # linear step list. A click made *while one was on screen* is dropped from steps
@@ -68,6 +69,7 @@ class ArtifactRecorder:
             e for e in transcript.entries
             if e.tool_call.tool in _ACTIONABLE and e.action_ok and not _is_interstitial_dismiss(e)
         ]
+        actionable = _dedupe_consecutive(actionable)
 
         for entry in actionable:
             step = self._entry_to_step(entry, idx, transcript.params, param_props, forced_params)
@@ -244,14 +246,27 @@ def _rank_locators(target: Any, matched: str | None) -> list[LocatorStrategy]:
 
     cands: list[LocatorStrategy] = []
     role, name = target.get("role"), target.get("name")
-    if role and name:
+    # A model often passes a form-control `name`/`id` token as `name` — not an
+    # accessible label. Detect that and emit a name-attr strategy + a role-only
+    # fallback, rather than a role_name that won't resolve.
+    name_is_token = bool(name) and bool(_TOKEN_RE.fullmatch(str(name)))
+    if role and name and not name_is_token:
         cands.append(LocatorStrategy(
             kind="role_name", params={"role": role, "name": name}, rank=0,
             rationale="ARIA role + accessible name: the most portable identifier, survives markup/id churn and works on desktop AX trees too",
         ))
-    elif role:
         cands.append(LocatorStrategy(
-            kind="role_name", params={"role": role}, rank=0,
+            kind="text", params={"text": name}, rank=len(cands),
+            rationale="the same label as visible text — a fallback if the accessibility name is computed differently at replay",
+        ))
+    if name_is_token:
+        cands.append(LocatorStrategy(
+            kind="dom_anchor", params={"css": f'[name="{name}"]'}, rank=len(cands),
+            rationale="form-control name attribute — legacy server-rendered forms expose these and they are stable across releases",
+        ))
+    if role:
+        cands.append(LocatorStrategy(
+            kind="role_name", params={"role": role}, rank=len(cands),
             rationale="ARIA role only — usable when the control is the sole one of its role on the screen; verify uniqueness at replay",
         ))
     if target.get("label"):
@@ -288,6 +303,27 @@ def _rank_locators(target: Any, matched: str | None) -> list[LocatorStrategy]:
     if matched:
         cands[0].params.setdefault("_discovery_matched", matched)
     return cands
+
+
+def _dedupe_consecutive(entries: list[TranscriptEntry]) -> list[TranscriptEntry]:
+    """A discovery model often repeats an idempotent read/observe-style action
+    several times (re-checking a value). Collapse consecutive entries with the
+    same tool + target + binding so the artifact has one step, not seven."""
+    out: list[TranscriptEntry] = []
+    for e in entries:
+        if out:
+            p, c = out[-1].tool_call, e.tool_call
+            same = (
+                p.tool == c.tool
+                and p.tool in {"extract", "assert_state", "wait_for", "observe"}
+                and p.args.get("target") == c.args.get("target")
+                and p.args.get("as") == c.args.get("as")
+                and p.args.get("condition") == c.args.get("condition")
+            )
+            if same:
+                continue
+        out.append(e)
+    return out
 
 
 def _is_interstitial_dismiss(entry: TranscriptEntry) -> bool:

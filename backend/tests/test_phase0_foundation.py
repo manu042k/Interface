@@ -13,7 +13,7 @@ def test_config_fails_fast_on_missing_secret(monkeypatch):
     monkeypatch.setenv("CUA_LLM_PROVIDERS", "openrouter")
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     with pytest.raises(ConfigError) as exc:
-        load_config(strict=True)
+        load_config(strict=True, use_dotenv=False)
     assert "OPENROUTER_API_KEY" in str(exc.value)
 
 
@@ -21,7 +21,7 @@ def test_config_offline_scripted_needs_no_key(monkeypatch):
     from cua.config import load_config
 
     monkeypatch.setenv("CUA_LLM_PROVIDERS", "scripted")
-    cfg = load_config(strict=True)
+    cfg = load_config(strict=True, use_dotenv=False)
     assert cfg.offline is True
     assert cfg.max_steps > 0
 
