@@ -111,15 +111,23 @@ class SandboxManager:
             await self._run(["docker", "rm", "-f", *ids])
 
     # -- terminal --------------------------------------------------
-    async def exec_process(self, container: str, argv: list[str]) -> asyncio.subprocess.Process:
-        """Start `docker exec -i <container> <argv...>` with piped stdio, for a
-        websocket-backed terminal. Caller pumps stdin/stdout and reaps it."""
-        return await asyncio.create_subprocess_exec(
-            "docker", "exec", "-i", container, *argv,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
+    async def exec_pty(
+        self, container: str, argv: list[str]
+    ) -> tuple[asyncio.subprocess.Process, int]:
+        """Start `docker exec -it <container> <argv...>` attached to a real PTY
+        so it's a proper interactive shell (prompt, job control, colours).
+        Returns (proc, master_fd); the caller pumps master_fd <-> websocket and
+        closes the fd + kills the proc on disconnect."""
+        import os
+        import pty
+
+        master, slave = pty.openpty()
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "exec", "-it", container, *argv,
+            stdin=slave, stdout=slave, stderr=slave, close_fds=True,
         )
+        os.close(slave)
+        return proc, master
 
     async def is_running(self, container: str) -> bool:
         rc, out, _ = await self._run(["docker", "inspect", "-f", "{{.State.Running}}", container])

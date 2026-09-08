@@ -11,21 +11,34 @@ export function SandboxTerminal({ runId }: { runId: string }) {
     let cleanup = () => {};
 
     (async () => {
-      const { Terminal } = await import("@xterm/xterm");
-      const { FitAddon } = await import("@xterm/addon-fit");
+      const [{ Terminal }, { FitAddon }] = await Promise.all([
+        import("@xterm/xterm"),
+        import("@xterm/addon-fit"),
+      ]);
       if (disposed || !hostRef.current) return;
 
       const term = new Terminal({
         fontSize: 12,
-        fontFamily:
-          "ui-monospace, SFMono-Regular, Menlo, monospace",
-        theme: { background: "#201515", foreground: "#f8f4f0", cursor: "#ff4f00" },
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+        theme: {
+          background: "#201515",
+          foreground: "#f8f4f0",
+          cursor: "#ff4f00",
+        },
         cursorBlink: true,
+        scrollback: 2000,
       });
       const fit = new FitAddon();
       term.loadAddon(fit);
       term.open(hostRef.current);
-      fit.fit();
+      const doFit = () => {
+        try {
+          fit.fit();
+        } catch {
+          /* container not laid out yet */
+        }
+      };
+      doFit();
 
       const ws = new WebSocket(wsUrl(`/ws/runs/${runId}/terminal`));
       ws.binaryType = "arraybuffer";
@@ -34,12 +47,15 @@ export function SandboxTerminal({ runId }: { runId: string }) {
         else term.write(new Uint8Array(m.data));
       };
       ws.onopen = () => term.writeln("\x1b[90m[connected to sandbox]\x1b[0m");
+      ws.onclose = () => term.writeln("\x1b[90m[disconnected]\x1b[0m");
       term.onData((d) => ws.readyState === 1 && ws.send(d));
 
-      const onResize = () => fit.fit();
-      window.addEventListener("resize", onResize);
+      // Fit to the host box only — never let xterm drive layout.
+      const ro = new ResizeObserver(() => doFit());
+      ro.observe(hostRef.current);
+
       cleanup = () => {
-        window.removeEventListener("resize", onResize);
+        ro.disconnect();
         ws.close();
         term.dispose();
       };
@@ -56,7 +72,10 @@ export function SandboxTerminal({ runId }: { runId: string }) {
       <div className="border-border/60 border-b bg-[#201515] px-3 py-1.5 text-xs font-medium text-[#f8f4f0]">
         sandbox terminal — <code>docker exec bash</code>
       </div>
-      <div ref={hostRef} className="h-56 bg-[#201515] p-2" />
+      {/* fixed-height, clipped viewport; xterm fills it absolutely */}
+      <div className="relative h-64 bg-[#201515]">
+        <div ref={hostRef} className="absolute inset-0 p-2" />
+      </div>
     </div>
   );
 }

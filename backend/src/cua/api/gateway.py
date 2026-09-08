@@ -244,6 +244,28 @@ def create_app(config: Config | None = None) -> FastAPI:
     async def list_interventions(status: str | None = "open") -> list[dict[str, Any]]:
         return app.state.system.console.inbox(status=status or "open")
 
+    @app.get("/runs/{run_id}/intervention")
+    async def run_intervention(run_id: str) -> dict[str, Any] | None:
+        """The latest not-resolved intervention for a run (open or claimed), so
+        the console can keep the handoff controls after a claim."""
+        svc = app.state.system.escalation
+        active = [
+            iv for iv in svc.list_interventions()
+            if iv.run_id == run_id and iv.status != "resolved"
+        ]
+        if not active:
+            return None
+        iv = active[-1]
+        return {
+            "intervention_id": iv.intervention_id,
+            "run_id": iv.run_id,
+            "status": iv.status,
+            "claimed_by": iv.claimed_by,
+            "step_index": iv.step_index,
+            "reason": iv.reason,
+            "goal": iv.goal,
+        }
+
     @app.get("/interventions/{intervention_id}")
     async def get_intervention(intervention_id: str) -> dict[str, Any]:
         try:
@@ -323,27 +345,35 @@ def create_app(config: Config | None = None) -> FastAPI:
             await websocket.send_text("\r\n[no live sandbox for this run]\r\n")
             await websocket.close()
             return
-        proc = await mgr.exec_process(run.sandbox_container, ["bash", "-i"])
+
+        import os
+
+        proc, master = await mgr.exec_pty(
+            run.sandbox_container, ["env", "TERM=xterm-256color", "bash", "-l"]
+        )
+        loop = asyncio.get_running_loop()
 
         async def pump_out() -> None:
-            assert proc.stdout is not None
             while True:
-                chunk = await proc.stdout.read(1024)
-                if not chunk:
+                try:
+                    data = await loop.run_in_executor(None, os.read, master, 2048)
+                except OSError:
                     break
-                await websocket.send_bytes(chunk)
+                if not data:
+                    break
+                await websocket.send_bytes(data)
 
         out_task = asyncio.create_task(pump_out())
         try:
             while True:
                 msg = await websocket.receive_text()
-                if proc.stdin is not None:
-                    proc.stdin.write(msg.encode())
-                    await proc.stdin.drain()
+                await loop.run_in_executor(None, os.write, master, msg.encode())
         except (WebSocketDisconnect, Exception):  # noqa: BLE001
             pass
         finally:
             out_task.cancel()
+            with _suppress():
+                os.close(master)
             with _suppress():
                 proc.kill()
             with _suppress():

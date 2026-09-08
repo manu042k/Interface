@@ -18,6 +18,7 @@ const TERMINAL = new Set(["completed", "failed", "dead_end"]);
 export default function RunPage() {
   const { id } = useParams<{ id: string }>();
   const [showTerm, setShowTerm] = useState(false);
+  const [handled, setHandled] = useState(false);
 
   const { data: run, refetch } = useQuery({
     queryKey: ["run", id],
@@ -26,8 +27,9 @@ export default function RunPage() {
       q.state.data && TERMINAL.has(q.state.data.status) ? false : 1500,
   });
 
-  const inControl = run?.status === "stuck";
-  const done = run && TERMINAL.has(run.status);
+  const isStuck = run?.status === "stuck" && !handled;
+  const inControl = isStuck;
+  const done = run && (TERMINAL.has(run.status) || (run.status === "stuck" && handled));
 
   return (
     <div className="space-y-4">
@@ -66,11 +68,22 @@ export default function RunPage() {
         </div>
       </header>
 
-      {run?.status === "stuck" && (
-        <HandoffPanel runId={id} onResolved={() => refetch()} />
+      {isStuck && (
+        <HandoffPanel
+          runId={id}
+          onResolved={() => {
+            setHandled(true);
+            refetch();
+          }}
+        />
+      )}
+      {run?.status === "stuck" && handled && (
+        <p className="border-success/40 bg-success/8 text-success rounded-lg border p-3 text-sm">
+          Operator handled this run and returned control to automation.
+        </p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+      <div className="grid gap-4 lg:h-[calc(100vh-13rem)] lg:grid-cols-[1.35fr_1fr]">
         <NoVncFrame novncUrl={run?.novnc_url ?? null} interactive={!!inControl} />
         <EventTimeline runId={id} />
       </div>

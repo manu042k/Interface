@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HandMetal, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { api, type Intervention } from "@/lib/api";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 const OPERATOR = "op_" + Math.random().toString(36).slice(2, 6);
+
+type Iv = {
+  intervention_id: string;
+  status: string;
+  claimed_by: string | null;
+  step_index: number;
+  reason: string;
+};
 
 export function HandoffPanel({
   runId,
@@ -16,18 +23,17 @@ export function HandoffPanel({
   runId: string;
   onResolved: () => void;
 }) {
-  const [iv, setIv] = useState<Intervention | null>(null);
-  const [inControl, setInControl] = useState(false);
+  const [iv, setIv] = useState<Iv | null>(null);
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState<string[]>([]);
+  const releasing = useRef(false);
 
   useEffect(() => {
     let alive = true;
     const tick = async () => {
       try {
-        const open = await api.interventions("open");
-        const mine = open.find((i) => i.run_id === runId) ?? null;
-        if (alive) setIv(mine);
+        const cur = await api.runIntervention(runId);
+        if (alive && !releasing.current) setIv(cur);
       } catch {
         /* ignore */
       }
@@ -41,8 +47,8 @@ export function HandoffPanel({
   }, [runId]);
 
   if (!iv) return null;
-
-  const step = (msg: string) => setLog((l) => [...l, msg]);
+  const step = (m: string) => setLog((l) => [...l, m]);
+  const inControl = iv.status === "claimed";
 
   async function claimAndTake() {
     if (!iv) return;
@@ -50,8 +56,8 @@ export function HandoffPanel({
     try {
       await api.claim(iv.intervention_id, OPERATOR);
       const h = await api.takeControl(iv.intervention_id, OPERATOR);
-      setInControl(true);
       step(`control acquired — ${h.live_handle} (${h.remote_display})`);
+      setIv({ ...iv, status: "claimed", claimed_by: OPERATOR });
       toast.success("You are in control of the live session");
     } catch (e) {
       toast.error(String((e as Error).message));
@@ -62,17 +68,21 @@ export function HandoffPanel({
   async function handBack() {
     if (!iv) return;
     setBusy(true);
+    releasing.current = true;
     try {
-      const out = await api.release(iv.intervention_id, OPERATOR, {
-        kind: "text_present",
-        params: { text: "Savings" },
-      });
+      const out = await api.release(
+        iv.intervention_id,
+        iv.claimed_by ?? OPERATOR,
+        { kind: "text_present", params: { text: "Savings" } },
+      );
       step(
         `handed back — resumed=${out.resumed}, checkpoint_holds=${out.checkpoint_already_holds}`,
       );
       toast.success(out.detail);
+      setIv(null);
       onResolved();
     } catch (e) {
+      releasing.current = false;
       toast.error(String((e as Error).message));
     }
     setBusy(false);
@@ -97,7 +107,7 @@ export function HandoffPanel({
             ) : (
               <>
                 <span className="text-muted-foreground text-sm">
-                  Drive the page in the live view above, then:
+                  {iv.claimed_by} in control — drive the page above, then:
                 </span>
                 <Button size="sm" onClick={handBack} disabled={busy}>
                   {busy && (

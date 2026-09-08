@@ -143,6 +143,14 @@ export const api = {
 
   interventions: (status = "open") =>
     j<Intervention[]>(`/interventions?status=${status}`),
+  runIntervention: (runId: string) =>
+    j<{
+      intervention_id: string;
+      status: string;
+      claimed_by: string | null;
+      step_index: number;
+      reason: string;
+    } | null>(`/runs/${runId}/intervention`),
   interventionContext: (id: string) =>
     j<Record<string, unknown>>(`/interventions/${id}`),
   claim: (id: string, operator: string) =>
