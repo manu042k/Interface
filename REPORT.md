@@ -142,9 +142,11 @@ to `human_actions_log`.
 **Hand back.** `release_control` → `resume`: releases the human lease,
 re-acquires automation's, and evaluates the goal checkpoint — if it already
 holds, the run is resolved as *goal satisfied*; otherwise automation continues
-its loop from the human-modified state. The operator console UI is a thin API +
-a React panel; the **mechanism** (pause / cede / resume on one session, lock
-ownership model, action recording) is real and covered by tests.
+its loop from the human-modified state. With `CUA_USE_SANDBOX=1` the operator
+takes over by clicking directly in the live **noVNC** canvas of the same
+container; without it, the console's scripted action buttons drive the shared
+session. Either way the **mechanism** (pause / cede / resume on one session,
+lock ownership model, action recording) is real and covered by tests.
 
 ## 6. Safety
 
@@ -184,12 +186,16 @@ coarse (domain/route/action) — it does not understand business semantics
 
 Deliberately thin-but-real, or stubbed at a clean seam:
 
-- **Operator console UI** — thin API + a single React panel. The handoff
-  mechanism, lock model, and action recording are real.
-- **Real container/microVM sandbox** — per-browser-context isolation,
-  cross-host egress blocking at the route handler, and a wall-clock watchdog are
-  real; kernel CPU/memory ceilings + a warm pool are `SessionWatchdog`'s
-  documented contract, not enforced here.
+- **Operator console** — now a Next.js 16 + shadcn app: goal input, a live
+  **noVNC** view of the run, a streaming event timeline, an in-browser terminal
+  into the run's sandbox, the stuck-run handoff, and a printable report. The
+  co-browsing takeover is real (operator clicks land in the same browser).
+- **Container sandbox** — now real: `CUA_USE_SANDBOX=1` gives every run its own
+  Docker container (`Xvfb → xfce → headed Chromium/CDP → x11vnc → websockify`),
+  the worker attaches over CDP and drives the *same* browser the operator
+  watches, and the container is held on `STUCK` for takeover. Still design-only:
+  a microVM (Firecracker/gVisor) boundary, kernel CPU/memory ceilings, a warm
+  pool for cold-start, and orchestration beyond a single Docker host (k8s).
 - **Postgres** — SQLite behind the same store interface; the access pattern
   (transactional versioning, base/override lookup) is Postgres-shaped.
 - **Desktop / legacy-web adapters** — one `SurfaceAdapter` seam, Playwright

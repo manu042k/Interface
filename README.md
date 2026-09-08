@@ -19,8 +19,10 @@ when replay or discovery gets stuck.
 
 ```
 backend/    Python monolith: discovery loop, artifact schema+store, replay
-            executor, policy/guardrails, escalation/handoff, MockBank target app
-frontend/   Operator Console + capability catalog (Vite + React + TS)
+            executor, policy/guardrails, escalation/handoff, per-run Docker
+            sandbox (noVNC + CDP), MockBank target app
+frontend/   Next.js 16 + shadcn console: goal input, live noVNC + event stream +
+            sandbox terminal, stuck-run handoff, printable run report
 evidence/   Committed demo bundles
 ```
 
@@ -89,17 +91,27 @@ cua serve                                         # http://127.0.0.1:8080/docs
 # POST /replays/{id}/invoke · GET /capabilities · /interventions/*
 ```
 
-### Frontend (optional)
+### Live console with per-run sandbox (Next.js + Docker)
+
+Watch a discovery run in a live noVNC canvas, shell into the run's sandbox from an
+in-browser terminal, and take over a stuck run by clicking directly in the canvas.
 
 ```bash
-cd frontend && npm install && npm run dev         # operator console + capability catalog
+bash backend/sandbox_image/build.sh              # once — builds cua-sandbox:latest (needs Docker)
+cd frontend && npm install && cd ..
+bash start.sh                                    # MockBank :8799 · gateway :8080 (CUA_USE_SANDBOX=1) · console :3000
+# open http://localhost:3000 → New run → submit → watch it live → Generate report
 ```
+
+Without Docker, set `CUA_USE_SANDBOX=0` (the default): the plain headless adapter
+runs and the console still works minus the live view.
 
 ## Tests
 
 ```bash
-cd backend && pytest        # 69 tests, offline, ~30s (needs chromium from `playwright install`)
+cd backend && pytest        # 72 tests (~45s); 3 sandbox tests skip cleanly without Docker/image
 ruff check src tests
+cd ../frontend && npm run build
 ```
 
 ## What's real vs. mocked
