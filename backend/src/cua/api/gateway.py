@@ -129,6 +129,7 @@ def create_app(config: Config | None = None) -> FastAPI:
                     )
                     run.artifact_id = artifact.artifact_id
                     run.artifact_version = artifact.version
+                    await sys.summarize_capability(artifact)  # record-time, best-effort
             except Exception as exc:  # noqa: BLE001
                 run.status = RunStatus.FAILED
                 run.detail = f"orchestrator crashed: {exc}"
@@ -253,15 +254,15 @@ def create_app(config: Config | None = None) -> FastAPI:
     @app.get("/capabilities")
     async def capabilities() -> list[dict[str, Any]]:
         arts = app.state.system.store.list(status=ArtifactStatus.APPROVED)
-        return [
-            {
-                "name": a.name, "artifact_id": a.artifact_id, "version": a.version,
-                "goal": a.goal_description, "vendor_app_id": a.vendor_app_id,
-                "input_schema": a.input_schema, "output_schema": a.output_schema,
-                "risk_class": a.risk_class, "invoke": f"/replays/{a.artifact_id}/invoke",
-            }
-            for a in arts
-        ]
+        # group by (name, vendor_app_id) -> keep the highest approved version
+        latest: dict[tuple[str, str], Any] = {}
+        counts: dict[tuple[str, str], int] = {}
+        for a in arts:
+            key = (a.name, a.vendor_app_id)
+            counts[key] = counts.get(key, 0) + 1
+            if key not in latest or a.version > latest[key].version:
+                latest[key] = a
+        return [_capability_card(a, counts[(a.name, a.vendor_app_id)] - 1) for a in latest.values()]
 
     # -- ST-037..ST-040: escalation & operator console ---------------
     @app.get("/interventions")
@@ -566,6 +567,54 @@ def _run_dict(run: RunRecord) -> dict[str, Any]:
         "app_target": run.app_target, "goal": run.goal, "detail": run.detail, "step_count": run.step_count,
         "artifact_id": run.artifact_id, "artifact_version": run.artifact_version,
         "novnc_url": run.novnc_url, "sandbox_container": run.sandbox_container,
+    }
+
+
+def _capability_card(a: Any, older_versions: int) -> dict[str, Any]:
+    ip = a.input_schema.get("properties", {})
+    op = a.output_schema.get("properties", {})
+    return {
+        "name": a.name,
+        "artifact_id": a.artifact_id,
+        "version": a.version,
+        "older_versions": older_versions,
+        "vendor_app_id": a.vendor_app_id,
+        "app_version": a.app_version,
+        "risk_class": a.risk_class,
+        "goal": a.goal_description,
+        "summary": a.agent_summary or a.goal_description,
+        "summary_source": "model" if a.agent_summary else "goal",
+        "inputs": [
+            {
+                "name": k,
+                "type": v.get("type", "string"),
+                "example": v.get("example"),
+                "sensitive": bool(v.get("x-sensitive")),
+            }
+            for k, v in ip.items()
+        ],
+        "outputs": [
+            {"field": k, "shape": v.get("x-shape", v.get("type", "string"))}
+            for k, v in op.items()
+        ],
+        "steps": [
+            {"i": s.step_index, "action": s.action_type, "description": s.description}
+            for s in a.steps
+        ],
+        "handles": {
+            "business_outcomes": [
+                {"code": r.code, "message": r.message} for r in a.known_outcomes
+            ],
+            "recoverable": [r.name for r in a.recoverable_rules],
+        },
+        "provenance": {
+            "created_from_run_id": a.created_from_run_id,
+            "reviewed_by": a.reviewed_by,
+            "reviewed_at": a.reviewed_at,
+        },
+        "input_schema": a.input_schema,
+        "output_schema": a.output_schema,
+        "invoke": f"/replays/{a.artifact_id}/invoke",
     }
 
 

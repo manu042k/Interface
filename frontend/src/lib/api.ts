@@ -38,11 +38,32 @@ export type Capability = {
   name: string;
   artifact_id: string;
   version: number;
-  goal: string;
+  older_versions: number;
   vendor_app_id: string;
+  app_version: string;
+  risk_class: string;
+  goal: string;
+  summary: string;
+  summary_source: "model" | "goal";
+  inputs: {
+    name: string;
+    type: string;
+    example: unknown;
+    sensitive: boolean;
+  }[];
+  outputs: { field: string; shape: string }[];
+  steps: { i: number; action: string; description: string }[];
+  handles: {
+    business_outcomes: { code: string; message: string }[];
+    recoverable: string[];
+  };
+  provenance: {
+    created_from_run_id: string | null;
+    reviewed_by: string | null;
+    reviewed_at: number | null;
+  };
   input_schema: { properties?: Record<string, { "x-sensitive"?: boolean }> };
   output_schema: { properties?: Record<string, unknown> };
-  risk_class: string;
   invoke: string;
 };
 

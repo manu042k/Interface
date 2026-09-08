@@ -91,6 +91,7 @@ def discover(
         artifact = None
         if run.status == RunStatus.COMPLETED:
             artifact = system.record(transcript, name=name or _slug(goal), vendor_app_id=vendor_app_id)
+            await system.summarize_capability(artifact)
         await system.shutdown()
         return run, transcript, artifact
 

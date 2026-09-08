@@ -253,6 +253,9 @@ class CapabilityArtifact(BaseModel):
     # Stable, human-meaningful name an agent invokes by (catalog key).
     name: str
     goal_description: str
+    # Reference blurb written by the model once, at record time (never in replay).
+    # Falls back to goal_description when unset.
+    agent_summary: str | None = None
 
     # Vendor-product identity — the axis multi-tenant reuse keys on.
     vendor_app_id: str = "generic"

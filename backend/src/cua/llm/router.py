@@ -154,6 +154,24 @@ class LLMRouter:
             f"no healthy provider (tried={tried or 'none'}; last error: {last_exc})"
         )
 
+    async def call_text(self, system: str, user: str) -> str:
+        """Plain-text completion for record-time metadata (capability summaries).
+        Best-effort: returns "" if every provider is unavailable rather than
+        raising — a missing summary is not fatal."""
+        now = time.time()
+        for provider in self._providers:
+            h = self._health[provider.name]
+            if not h.available(now):
+                continue
+            try:
+                out = await provider.complete_text(system, user)
+                h.served += 1
+                return out
+            except (ProviderUnavailable, ProviderError):
+                h.note_error(time.time())
+                continue
+        return ""
+
     def reset(self) -> None:
         for h in self._health.values():
             h.status = ProviderStatus.HEALTHY

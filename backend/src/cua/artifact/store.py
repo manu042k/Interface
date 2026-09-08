@@ -121,6 +121,22 @@ class ArtifactStore:
             )
         return art
 
+    def set_summary(self, artifact_id: str, version: int, summary: str) -> None:
+        """Persist a record-time agent summary onto an existing row."""
+        with self._lock, self._connect() as con:
+            row = con.execute(
+                "SELECT body FROM artifacts WHERE artifact_id = ? AND version = ?",
+                (artifact_id, version),
+            ).fetchone()
+            if row is None:
+                return
+            art = CapabilityArtifact.model_validate_json(row["body"])
+            art.agent_summary = summary
+            con.execute(
+                "UPDATE artifacts SET body = ? WHERE artifact_id = ? AND version = ?",
+                (art.model_dump_json(), artifact_id, version),
+            )
+
     # -- read -------------------------------------------------------
     def get(self, artifact_id: str, version: int) -> CapabilityArtifact:
         with self._connect() as con:

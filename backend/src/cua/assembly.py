@@ -62,6 +62,17 @@ class System:
         )
         return self.store.save_draft(artifact)
 
+    async def summarize_capability(self, artifact: CapabilityArtifact) -> str:
+        """Record-time: ask the model for a catalog reference blurb (never in
+        replay). Best-effort — persists onto the row, returns "" on failure."""
+        from .artifact.summarizer import summarize
+
+        text = await summarize(artifact, self.router)
+        if text:
+            artifact.agent_summary = text
+            self.store.set_summary(artifact.artifact_id, artifact.version, text)
+        return text
+
     async def shutdown(self) -> None:
         await self.adapter.shutdown()
         if self.sandbox_manager is not None:

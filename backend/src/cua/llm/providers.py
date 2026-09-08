@@ -47,6 +47,8 @@ class Provider(Protocol):
 
     async def complete(self, system: str, user: str, tools: list[dict[str, Any]]) -> ModelResponse: ...
 
+    async def complete_text(self, system: str, user: str) -> str: ...
+
 
 # ---------------------------------------------------------------------------
 # Real providers (OpenAI-compatible)
@@ -98,6 +100,36 @@ class OpenAICompatProvider:
 
         data = resp.json()
         return _parse_openai_tool_call(data, self.name)
+
+    async def complete_text(self, system: str, user: str) -> str:
+        payload = {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "temperature": 0.2,
+            "max_tokens": 160,
+        }
+        headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"}
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                resp = await client.post(f"{self._base}/chat/completions", json=payload, headers=headers)
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ReadError) as exc:
+            raise ProviderUnavailable(f"{self.name}: {exc}") from exc
+        if resp.status_code == 429:
+            raise RateLimited(f"{self.name}: 429", status=429,
+                              retry_after=_parse_retry_after(resp.headers.get("retry-after")))
+        if resp.status_code in {402, 403}:
+            raise RateLimited(f"{self.name}: {resp.status_code}", status=resp.status_code)
+        if resp.status_code >= 500:
+            raise ProviderUnavailable(f"{self.name}: {resp.status_code}", status=resp.status_code)
+        if resp.status_code >= 400:
+            raise ProviderError(f"{self.name}: {resp.status_code} {resp.text[:200]}", status=resp.status_code)
+        try:
+            return (resp.json()["choices"][0]["message"]["content"] or "").strip()
+        except (KeyError, IndexError) as exc:
+            raise ProviderError(f"{self.name}: unparseable text response: {exc}") from exc
 
 
 def _parse_retry_after(value: str | None) -> float | None:
@@ -161,3 +193,7 @@ class ScriptedProvider:
             tool, args, reasoning = self._fallback(system, user)
             return ModelResponse(tool=tool, args=args, reasoning=reasoning, provider=self.name)
         return ModelResponse(tool="stuck", args={"reason": "scripted provider exhausted", "context": {}}, provider=self.name)
+
+    async def complete_text(self, system: str, user: str) -> str:
+        # offline: no summary — the catalog falls back to the goal description.
+        return ""
