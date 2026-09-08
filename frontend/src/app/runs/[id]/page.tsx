@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { FileText, TerminalSquare, ChevronRight } from "lucide-react";
+import {
+  FileText,
+  TerminalSquare,
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/badges";
@@ -29,10 +35,12 @@ export default function RunPage() {
 
   const isStuck = run?.status === "stuck" && !handled;
   const inControl = isStuck;
-  const done = run && (TERMINAL.has(run.status) || (run.status === "stuck" && handled));
+  const ended =
+    !!run && (TERMINAL.has(run.status) || (run.status === "stuck" && handled));
+  const ok = run?.status === "completed";
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full min-h-[640px] flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
@@ -48,7 +56,7 @@ export default function RunPage() {
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={run?.status} />
-          {run?.sandbox_container && (
+          {run?.sandbox_container && !ended && (
             <Button
               variant="outline"
               size="sm"
@@ -77,36 +85,58 @@ export default function RunPage() {
           }}
         />
       )}
-      {run?.status === "stuck" && handled && (
-        <p className="border-success/40 bg-success/8 text-success rounded-lg border p-3 text-sm">
-          Operator handled this run and returned control to automation.
-        </p>
+
+      {ended && (
+        <div
+          className={`flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm ${
+            ok
+              ? "border-success/40 bg-success/8"
+              : run?.status === "stuck"
+                ? "border-success/40 bg-success/8"
+                : "border-destructive/40 bg-destructive/8"
+          }`}
+        >
+          {ok || run?.status === "stuck" ? (
+            <CheckCircle2 className="text-success h-4 w-4" />
+          ) : (
+            <XCircle className="text-destructive h-4 w-4" />
+          )}
+          <span className="font-medium">
+            {run?.status === "stuck" && handled
+              ? "Operator handled this run; control returned to automation."
+              : `Run ${run?.status}`}
+          </span>
+          {run?.detail && (
+            <span className="text-muted-foreground">— {run.detail}</span>
+          )}
+          {run?.artifact_id && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <Link
+                href="/review"
+                className="text-primary underline underline-offset-2"
+              >
+                artifact {run.artifact_id.slice(0, 8)} v{run.artifact_version}
+              </Link>
+              <span className="text-muted-foreground">
+                (draft — review to approve)
+              </span>
+            </>
+          )}
+        </div>
       )}
 
-      <div className="grid gap-4 lg:h-[calc(100vh-13rem)] lg:grid-cols-[1.35fr_1fr]">
-        <NoVncFrame novncUrl={run?.novnc_url ?? null} interactive={!!inControl} />
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1.35fr_1fr]">
+        <NoVncFrame
+          novncUrl={run?.novnc_url ?? null}
+          interactive={!!inControl}
+          ended={ended && !isStuck}
+        />
         <EventTimeline runId={id} />
       </div>
 
-      {showTerm && run?.sandbox_container && <SandboxTerminal runId={id} />}
-
-      {done && (
-        <p className="text-muted-foreground text-sm">
-          Run {run.status}
-          {run.detail ? ` — ${run.detail}` : ""}.{" "}
-          {run.artifact_id ? (
-            <>
-              Recorded artifact{" "}
-              <Link
-                href={`/review`}
-                className="text-primary underline underline-offset-2"
-              >
-                {run.artifact_id.slice(0, 8)} v{run.artifact_version}
-              </Link>{" "}
-              (draft — review to approve).
-            </>
-          ) : null}
-        </p>
+      {showTerm && run?.sandbox_container && !ended && (
+        <SandboxTerminal runId={id} />
       )}
     </div>
   );

@@ -15,7 +15,7 @@ const NAV = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <aside className="no-print bg-sidebar border-sidebar-border hidden w-60 shrink-0 flex-col border-r px-4 py-6 md:flex">
         <Link href="/" className="mb-8 flex items-center gap-2 px-2">
           <span className="bg-primary text-primary-foreground grid h-7 w-7 place-items-center rounded-md text-sm font-bold">
@@ -50,8 +50,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           replay is how the agent invokes it.
         </p>
       </aside>
-      <main className="min-w-0 flex-1 px-6 py-8 md:px-10">
-        <div className="mx-auto max-w-6xl">{children}</div>
+      <main className="min-w-0 flex-1 overflow-y-auto px-6 py-8 md:px-10">
+        <div className="mx-auto h-full max-w-6xl">{children}</div>
       </main>
     </div>
   );

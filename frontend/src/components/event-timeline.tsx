@@ -61,11 +61,12 @@ export function EventTimeline({ runId }: { runId: string }) {
   }, [events.length]);
 
   return (
-    <div className="bg-card flex h-full min-h-[420px] flex-col rounded-lg border">
-      <div className="border-border/60 border-b px-3 py-2 text-xs font-medium uppercase tracking-wide">
-        Event timeline
+    <div className="bg-card flex h-full min-h-0 flex-col overflow-hidden rounded-lg border">
+      <div className="border-border/60 flex items-center justify-between border-b px-3 py-2 text-xs font-medium uppercase tracking-wide">
+        <span>Event timeline</span>
+        <span className="text-muted-foreground normal-case">{events.length} events</span>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <ol className="space-y-0.5 p-3">
           {events.map((e, i) => {
             const Icon = ICON[e.event] ?? Radio;
