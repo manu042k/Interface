@@ -5,8 +5,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { api, type ArtifactSummary } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +30,6 @@ export default function ReviewPage() {
     refetchInterval: 4000,
   });
   const [open, setOpen] = useState<ArtifactSummary | null>(null);
-  const [reviewer, setReviewer] = useState("operator");
 
   const full = useQuery({
     queryKey: ["artifact", open?.artifact_id, open?.version],
@@ -42,7 +39,7 @@ export default function ReviewPage() {
 
   const decide = useMutation({
     mutationFn: (d: "approve" | "reject") =>
-      api.promote(open!.artifact_id, open!.version, d, reviewer),
+      api.promote(open!.artifact_id, open!.version, d, "operator"),
     onSuccess: (_r, d) => {
       toast.success(`Artifact ${d === "approve" ? "approved" : "rejected"}`);
       setOpen(null);
@@ -117,26 +114,19 @@ export default function ReviewPage() {
               {open?.name} v{open?.version}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex items-end gap-2 border-b p-4">
-            <div className="flex-1 space-y-1.5">
-              <Label>Reviewer</Label>
-              <Input
-                value={reviewer}
-                onChange={(e) => setReviewer(e.target.value)}
-              />
-            </div>
-            <Button
-              onClick={() => decide.mutate("approve")}
-              disabled={decide.isPending}
-            >
-              Approve
-            </Button>
+          <div className="flex justify-end gap-2 border-b p-4">
             <Button
               variant="outline"
               onClick={() => decide.mutate("reject")}
               disabled={decide.isPending}
             >
               Reject
+            </Button>
+            <Button
+              onClick={() => decide.mutate("approve")}
+              disabled={decide.isPending}
+            >
+              Approve
             </Button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
