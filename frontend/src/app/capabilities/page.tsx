@@ -9,6 +9,8 @@ import {
   ArrowRight,
   Flag,
   RotateCcw,
+  ChevronDown,
+  Crosshair,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Capability, type ReplayResult } from "@/lib/api";
@@ -77,6 +79,7 @@ function CapabilityCard({
   cap: Capability;
   onInvoke: () => void;
 }) {
+  const [showTargets, setShowTargets] = useState(false);
   return (
     <Card>
       <CardContent className="space-y-3.5 pt-5">
@@ -151,24 +154,85 @@ function CapabilityCard({
         </div>
 
         <div>
-          <div className="text-muted-foreground mb-1 text-xs font-medium uppercase">
-            Steps ({cap.steps.length})
+          <div className="text-muted-foreground mb-1.5 flex items-center justify-between text-xs font-medium uppercase">
+            <span>Steps ({cap.steps.length})</span>
+            <button
+              type="button"
+              onClick={() => setShowTargets((v) => !v)}
+              className="hover:text-foreground flex items-center gap-1 normal-case"
+            >
+              <Crosshair className="h-3 w-3" />
+              how each step is targeted
+              <ChevronDown
+                className={`h-3 w-3 transition-transform ${showTargets ? "rotate-180" : ""}`}
+              />
+            </button>
           </div>
-          <ol className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs">
+          <ol className="flex flex-wrap items-center gap-x-1 gap-y-1.5 text-xs">
             {cap.steps.map((s, i) => (
               <li key={s.i} className="flex items-center gap-1">
                 {i > 0 && (
-                  <ArrowRight className="text-muted-foreground h-3 w-3" />
+                  <ArrowRight className="text-muted-foreground h-3 w-3 shrink-0" />
                 )}
                 <span
                   className="bg-accent rounded px-1.5 py-0.5"
                   title={s.description}
                 >
-                  {s.action}
+                  <span className="font-medium">{s.action}</span>
+                  {s.target && (
+                    <span className="text-muted-foreground"> {s.target}</span>
+                  )}
+                  {s.output && (
+                    <span className="text-muted-foreground"> → {s.output}</span>
+                  )}
                 </span>
               </li>
             ))}
           </ol>
+
+          {showTargets && (
+            <div className="border-border/60 mt-2.5 space-y-2.5 rounded-lg border p-3 text-xs">
+              {cap.steps.map((s) => (
+                <div key={s.i}>
+                  <div className="flex flex-wrap items-baseline gap-1.5">
+                    <span className="text-muted-foreground">{s.i}</span>
+                    <span className="font-medium">{s.action}</span>
+                    <span className="text-muted-foreground">
+                      {s.description}
+                    </span>
+                    <span className="text-muted-foreground">
+                      · {s.idempotent ? "idempotent" : "NON-idempotent"}
+                    </span>
+                  </div>
+                  {s.locators.length > 0 ? (
+                    <ul className="mt-1 space-y-1">
+                      {s.locators.map((l, li) => (
+                        <li key={li} className="text-muted-foreground">
+                          <span className="text-foreground">
+                            rank {l.rank} · {l.kind}
+                          </span>{" "}
+                          <code>{JSON.stringify(l.params)}</code>
+                          <br />
+                          <span className="opacity-80">↳ {l.rationale}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground mt-1">
+                      {s.checkpoint
+                        ? `checkpoint: ${JSON.stringify(s.checkpoint)}`
+                        : "no element — control/assertion step"}
+                    </p>
+                  )}
+                </div>
+              ))}
+              <p className="text-muted-foreground border-border/60 border-t pt-2 opacity-80">
+                Replay tries these strategies top-down and uses the first that
+                resolves to one visible element — no model. A match below rank 0
+                is logged as a drift signal.
+              </p>
+            </div>
+          )}
         </div>
 
         {(cap.handles.business_outcomes.length > 0 ||

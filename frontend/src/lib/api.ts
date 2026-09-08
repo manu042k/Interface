@@ -52,7 +52,22 @@ export type Capability = {
     sensitive: boolean;
   }[];
   outputs: { field: string; shape: string }[];
-  steps: { i: number; action: string; description: string }[];
+  steps: {
+    i: number;
+    action: string;
+    description: string;
+    target: string | null;
+    idempotent: boolean;
+    binding: { param?: string; literal?: string | null } | null;
+    output: string | null;
+    checkpoint: { kind: string; params: Record<string, unknown> } | null;
+    locators: {
+      kind: string;
+      rank: number;
+      params: Record<string, unknown>;
+      rationale: string;
+    }[];
+  }[];
   handles: {
     business_outcomes: { code: string; message: string }[];
     recoverable: string[];

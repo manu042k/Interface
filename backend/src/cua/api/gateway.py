@@ -570,6 +570,31 @@ def _run_dict(run: RunRecord) -> dict[str, Any]:
     }
 
 
+def _target_hint(step: Any) -> str | None:
+    """A short human phrase for what a step acts on, from its top locator."""
+    if step.action_type == "navigate":
+        return None
+    if step.value_binding and step.value_binding.param:
+        base = step.value_binding.param
+    else:
+        base = None
+    if not step.locator_spec:
+        return base
+    p = {k: v for k, v in step.locator_spec[0].params.items() if not k.startswith("_")}
+    hint = (
+        (f"{p['role']} “{p['name']}”" if p.get("role") and p.get("name") else None)
+        or (f"“{p['name']}”" if p.get("name") else None)
+        or (f"the {p['label']} field" if p.get("label") else None)
+        or (f"near “{p['near']}”" if p.get("near") else None)
+        or (f"“{p['text']}”" if p.get("text") else None)
+        or (p.get("css"))
+        or (p.get("role"))
+    )
+    if base and hint:
+        return f"{base} → {hint}"
+    return hint or base
+
+
 def _capability_card(a: Any, older_versions: int) -> dict[str, Any]:
     ip = a.input_schema.get("properties", {})
     op = a.output_schema.get("properties", {})
@@ -598,7 +623,29 @@ def _capability_card(a: Any, older_versions: int) -> dict[str, Any]:
             for k, v in op.items()
         ],
         "steps": [
-            {"i": s.step_index, "action": s.action_type, "description": s.description}
+            {
+                "i": s.step_index,
+                "action": s.action_type,
+                "description": s.description,
+                "target": _target_hint(s),
+                "idempotent": s.idempotent,
+                "binding": (
+                    {"param": s.value_binding.param} if s.value_binding and s.value_binding.param
+                    else {"literal": s.value_binding.literal} if s.value_binding
+                    else None
+                ),
+                "output": s.output_binding.field if s.output_binding else None,
+                "checkpoint": (
+                    {"kind": s.step_checkpoint.kind, "params": s.step_checkpoint.params}
+                    if s.step_checkpoint else None
+                ),
+                "locators": [
+                    {"kind": ls.kind, "rank": ls.rank,
+                     "params": {k: v for k, v in ls.params.items() if not k.startswith("_")},
+                     "rationale": ls.rationale}
+                    for ls in s.locator_spec
+                ],
+            }
             for s in a.steps
         ],
         "handles": {
