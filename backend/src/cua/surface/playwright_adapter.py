@@ -41,13 +41,19 @@ class _Session:
 class PlaywrightAdapter(SurfaceAdapter):
     surface_family = "web"
 
-    def __init__(self, *, headed: bool = False, default_timeout_ms: int = 15000) -> None:
+    def __init__(
+        self, *, headed: bool = False, default_timeout_ms: int = 15000,
+        session_wall_clock_s: float = 300.0,
+    ) -> None:
         self._headed = headed
         self._default_timeout = default_timeout_ms
         self._pw = None
         self._browser: Browser | None = None
         self._sessions: dict[str, _Session] = {}
         self._lock = asyncio.Lock()
+        from .sandbox import SessionBudget, SessionWatchdog
+
+        self.watchdog = SessionWatchdog(SessionBudget(wall_clock_s=session_wall_clock_s))
 
     # -- lifecycle ------------------------------------------------------
     async def _ensure_browser(self) -> Browser:
@@ -82,12 +88,27 @@ class PlaywrightAdapter(SurfaceAdapter):
                 await route.continue_()
 
         await context.route("**/*", _route)
+        self.watchdog.register(handle)
 
         if target:
             await page.goto(target, wait_until="domcontentloaded")
         return handle
 
+    async def sweep_watchdog(self) -> list[str]:
+        """ST-042: force-close sessions past their wall-clock budget. Returns the
+        killed session handles (callers mark the run resource_exceeded)."""
+        killed: list[str] = []
+        for meter in self.watchdog.sweep():
+            await self.close_session(meter.session_id)
+            killed.append(meter.session_id)
+        return killed
+
+    def egress_report(self, session_handle: str) -> list[str]:
+        sess = self._sessions.get(session_handle)
+        return list(sess.blocked_egress) if sess else []
+
     async def close_session(self, session_handle: str) -> None:
+        self.watchdog.unregister(session_handle)
         sess = self._sessions.pop(session_handle, None)
         if sess is None:
             return
