@@ -16,6 +16,7 @@ scale-out swap and doesn't change this interface.
 
 from __future__ import annotations
 
+import asyncio
 import time
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -98,43 +99,56 @@ class LLMRouter:
         tried: list[str] = []
         last_exc: Exception | None = None
 
+        # with a single configured provider a transient blip has nowhere to
+        # rotate — retry it in place a couple of times before cooling it down.
+        solo_retries = 2 if len(self._providers) == 1 else 0
+
         for provider in self._providers:
             h = self._health[provider.name]
             if not h.available(now):
                 continue
             tried.append(provider.name)
-            try:
-                resp = await provider.complete(system, user, tools)
-                h.served += 1
-                self._emit("llm_call", provider=provider.name, tool=resp.tool, rotated=len(tried) > 1)
-                return resp
-            except RateLimited as exc:
-                last_exc = exc
-                ttl = exc.retry_after or self._default_cooldown
-                h.status = ProviderStatus.COOLING_DOWN
-                h.cooldown_until = time.time() + ttl
-                h.note_error(time.time())
-                self._emit("provider_rotate", provider=provider.name, reason="rate_limited", cooldown_s=ttl)
-                continue
-            except ProviderUnavailable as exc:
-                last_exc = exc
-                h.note_error(time.time())
-                if h.error_rate(time.time()) >= self._degrade_rate:
-                    h.status = ProviderStatus.DEGRADED
-                    self._emit("provider_degraded", provider=provider.name)
-                else:
+            retry = 0
+            while True:
+                try:
+                    resp = await provider.complete(system, user, tools)
+                    h.served += 1
+                    self._emit("llm_call", provider=provider.name, tool=resp.tool, rotated=len(tried) > 1)
+                    return resp
+                except RateLimited as exc:
+                    last_exc = exc
+                    ttl = exc.retry_after or self._default_cooldown
                     h.status = ProviderStatus.COOLING_DOWN
-                    h.cooldown_until = time.time() + self._default_cooldown
-                self._emit("provider_rotate", provider=provider.name, reason="unavailable")
-                continue
-            except ProviderError as exc:
-                # A bad-request / unparseable response is not a rotation signal by
-                # itself, but we still try the next provider once rather than
-                # failing the turn outright.
-                last_exc = exc
-                h.note_error(time.time())
-                self._emit("provider_rotate", provider=provider.name, reason="error")
-                continue
+                    h.cooldown_until = time.time() + ttl
+                    h.note_error(time.time())
+                    self._emit("provider_rotate", provider=provider.name, reason="rate_limited", cooldown_s=ttl)
+                    break
+                except ProviderUnavailable as exc:
+                    last_exc = exc
+                    h.note_error(time.time())
+                    if retry < solo_retries:
+                        retry += 1
+                        self._emit("provider_retry", provider=provider.name, attempt=retry, reason="unavailable")
+                        await asyncio.sleep(2.0 * retry)
+                        continue
+                    if h.error_rate(time.time()) >= self._degrade_rate:
+                        h.status = ProviderStatus.DEGRADED
+                        self._emit("provider_degraded", provider=provider.name)
+                    else:
+                        h.status = ProviderStatus.COOLING_DOWN
+                        h.cooldown_until = time.time() + self._default_cooldown
+                    self._emit("provider_rotate", provider=provider.name, reason="unavailable")
+                    break
+                except ProviderError as exc:
+                    last_exc = exc
+                    h.note_error(time.time())
+                    if retry < solo_retries:
+                        retry += 1
+                        self._emit("provider_retry", provider=provider.name, attempt=retry, reason="error")
+                        await asyncio.sleep(2.0 * retry)
+                        continue
+                    self._emit("provider_rotate", provider=provider.name, reason="error")
+                    break
 
         raise AllProvidersExhausted(
             f"no healthy provider (tried={tried or 'none'}; last error: {last_exc})"

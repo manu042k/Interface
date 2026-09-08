@@ -104,7 +104,7 @@ class Orchestrator:
         params: dict[str, Any] | None = None,
         run: RunRecord | None = None,
         confirm_risky: bool = False,
-        exhausted_ceiling: int = 4,
+        exhausted_ceiling: int = 6,
         max_steps: int | None = None,
     ) -> tuple[RunRecord, DiscoveryTranscript]:
         params = params or {}
