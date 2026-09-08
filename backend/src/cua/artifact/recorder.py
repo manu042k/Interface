@@ -1,0 +1,345 @@
+"""ST-023/024: Artifact Recorder — successful transcript -> draft CapabilityArtifact.
+
+Design choices that matter here:
+
+* The artifact steps mirror the *executed, successful, actionable* steps 1:1.
+  `observe`, failed actions, and guardrail-rejected actions never become steps.
+* Every step gets a RANKED locator chain (ADR-02), not one selector. The rank
+  order encodes robustness on legacy markup: role+name > label > row-relative >
+  visible text > raw dom anchor. Each strategy carries a `rationale` string —
+  the "your reasoning about robustness" the brief asks for in §3.2.
+* Free-typed values are parameterized: if a typed value equals a supplied param
+  it becomes a `param` binding; if it merely looks secret it is refused as a
+  literal and recorded as a param the caller must supply (ST-024). Ordinary
+  literals (a dropdown option) stay literal.
+* The Recorder seeds `known_outcomes` and `recoverable_rules` with the
+  exceptional states this flow can plausibly hit, so replay's error taxonomy is
+  part of the recorded contract, not bolted on. In a real system these come from
+  per-app knowledge + review; here they are derived from the flow shape and
+  flagged as review-worthy.
+* The whole artifact is passed through `redact()` before it is returned.
+"""
+
+from __future__ import annotations
+
+import re
+from typing import Any
+
+from ..discovery.orchestrator import DiscoveryTranscript, TranscriptEntry
+from ..models import (
+    ActionType,
+    BusinessOutcomeRule,
+    CapabilityArtifact,
+    Condition,
+    LocatorStrategy,
+    OutputBinding,
+    RecoverableRule,
+    RiskClass,
+    Step,
+    ValueBinding,
+)
+from ..redaction import redact_text
+
+_ACTIONABLE = {"click", "type", "select", "navigate", "wait_for", "extract", "assert_state"}
+_RISKY_URL_RE = re.compile(r"/(create|submit|confirm|delete|remove|transfer|post|approve)(/|$|\?)", re.I)
+_SECRETISH_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{8,}$")  # mixed alnum, 8+ — conservative
+
+
+class ArtifactRecorder:
+    def build_artifact(
+        self,
+        transcript: DiscoveryTranscript,
+        *,
+        name: str,
+        vendor_app_id: str = "generic",
+        app_version: str = "unknown",
+    ) -> CapabilityArtifact:
+        steps: list[Step] = []
+        output_props: dict[str, Any] = {}
+        param_props: dict[str, Any] = {}
+        forced_params: dict[str, str] = {}
+        idx = 0
+
+        actionable = [e for e in transcript.entries if e.tool_call.tool in _ACTIONABLE and e.action_ok]
+
+        for entry in actionable:
+            step = self._entry_to_step(entry, idx, transcript.params, param_props, forced_params)
+            if entry.tool_call.tool == "extract" and step.output_binding:
+                shape = step.output_binding.shape
+                output_props[step.output_binding.field] = {"type": _json_type(shape), "x-shape": shape}
+            steps.append(step)
+            idx += 1
+
+        # inputs: supplied params + any forced-to-param typed values
+        for k, v in transcript.params.items():
+            param_props.setdefault(k, {"type": "string", "example": redact_text(str(v))[0]})
+        for k in forced_params:
+            param_props.setdefault(k, {"type": "string", "x-sensitive": True})
+
+        checkpoint = self._derive_checkpoint(transcript, actionable)
+        risk = (
+            RiskClass.RISKY_IRREVERSIBLE
+            if any(s.risk_class == RiskClass.RISKY_IRREVERSIBLE for s in steps)
+            else RiskClass.SAFE_REVERSIBLE
+        )
+
+        artifact = CapabilityArtifact(
+            name=name,
+            goal_description=transcript.goal,
+            vendor_app_id=vendor_app_id,
+            app_version=app_version,
+            input_schema={"type": "object", "properties": param_props, "required": list(transcript.params)},
+            output_schema={"type": "object", "properties": output_props, "required": list(output_props)},
+            steps=steps,
+            checkpoint=checkpoint,
+            known_outcomes=self._seed_business_outcomes(transcript),
+            recoverable_rules=self._seed_recoverables(transcript),
+            risk_class=risk,
+            created_from_run_id=transcript.run_id,
+        )
+        # ST-024: redact the whole thing before it leaves the recorder.
+        return CapabilityArtifact.model_validate(_redact_model(artifact.model_dump()))
+
+    # -- step construction ------------------------------------------
+    def _entry_to_step(
+        self,
+        entry: TranscriptEntry,
+        idx: int,
+        params: dict[str, Any],
+        param_props: dict[str, Any],
+        forced_params: dict[str, str],
+    ) -> Step:
+        tool = entry.tool_call.tool
+        args = entry.tool_call.args
+        action_type = ActionType(tool)
+        desc = entry.tool_call.reasoning or f"{tool} step"
+
+        locator_spec: list[LocatorStrategy] = []
+        value_binding: ValueBinding | None = None
+        output_binding: OutputBinding | None = None
+        step_checkpoint: Condition | None = None
+
+        if tool in {"click", "type", "select", "extract"}:
+            locator_spec = _rank_locators(args.get("target"), entry.action_result.get("matched_strategy"))
+
+        if tool == "type":
+            raw = str(args.get("value", ""))
+            value_binding = _bind_value(raw, params, forced_params, field_hint=_target_hint(args.get("target")))
+        elif tool == "select":
+            value_binding = ValueBinding(literal=str(args.get("option", "")))
+        elif tool == "navigate":
+            url = str(args.get("url", ""))
+            value_binding = _bind_url(url, params)
+
+        if tool == "extract":
+            field = args.get("as") or "value"
+            output_binding = OutputBinding(field=field, shape=args.get("expected_shape", "string"))
+
+        if tool == "assert_state":
+            step_checkpoint = _condition_from_arg(args.get("condition"))
+
+        idempotent = _is_idempotent(tool, entry)
+        risk_class = RiskClass(entry.action_result.get("risk_class", RiskClass.SAFE_REVERSIBLE))
+        mutex_key = _mutex_key(params) if not idempotent else None
+
+        return Step(
+            step_index=idx,
+            action_type=action_type,
+            description=desc,
+            locator_spec=locator_spec,
+            value_binding=value_binding,
+            output_binding=output_binding,
+            step_checkpoint=step_checkpoint,
+            idempotent=idempotent,
+            mutex_key=mutex_key,
+            risk_class=risk_class,
+        )
+
+    # -- checkpoint / outcomes ------------------------------------
+    def _derive_checkpoint(self, transcript: DiscoveryTranscript, actionable: list[TranscriptEntry]) -> Condition:
+        for entry in reversed(actionable):
+            if entry.tool_call.tool == "assert_state":
+                return _condition_from_arg(entry.tool_call.args.get("condition"))
+        st = transcript.final_state
+        if st is not None:
+            base = re.sub(r"\d+", r"\\d+", re.escape(st.url.split("?")[0]))
+            return Condition(
+                kind="url_matches",
+                params={"pattern": base},
+                description=f"ended on {st.url}",
+            )
+        return Condition(kind="text_present", params={"text": ""}, description="no checkpoint derived — review needed")
+
+    def _seed_business_outcomes(self, transcript: DiscoveryTranscript) -> list[BusinessOutcomeRule]:
+        g = transcript.goal.lower()
+        out: list[BusinessOutcomeRule] = []
+        if any(w in g for w in ("look up", "member", "search", "find")):
+            out.append(BusinessOutcomeRule(
+                code="member_not_found",
+                when=Condition(kind="text_present", params={"any": ["No members matched", "was not found", "not found"]}),
+                message="The requested member does not exist.",
+            ))
+            out.append(BusinessOutcomeRule(
+                code="permission_denied",
+                when=Condition(kind="text_present", params={"any": ["restricted", "do not have permission", "not authorized"]}),
+                message="Caller is not permitted to view this record.",
+            ))
+        if "sub-account" in g or "sub account" in g:
+            out.append(BusinessOutcomeRule(
+                code="validation_error",
+                when=Condition(kind="text_present", params={"any": ["Please choose an account type", "is required"]}),
+                message="The form was rejected by server-side validation.",
+                from_step=1,
+            ))
+        return out
+
+    def _seed_recoverables(self, transcript: DiscoveryTranscript) -> list[RecoverableRule]:
+        rules: list[RecoverableRule] = []
+        saw_notice = any("Acknowledge" in str(e.tool_call.args) for e in transcript.entries)
+        if saw_notice:
+            rules.append(RecoverableRule(
+                name="session_notice_interstitial",
+                when=Condition(kind="text_present", params={"text": "Session Notice"}),
+                action="dismiss",
+                target=[LocatorStrategy(
+                    kind="text", params={"text": "Acknowledge and continue"}, rank=0,
+                    rationale="the interstitial's only continue affordance; stable literal label",
+                )],
+                settle=Condition(kind="text_absent", params={"text": "Session Notice"}),
+            ))
+        # transient slow load is generic
+        rules.append(RecoverableRule(
+            name="transient_slow_load",
+            when=Condition(kind="text_present", params={"any": ["Loading", "please wait"]}),
+            action="wait",
+            settle=Condition(kind="text_absent", params={"any": ["Loading", "please wait"]}),
+            timeout_ms=8000,
+        ))
+        return rules
+
+
+# ---------------------------------------------------------------------------
+# locator ranking — the robustness story
+# ---------------------------------------------------------------------------
+
+
+def _rank_locators(target: Any, matched: str | None) -> list[LocatorStrategy]:
+    if target is None:
+        return []
+    if isinstance(target, str):
+        target = {"text": target}
+    if not isinstance(target, dict):
+        return []
+
+    cands: list[LocatorStrategy] = []
+    role, name = target.get("role"), target.get("name")
+    if role and name:
+        cands.append(LocatorStrategy(
+            kind="role_name", params={"role": role, "name": name}, rank=0,
+            rationale="ARIA role + accessible name: the most portable identifier, survives markup/id churn and works on desktop AX trees too",
+        ))
+    elif role:
+        cands.append(LocatorStrategy(
+            kind="role_name", params={"role": role}, rank=0,
+            rationale="ARIA role only — usable when the control is the sole one of its role on the screen; verify uniqueness at replay",
+        ))
+    if target.get("label"):
+        cands.append(LocatorStrategy(
+            kind="label", params={"label": target["label"]}, rank=len(cands),
+            rationale="form control bound to its <label> text — stable in server-rendered legacy forms that lack ids",
+        ))
+    if target.get("placeholder"):
+        cands.append(LocatorStrategy(
+            kind="label", params={"placeholder": target["placeholder"]}, rank=len(cands),
+            rationale="placeholder text — weaker than a label (often absent / localized) but better than positional",
+        ))
+    if target.get("near"):
+        cands.append(LocatorStrategy(
+            kind="relative_to_landmark", params={"near": target["near"]}, rank=len(cands),
+            rationale="anchored to a visible row label ('the value cell in the Savings row') — robust against table nesting with no ids",
+        ))
+    if target.get("text"):
+        cands.append(LocatorStrategy(
+            kind="text", params={"text": target["text"]}, rank=len(cands),
+            rationale="visible/link text — readable and fairly stable, but breaks on wording or localization changes",
+        ))
+    if target.get("css"):
+        cands.append(LocatorStrategy(
+            kind="dom_anchor", params={"css": target["css"]}, rank=len(cands),
+            rationale="CSS path — last-resort fallback; brittle on legacy markup, kept only so replay has something to try",
+        ))
+    # ensure at least one strategy
+    if not cands:
+        cands.append(LocatorStrategy(
+            kind="text", params=target, rank=0,
+            rationale="raw target description carried through — review and strengthen before approval",
+        ))
+    if matched:
+        cands[0].params.setdefault("_discovery_matched", matched)
+    return cands
+
+
+def _target_hint(target: Any) -> str:
+    if isinstance(target, dict):
+        return str(target.get("label") or target.get("name") or target.get("placeholder") or target.get("near") or "value")
+    return "value"
+
+
+def _bind_value(raw: str, params: dict[str, Any], forced: dict[str, str], *, field_hint: str) -> ValueBinding:
+    for pk, pv in params.items():
+        if str(pv) == raw:
+            return ValueBinding(param=pk)
+    if _SECRETISH_RE.match(raw) and not raw.replace(",", "").replace(".", "").isdigit():
+        key = re.sub(r"\W+", "_", field_hint).strip("_").lower() or "secret_value"
+        forced[key] = raw
+        return ValueBinding(param=key)
+    safe, _ = redact_text(raw)
+    return ValueBinding(literal=safe)
+
+
+def _bind_url(url: str, params: dict[str, Any]) -> ValueBinding:
+    # canonicalize concrete ids that came from a param into :placeholders
+    templ = url
+    for pk, pv in params.items():
+        if pv and str(pv) in templ:
+            templ = templ.replace(str(pv), "{" + pk + "}")
+    return ValueBinding(literal=templ)
+
+
+def _condition_from_arg(cond: Any) -> Condition:
+    if isinstance(cond, dict) and cond.get("kind"):
+        return Condition(kind=cond["kind"], params=cond.get("params", {}), description=cond.get("description", ""))
+    if isinstance(cond, dict):
+        return Condition(kind="text_present", params=cond, description="derived")
+    return Condition(kind="text_present", params={"text": str(cond)}, description="derived")
+
+
+def _is_idempotent(tool: str, entry: TranscriptEntry) -> bool:
+    if tool in {"navigate", "wait_for", "extract", "assert_state"}:
+        return True
+    url_after = str(entry.action_result.get("url_after", ""))
+    if tool == "click" and _RISKY_URL_RE.search(url_after):
+        return False  # a submit/create/confirm click — non-idempotent unless proven otherwise
+    if tool == "click" and entry.action_result.get("risk_class") == RiskClass.RISKY_IRREVERSIBLE:
+        return False
+    return True
+
+
+def _mutex_key(params: dict[str, Any]) -> str | None:
+    for k in ("member_id", "account_id", "record_id", "id"):
+        if k in params:
+            return k
+    return None
+
+
+def _json_type(shape: str) -> str:
+    return {
+        "number": "number", "currency": "object", "integer": "integer",
+        "boolean": "boolean", "date": "string", "string": "string",
+    }.get(shape, "string")
+
+
+def _redact_model(data: Any) -> Any:
+    from ..redaction import redact
+
+    return redact(data)

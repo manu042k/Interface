@@ -9,13 +9,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from .artifact.recorder import ArtifactRecorder
+from .artifact.store import ArtifactStore
 from .config import Config
 from .discovery.agent import DiscoveryAgent
 from .discovery.offline_pilot import offline_fallback
-from .discovery.orchestrator import Orchestrator
+from .discovery.orchestrator import DiscoveryTranscript, Orchestrator
 from .events import RunLogger
 from .llm.providers import OpenAICompatProvider, Provider, ScriptedProvider
 from .llm.router import LLMRouter
+from .models import CapabilityArtifact
 from .observability import FileSink
 from .policy.engine import PolicyEngine
 from .surface.perception import Perception
@@ -32,9 +35,21 @@ class System:
     router: LLMRouter
     agent: DiscoveryAgent
     orchestrator: Orchestrator
+    store: ArtifactStore
+    recorder: ArtifactRecorder
 
     def logger(self, run_id: str) -> RunLogger:
         return RunLogger(self.sink, run_id)
+
+    def record(
+        self, transcript: DiscoveryTranscript, *, name: str, vendor_app_id: str = "mockbank",
+        app_version: str = "7.2",
+    ) -> CapabilityArtifact:
+        """Build a draft artifact from a successful discovery transcript and persist it."""
+        artifact = self.recorder.build_artifact(
+            transcript, name=name, vendor_app_id=vendor_app_id, app_version=app_version
+        )
+        return self.store.save_draft(artifact)
 
     async def shutdown(self) -> None:
         await self.adapter.shutdown()
@@ -70,4 +85,6 @@ def build_system(config: Config, *, extra: dict[str, Any] | None = None) -> Syst
         router=router,
         logger_factory=lambda rid: RunLogger(sink, rid),
     )
-    return System(config, sink, adapter, perception, policy, router, agent, orchestrator)
+    store = ArtifactStore(config.db_path)
+    recorder = ArtifactRecorder()
+    return System(config, sink, adapter, perception, policy, router, agent, orchestrator, store, recorder)
