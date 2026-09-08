@@ -47,6 +47,7 @@ class System:
     broker: SessionBroker
     escalation: EscalationService
     console: OperatorConsole
+    sandbox_manager: Any | None = None
 
     def logger(self, run_id: str) -> RunLogger:
         return RunLogger(self.sink, run_id)
@@ -63,6 +64,11 @@ class System:
 
     async def shutdown(self) -> None:
         await self.adapter.shutdown()
+        if self.sandbox_manager is not None:
+            try:
+                await self.sandbox_manager.stop_all()
+            except Exception:  # noqa: BLE001
+                pass
 
 
 def _build_providers(config: Config) -> list[Provider]:
@@ -86,6 +92,12 @@ def build_system(config: Config, *, extra: dict[str, Any] | None = None) -> Syst
     router = LLMRouter(_build_providers(config), logger=router_logger)
     agent = DiscoveryAgent(router)
 
+    sandbox_manager = None
+    if config.use_sandbox:
+        from .sandbox.manager import SandboxManager
+
+        sandbox_manager = SandboxManager(image=config.sandbox_image, host=config.novnc_host)
+
     broker = SessionBroker()
     escalation = EscalationService(
         broker=broker, adapter=adapter, perception=perception,
@@ -103,6 +115,7 @@ def build_system(config: Config, *, extra: dict[str, Any] | None = None) -> Syst
         logger_factory=lambda rid: RunLogger(sink, rid),
         escalation=escalation,
         broker=broker,
+        sandbox_manager=sandbox_manager,
     )
     store = ArtifactStore(config.db_path)
     recorder = ArtifactRecorder()
@@ -113,8 +126,10 @@ def build_system(config: Config, *, extra: dict[str, Any] | None = None) -> Syst
         policy=policy,
         locator_engine=locator_engine,
         logger_factory=lambda rid: RunLogger(sink, rid),
+        sandbox_manager=sandbox_manager,
     )
     return System(
         config, sink, adapter, perception, policy, router, agent, orchestrator,
         store, recorder, locator_engine, replay, broker, escalation, console,
+        sandbox_manager,
     )

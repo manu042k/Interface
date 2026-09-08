@@ -38,6 +38,8 @@ class FileSink:
         self.root = Path(root)
         self._locks: dict[str, threading.Lock] = {}
         self._global = threading.Lock()
+        # run_id -> list of (event_loop, asyncio.Queue) for live streaming (A5)
+        self._subs: dict[str, list[tuple[Any, Any]]] = {}
 
     # -- internals ---------------------------------------------------------
     def _run_dir(self, run_id: str) -> Path:
@@ -63,9 +65,35 @@ class FileSink:
             with self._lock_for(run_id):
                 with path.open("a", encoding="utf-8") as fh:
                     fh.write(line + "\n")
+            self._publish(run_id, record)
         except Exception:  # noqa: BLE001 — logging must never take down the caller
             # Last-ditch: drop to stderr, keep going.
             traceback.print_exc()
+
+    # -- A5: in-process live stream (backs the /ws/runs/{id}/events endpoint) --
+    def _publish(self, run_id: str, record: dict[str, Any]) -> None:
+        for loop, queue in list(self._subs.get(run_id, [])):
+            try:
+                loop.call_soon_threadsafe(queue.put_nowait, record)
+            except Exception:  # noqa: BLE001 — a dead subscriber must not break logging
+                pass
+
+    async def subscribe(self, run_id: str):
+        """Async generator of new events for `run_id`, from the moment of
+        subscription. Pair with read_events() for the backlog."""
+        import asyncio
+
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue = asyncio.Queue()
+        self._subs.setdefault(run_id, []).append((loop, queue))
+        try:
+            while True:
+                yield await queue.get()
+        finally:
+            subs = self._subs.get(run_id, [])
+            self._subs[run_id] = [(lp, q) for (lp, q) in subs if q is not queue]
+            if not self._subs[run_id]:
+                self._subs.pop(run_id, None)
 
     # -- ST-014: richer evidence, gated to failure/checkpoint by callers --
     def put_evidence(
@@ -109,3 +137,7 @@ class NullSink:
 
     def read_events(self, run_id: str) -> list[dict[str, Any]]:
         return []
+
+    async def subscribe(self, run_id: str):  # noqa: D401
+        if False:  # pragma: no cover - empty async generator
+            yield {}

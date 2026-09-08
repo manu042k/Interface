@@ -36,6 +36,8 @@ class _Session:
     tenant: str
     allowed_hosts: set[str] = field(default_factory=set)
     blocked_egress: list[str] = field(default_factory=list)
+    # set for sandbox sessions: the CDP-attached Browser to disconnect (not kill)
+    cdp_browser: Browser | None = None
 
 
 class PlaywrightAdapter(SurfaceAdapter):
@@ -56,26 +58,51 @@ class PlaywrightAdapter(SurfaceAdapter):
         self.watchdog = SessionWatchdog(SessionBudget(wall_clock_s=session_wall_clock_s))
 
     # -- lifecycle ------------------------------------------------------
+    async def _ensure_pw(self):
+        async with self._lock:
+            if self._pw is None:
+                self._pw = await async_playwright().start()
+            return self._pw
+
     async def _ensure_browser(self) -> Browser:
+        await self._ensure_pw()
         async with self._lock:
             if self._browser is None:
-                self._pw = await async_playwright().start()
                 self._browser = await self._pw.chromium.launch(headless=not self._headed)
             return self._browser
 
     async def open_session(
-        self, target: str, tenant: str = "default", *, extra_allowed_hosts: set[str] | None = None
+        self,
+        target: str,
+        tenant: str = "default",
+        *,
+        extra_allowed_hosts: set[str] | None = None,
+        cdp_url: str | None = None,
     ) -> str:
-        browser = await self._ensure_browser()
-        context = await browser.new_context()
-        context.set_default_timeout(self._default_timeout)
-        page = await context.new_page()
-
         handle = "sess_" + uuid.uuid4().hex[:12]
+        cdp_browser: Browser | None = None
+
+        if cdp_url:
+            # Attach to the headed browser running inside the run's sandbox
+            # container and drive the SAME page the user watches over noVNC.
+            pw = await self._ensure_pw()
+            cdp_browser = await pw.chromium.connect_over_cdp(cdp_url)
+            context = cdp_browser.contexts[0] if cdp_browser.contexts else await cdp_browser.new_context()
+            page = context.pages[0] if context.pages else await context.new_page()
+        else:
+            browser = await self._ensure_browser()
+            context = await browser.new_context()
+            page = await context.new_page()
+
+        context.set_default_timeout(self._default_timeout)
+
         allowed = {urlparse(target).hostname or ""}
         allowed |= extra_allowed_hosts or set()
         allowed.discard("")
-        sess = _Session(handle=handle, context=context, page=page, tenant=tenant, allowed_hosts=allowed)
+        sess = _Session(
+            handle=handle, context=context, page=page, tenant=tenant,
+            allowed_hosts=allowed, cdp_browser=cdp_browser,
+        )
         self._sessions[handle] = sess
 
         # ST-041 seam: block cross-host egress at the browser boundary.
@@ -113,7 +140,12 @@ class PlaywrightAdapter(SurfaceAdapter):
         if sess is None:
             return
         try:
-            await sess.context.close()
+            if sess.cdp_browser is not None:
+                # Disconnect only — the sandbox container owns the browser and is
+                # torn down by the SandboxManager.
+                await sess.cdp_browser.close()
+            else:
+                await sess.context.close()
         except Exception:  # noqa: BLE001
             pass
 

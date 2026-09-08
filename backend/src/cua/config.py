@@ -78,6 +78,12 @@ class Config:
     # Browser
     headed: bool
 
+    # Per-run Docker sandbox (live noVNC + CDP). Off by default so CI and the
+    # offline demo use the plain headless adapter.
+    use_sandbox: bool
+    sandbox_image: str
+    novnc_host: str
+
     extra: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -146,6 +152,9 @@ def load_config(dotenv_path: str | os.PathLike[str] | None = None, *, strict: bo
         run_timeout_seconds=_int("CUA_RUN_TIMEOUT_SECONDS", 300),
         action_timeout_seconds=_int("CUA_ACTION_TIMEOUT_SECONDS", 15),
         headed=_bool("CUA_HEADED", False),
+        use_sandbox=_bool("CUA_USE_SANDBOX", False),
+        sandbox_image=_optional("CUA_SANDBOX_IMAGE", "cua-sandbox:latest"),
+        novnc_host=_optional("CUA_NOVNC_HOST", "localhost"),
     )
 
 

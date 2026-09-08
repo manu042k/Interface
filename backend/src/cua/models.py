@@ -310,6 +310,11 @@ class RunRecord(BaseModel):
     step_count: int = 0
     detail: str | None = None
 
+    # Live per-run sandbox (set only when CUA_USE_SANDBOX is on).
+    novnc_url: str | None = None
+    sandbox_container: str | None = None
+    cdp_url: str | None = None
+
 
 class FailureDetail(BaseModel):
     step_index: int

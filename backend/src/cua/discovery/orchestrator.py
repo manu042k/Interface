@@ -82,6 +82,7 @@ class Orchestrator:
         logger_factory: Any,
         escalation: Any | None = None,
         broker: Any | None = None,
+        sandbox_manager: Any | None = None,
     ) -> None:
         self.cfg = config
         self.adapter = adapter
@@ -89,6 +90,7 @@ class Orchestrator:
         self.agent = agent
         self.policy = policy
         self.router = router
+        self.sandbox_manager = sandbox_manager
         self._logger_factory = logger_factory  # (run_id) -> RunLogger
         self.escalation = escalation
         self.broker = broker
@@ -117,7 +119,13 @@ class Orchestrator:
         history: list[str] = []
         note: str | None = None
 
-        session = await self.adapter.open_session(target, tenant)
+        from ..sandbox.session import close_run_surface, open_run_surface
+
+        surface = await open_run_surface(
+            adapter=self.adapter, sandbox_manager=self.sandbox_manager,
+            target=target, tenant=tenant, run=run, logger=log,
+        )
+        session = surface.session_handle
         try:
             step = 0
             while True:
@@ -256,8 +264,14 @@ class Orchestrator:
         finally:
             if run.status == RunStatus.STUCK:
                 log.event(None, "session_held", session=session, reason="stuck — awaiting escalation")
+                if surface.sandbox is not None:
+                    log.event(None, "sandbox_held", container=run.sandbox_container,
+                              reason="stuck — awaiting operator")
             else:
-                await self.adapter.close_session(session)
+                await close_run_surface(
+                    adapter=self.adapter, sandbox_manager=self.sandbox_manager,
+                    surface=surface, run=run, logger=log,
+                )
 
     # -- helpers ---------------------------------------------------
     async def _decide_with_backoff(

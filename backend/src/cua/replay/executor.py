@@ -59,12 +59,14 @@ class ReplayExecutor:
         policy: PolicyEngine,
         locator_engine: LocatorResolutionEngine,
         logger_factory: Any,
+        sandbox_manager: Any | None = None,
     ) -> None:
         self.adapter = adapter
         self.perception = perception
         self.policy = policy
         self.locators = locator_engine
         self._logger_factory = logger_factory
+        self.sandbox_manager = sandbox_manager
 
     # -- ST-030 boundary validation ------------------------------------
     @staticmethod
@@ -81,6 +83,7 @@ class ReplayExecutor:
         tenant: str = "default",
         run_id: str,
         idempotency_key: str | None = None,
+        run: Any | None = None,
     ) -> ReplayResult:
         started = time.time()
         log: RunLogger = self._logger_factory(run_id)
@@ -99,7 +102,16 @@ class ReplayExecutor:
 
         outputs: dict[str, Any] = {}
         recovered: list[str] = []
-        session = await self.adapter.open_session(target, tenant)
+
+        from ..models import RunMode, RunRecord
+        from ..sandbox.session import close_run_surface, open_run_surface
+
+        run = run or RunRecord(run_id=run_id, mode=RunMode.REPLAY, tenant_id=tenant, app_target=target)
+        surface = await open_run_surface(
+            adapter=self.adapter, sandbox_manager=self.sandbox_manager,
+            target=target, tenant=tenant, run=run, logger=log,
+        )
+        session = surface.session_handle
         try:
             for step in artifact.steps:
                 state = await self.perception.observe(self.adapter, session)
@@ -151,7 +163,10 @@ class ReplayExecutor:
                 steps_executed=len(artifact.steps), duration_seconds=time.time() - started,
             )
         finally:
-            await self.adapter.close_session(session)
+            await close_run_surface(
+                adapter=self.adapter, sandbox_manager=self.sandbox_manager,
+                surface=surface, run=run, logger=log,
+            )
 
     # -- one step -------------------------------------------------
     async def _run_step(
