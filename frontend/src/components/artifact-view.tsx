@@ -1,6 +1,7 @@
 "use client";
 
-import { Crosshair, Flag, RotateCcw, ShieldAlert, Target } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, Flag, RotateCcw, ShieldAlert } from "lucide-react";
 
 type Condition = {
   kind?: string;
@@ -41,11 +42,7 @@ type Artifact = {
   risk_class?: string;
   steps: Step[];
   known_outcomes: { code: string; when?: Condition; message?: string }[];
-  recoverable_rules: {
-    name: string;
-    action: string;
-    when?: Condition;
-  }[];
+  recoverable_rules: { name: string; action: string; when?: Condition }[];
 };
 
 /* ---- humanisers ---------------------------------------------------------- */
@@ -58,38 +55,32 @@ function phraseCondition(c?: Condition | null): string {
     case "url_matches":
       return `URL matches ${s("pattern") !== "…" ? s("pattern") : s("url")}`;
     case "text_present":
-      return `“${s("text")}” is visible on the page`;
+      return `“${s("text")}” is visible`;
     case "text_absent":
-      return `“${s("text")}” is no longer on the page`;
+      return `“${s("text")}” is gone`;
     case "element_present":
       return `${s("selector")} is present`;
     case "element_absent":
       return `${s("selector")} is absent`;
     case "extract_equals":
-      return `extracted ${s("as")} equals “${s("value")}”`;
+      return `${s("as")} equals “${s("value")}”`;
     case "extract_matches":
-      return `extracted ${s("as")} matches /${s("pattern")}/`;
+      return `${s("as")} matches /${s("pattern")}/`;
     default:
       return `${c.kind} ${JSON.stringify(p)}`;
   }
 }
 
-function describeLocator(params?: Record<string, unknown>): string {
-  if (!params || Object.keys(params).length === 0) return "";
+function locatorParams(params?: Record<string, unknown>): string {
+  if (!params) return "";
   return Object.entries(params)
     .filter(([k]) => !k.startsWith("_"))
     .map(([k, v]) => {
       const val = typeof v === "string" ? v : JSON.stringify(v);
       return `${k}=${/\s/.test(String(val)) ? `"${val}"` : val}`;
     })
-    .join(" · ");
+    .join(" ");
 }
-
-const ACTION_TONE: Record<string, string> = {
-  extract: "bg-primary/10 text-primary",
-  assert_state: "bg-muted text-muted-foreground",
-  wait_for: "bg-muted text-muted-foreground",
-};
 
 /* ---- component --------------------------------------------------------- */
 
@@ -104,53 +95,52 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
         <div className="border-warning/40 bg-warning/10 text-warning flex items-start gap-2 rounded-lg border p-3 text-xs">
           <ShieldAlert className="mt-px h-4 w-4 shrink-0" />
           <span>
-            This capability performs an{" "}
-            <strong>irreversible action</strong>. Approving lets agents invoke it
-            unattended — check every non-idempotent step below.
+            This capability performs an <strong>irreversible action</strong>.
+            Approving lets agents invoke it unattended — check every step marked{" "}
+            <em>mutates state</em>.
           </span>
         </div>
       )}
 
       {/* Contract ------------------------------------------------------- */}
-      <section className="border-border/70 divide-border/60 divide-y rounded-lg border">
+      <section className="border-border/70 divide-border/60 divide-y rounded-lg border text-sm">
         <ContractRow label="Takes">
           {inputs.length === 0 ? (
-            <Muted>no inputs</Muted>
+            <Muted>nothing</Muted>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
+            <ChipRow>
               {inputs.map(([name, v]) => (
                 <Chip key={name}>
                   {name}
                   <span className="text-muted-foreground">
-                    &nbsp;: {v.type ?? "string"}
+                    :{v.type ?? "string"}
                   </span>
                   {v["x-sensitive"] && (
-                    <span className="text-warning">&nbsp;· sensitive</span>
+                    <span className="text-warning"> ·sensitive</span>
                   )}
                 </Chip>
               ))}
-            </div>
+            </ChipRow>
           )}
         </ContractRow>
         <ContractRow label="Returns">
           {outputs.length === 0 ? (
-            <Muted>no outputs</Muted>
+            <Muted>nothing</Muted>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
+            <ChipRow>
               {outputs.map(([name, v]) => (
                 <Chip key={name}>
                   {name}
                   <span className="text-muted-foreground">
-                    &nbsp;: {v["x-shape"] ?? v.type ?? "string"}
+                    :{v["x-shape"] ?? v.type ?? "string"}
                   </span>
                 </Chip>
               ))}
-            </div>
+            </ChipRow>
           )}
         </ContractRow>
         <ContractRow label="Done when">
-          <span className="flex items-start gap-1.5 text-sm">
-            <Target className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span className="text-foreground">
             {phraseCondition(artifact.checkpoint)}
           </span>
         </ContractRow>
@@ -159,108 +149,11 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
       {/* Steps -------------------------------------------------------- */}
       <section>
         <SectionTitle count={artifact.steps.length}>Steps</SectionTitle>
-        <ol className="mt-3 space-y-2.5">
+        <ol className="border-border/70 divide-border/60 mt-2 divide-y rounded-lg border">
           {artifact.steps.map((s) => (
-            <li
-              key={s.step_index}
-              className="border-border/70 rounded-lg border p-3"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-muted text-muted-foreground grid h-5 w-5 shrink-0 place-items-center rounded text-[11px] font-medium">
-                  {s.step_index}
-                </span>
-                <code
-                  className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
-                    ACTION_TONE[s.action_type] ?? "bg-secondary"
-                  }`}
-                >
-                  {s.action_type}
-                </code>
-                <span className="text-sm">{s.description}</span>
-                <span className="ml-auto shrink-0">
-                  {s.idempotent ? (
-                    <span className="text-muted-foreground text-[11px]">
-                      repeatable
-                    </span>
-                  ) : (
-                    <span className="bg-warning/12 text-warning rounded px-1.5 py-0.5 text-[11px] font-medium">
-                      mutates state
-                    </span>
-                  )}
-                </span>
-              </div>
-
-              {(s.value_binding || s.output_binding || s.step_checkpoint) && (
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 pl-7 text-xs">
-                  {s.value_binding?.param && (
-                    <span>
-                      <span className="text-muted-foreground">input </span>
-                      <code>← {s.value_binding.param}</code>
-                    </span>
-                  )}
-                  {s.value_binding?.literal != null && (
-                    <span className="text-muted-foreground">
-                      input ← “{s.value_binding.literal}”
-                    </span>
-                  )}
-                  {s.output_binding && (
-                    <span>
-                      <span className="text-muted-foreground">output </span>
-                      <code>
-                        → {s.output_binding.field} ({s.output_binding.shape})
-                      </code>
-                    </span>
-                  )}
-                  {s.step_checkpoint?.kind && (
-                    <span className="text-muted-foreground">
-                      then verify {phraseCondition(s.step_checkpoint)}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {s.locator_spec.length > 0 && (
-                <div className="mt-2.5 pl-7">
-                  <div className="text-muted-foreground mb-1 flex items-center gap-1 text-[11px] font-medium uppercase">
-                    <Crosshair className="h-3 w-3" /> finds the element by
-                  </div>
-                  <ol className="space-y-1">
-                    {s.locator_spec.map((l, i) => (
-                      <li
-                        key={i}
-                        className={`text-xs ${
-                          i === 0 ? "" : "text-muted-foreground"
-                        }`}
-                      >
-                        <span className="text-muted-foreground tabular-nums">
-                          {l.rank}.
-                        </span>{" "}
-                        <span className={i === 0 ? "font-medium" : ""}>
-                          {l.kind}
-                        </span>
-                        {describeLocator(l.params) && (
-                          <code className="text-muted-foreground ml-1.5">
-                            {describeLocator(l.params)}
-                          </code>
-                        )}
-                        {l.rationale && (
-                          <span className="text-muted-foreground/80 block pl-4">
-                            ↳ {l.rationale}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-            </li>
+            <StepRow key={s.step_index} step={s} />
           ))}
         </ol>
-        <p className="text-muted-foreground/80 mt-2 text-xs">
-          Replay tries the strategies top-down and takes the first that resolves
-          to one visible element — no model. A match below rank 0 is logged as
-          drift.
-        </p>
       </section>
 
       {/* Handles ---------------------------------------------------------- */}
@@ -274,48 +167,131 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
           >
             Handles
           </SectionTitle>
-          <div className="mt-3 space-y-2">
+          <ul className="mt-2 space-y-1.5 text-sm">
             {artifact.known_outcomes.map((o) => (
-              <div
-                key={o.code}
-                className="border-border/70 flex items-start gap-2 rounded-lg border p-2.5 text-xs"
-              >
-                <Flag className="text-warning mt-px h-3.5 w-3.5 shrink-0" />
-                <div>
-                  <code className="text-warning font-medium">{o.code}</code>
-                  {o.message && <span> — {o.message}</span>}
+              <li key={o.code} className="flex items-start gap-2">
+                <Flag className="text-warning mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  <code className="text-warning">{o.code}</code>
+                  {o.message && (
+                    <span className="text-muted-foreground"> — {o.message}</span>
+                  )}
                   {o.when?.kind && (
-                    <span className="text-muted-foreground block">
-                      stops &amp; reports when {phraseCondition(o.when)}
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · when {phraseCondition(o.when)}
                     </span>
                   )}
-                </div>
-              </div>
+                </span>
+              </li>
             ))}
             {artifact.recoverable_rules.map((r) => (
-              <div
-                key={r.name}
-                className="border-border/70 flex items-start gap-2 rounded-lg border p-2.5 text-xs"
-              >
-                <RotateCcw className="text-muted-foreground mt-px h-3.5 w-3.5 shrink-0" />
-                <div>
-                  <code className="font-medium">{r.name}</code>
+              <li key={r.name} className="flex items-start gap-2">
+                <RotateCcw className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  <code>{r.name}</code>
                   <span className="text-muted-foreground">
                     {" "}
                     · {r.action} then retry
+                    {r.when?.kind && <> · when {phraseCondition(r.when)}</>}
                   </span>
-                  {r.when?.kind && (
-                    <span className="text-muted-foreground block">
-                      triggers when {phraseCondition(r.when)}
-                    </span>
-                  )}
-                </div>
-              </div>
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
     </div>
+  );
+}
+
+/* ---- step row ------------------------------------------------------------ */
+
+function StepRow({ step: s }: { step: Step }) {
+  const [open, setOpen] = useState(false);
+  const primary = s.locator_spec[0];
+  const rest = s.locator_spec.slice(1);
+
+  return (
+    <li className="px-3 py-2.5">
+      <div className="flex items-baseline gap-2.5">
+        <span className="text-muted-foreground/70 w-4 shrink-0 text-right text-xs tabular-nums">
+          {s.step_index}
+        </span>
+        <span className="bg-muted text-foreground/70 mt-px shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+          {s.action_type}
+        </span>
+        <span className="flex-1 text-sm">{s.description}</span>
+        {!s.idempotent && (
+          <span className="bg-warning/12 text-warning shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium">
+            mutates state
+          </span>
+        )}
+      </div>
+
+      <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 pl-[26px] text-xs">
+        {s.value_binding?.param && (
+          <span>
+            input <code className="text-foreground">← {s.value_binding.param}</code>
+          </span>
+        )}
+        {s.value_binding?.literal != null && (
+          <span>input ← “{s.value_binding.literal}”</span>
+        )}
+        {s.output_binding && (
+          <span>
+            output{" "}
+            <code className="text-foreground">
+              → {s.output_binding.field} ({s.output_binding.shape})
+            </code>
+          </span>
+        )}
+        {s.step_checkpoint?.kind && (
+          <span>verify {phraseCondition(s.step_checkpoint)}</span>
+        )}
+        {primary && (
+          <span>
+            via <span className="text-foreground">{primary.kind}</span>
+            {locatorParams(primary.params) && (
+              <code className="ml-1">{locatorParams(primary.params)}</code>
+            )}
+          </span>
+        )}
+        {rest.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="hover:text-foreground inline-flex items-center gap-0.5"
+          >
+            {open ? "hide" : `+${rest.length} fallback${rest.length > 1 ? "s" : ""}`}
+            <ChevronDown
+              className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
+            />
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <ol className="mt-1.5 space-y-1 pl-[26px] text-xs">
+          {s.locator_spec.map((l, i) => (
+            <li key={i} className="text-muted-foreground">
+              <span className="tabular-nums">{l.rank}.</span>{" "}
+              <span className={i === 0 ? "text-foreground font-medium" : ""}>
+                {l.kind}
+              </span>
+              {locatorParams(l.params) && (
+                <code className="ml-1">{locatorParams(l.params)}</code>
+              )}
+              {l.rationale && (
+                <span className="text-muted-foreground/80 block pl-4">
+                  {l.rationale}
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </li>
   );
 }
 
@@ -329,10 +305,10 @@ function SectionTitle({
   count?: number;
 }) {
   return (
-    <h3 className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide">
+    <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
       {children}
       {count !== undefined && (
-        <span className="text-muted-foreground/70">· {count}</span>
+        <span className="text-muted-foreground/70"> · {count}</span>
       )}
     </h3>
   );
@@ -346,13 +322,17 @@ function ContractRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex gap-3 p-3">
-      <span className="text-muted-foreground w-20 shrink-0 pt-0.5 text-xs font-medium uppercase">
+    <div className="flex gap-3 px-3 py-2.5">
+      <span className="text-muted-foreground w-24 shrink-0 pt-0.5 text-xs font-medium uppercase">
         {label}
       </span>
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
+}
+
+function ChipRow({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-wrap gap-1.5">{children}</div>;
 }
 
 function Chip({ children }: { children: React.ReactNode }) {
