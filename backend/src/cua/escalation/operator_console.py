@@ -30,6 +30,7 @@ class OperatorConsole:
                 "tenant": iv.tenant_id,
                 "capability": iv.capability_name,
                 "goal": iv.goal,
+                "run_id": iv.run_id,
                 "step_index": iv.step_index,
                 "reason": iv.reason,
                 "opened_at": iv.opened_at,

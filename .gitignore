@@ -29,8 +29,11 @@ backend/playwright-report/
 
 # --- Node (frontend) ---
 node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+frontend/.env.local
 frontend/dist/
-frontend/.vite/
 *.log
 
 # --- Local run artifacts ---

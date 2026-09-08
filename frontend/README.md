@@ -1,27 +1,31 @@
-# CUA Operator Console (frontend)
+# CUA Console (frontend)
 
-Minimal Vite + React + TypeScript UI over the gateway API (`cua serve`, :8080).
+Next.js 16 (App Router) + shadcn/ui. Design language: `DESIGN.md`
+(`npx getdesign@latest add zapier` — warm cream, coffee ink, one orange CTA).
 
-Three panels:
+## Pages
 
-| Panel | Backs onto |
+| Route | What |
 |---|---|
-| **Capabilities** | `GET /capabilities` + `POST /replays/{id}/invoke` — the agent-facing catalog: pick an approved capability, fill its typed params, run a deterministic replay, see the structured outcome (`success` / `business_outcome` / `recoverable_then_success` / `hard_failure`). |
-| **Review** | `GET /artifacts?status=draft` + `POST …/promote` — inspect a draft's ranked locator strategies, risk class, and known-outcome / recoverable rules, then approve or reject. |
-| **Interventions** | `GET /interventions` + claim / take-control / actions / release — claim a stuck run, take the control lock on the **same live session**, drive it (actions are recorded), hand control back. |
+| `/` | **New run** — goal + target + typed params → `POST /runs`, redirects to the live run |
+| `/runs/[id]` | **Live run** — interactive **noVNC** canvas of the sandbox + streaming **event timeline** (`/ws/runs/[id]/events`) + collapsible **sandbox terminal** (`/ws/runs/[id]/terminal`). When the run is `stuck`: claim → take control (drive the canvas) → hand back. |
+| `/runs/[id]/report` | **Report** — printable cards: run summary, timeline, replay invocations, artifact schema, evidence screenshots. Print/PDF + download `.md`. |
+| `/capabilities` | Approved catalog + invoke dialog (deterministic replay, outcome badge) |
+| `/review` | Draft artifacts → sheet with ranked locators + rationale, risk, known/recoverable rules → approve/reject |
+| `/interventions` | Open stuck runs → jump to the run to take over |
 
 ## Run
 
 ```bash
-# terminal 1 — backend
-cd ../backend && source .venv/bin/activate
-cua serve-mock &          # :8799
-cua serve                 # :8080
+# backend (repo root)
+bash backend/sandbox_image/build.sh          # once
+bash start.sh                                # MockBank :8799, gateway :8080 (CUA_USE_SANDBOX=1)
 
-# terminal 2 — frontend
+# frontend
+cd frontend
 npm install
-npm run dev               # http://localhost:5173  (proxies /api -> :8080)
+npm run dev                                  # http://localhost:3000
 ```
 
-The operator console UI is deliberately thin (brief §3.6 scopes a full
-co-browsing console out); the **handoff mechanism** it drives is real.
+`NEXT_PUBLIC_API_BASE` defaults to `http://localhost:8080`; override in
+`frontend/.env.local` if the gateway is elsewhere.
