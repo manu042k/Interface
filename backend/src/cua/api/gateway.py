@@ -8,6 +8,10 @@
   POST /replays/{artifact_id}/invoke  deterministic replay (ST-030); sync long-poll
   GET  /replays/{invocation_id}       replay result
   GET  /capabilities                  agent-facing catalog of approved capabilities (stretch)
+  WS   /ws/runs/{run_id}/events       live event timeline (backlog + stream)
+  WS   /ws/runs/{run_id}/terminal     bash into the run's live sandbox container
+  GET  /runs/{run_id}/report[.md]     assembled run report (JSON / Markdown)
+  GET  /evidence/{run_id}/{path}      evidence blob (screenshots for the report)
 
 Everything behind this is the in-process monolith (ADR-01).
 """
@@ -15,11 +19,16 @@ Everything behind this is the in-process monolith (ADR-01).
 from __future__ import annotations
 
 import asyncio
+import json
+import time
 import uuid
+from pathlib import Path as FsPath
 from typing import Any, Literal
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from ..artifact.store import PromotionDecision
@@ -57,6 +66,8 @@ class RunView(BaseModel):
     step_count: int
     artifact_id: str | None = None
     artifact_version: int | None = None
+    novnc_url: str | None = None
+    sandbox_container: str | None = None
 
 
 class PromoteRequest(BaseModel):
@@ -76,6 +87,12 @@ class InvokeRequest(BaseModel):
 
 def create_app(config: Config | None = None) -> FastAPI:
     app = FastAPI(title="Computer-Use Automation System", version="0.1.0")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.state.config = config or load_config(strict=False)
     app.state.system = build_system(app.state.config)
     app.state.runs: dict[str, RunRecord] = {}
@@ -182,7 +199,7 @@ def create_app(config: Config | None = None) -> FastAPI:
             run.status = RunStatus.RUNNING
             result = await sys.replay.execute(
                 artifact, req.params, target=req.target, tenant=req.tenant,
-                run_id=invocation_id, idempotency_key=req.idempotency_key,
+                run_id=invocation_id, idempotency_key=req.idempotency_key, run=run,
             )
             app.state.replays[invocation_id] = result
             run.status = RunStatus.COMPLETED if result.outcome.value in {"success", "recoverable_then_success", "business_outcome"} else RunStatus.FAILED
@@ -272,11 +289,193 @@ def create_app(config: Config | None = None) -> FastAPI:
         except (KeyError, ValueError) as exc:
             raise HTTPException(409, str(exc)) from exc
 
+    # -- live run stream (event timeline) --------------------------
+    @app.websocket("/ws/runs/{run_id}/events")
+    async def run_events_ws(websocket: WebSocket, run_id: str) -> None:
+        await websocket.accept()
+        sink = app.state.system.sink
+        try:
+            # backlog first, then live
+            for ev in sink.read_events(run_id):
+                await websocket.send_json(ev)
+            run = app.state.runs.get(run_id)
+            if run and run.status in _TERMINAL_RUN:
+                await websocket.close()
+                return
+            async for ev in sink.subscribe(run_id):
+                await websocket.send_json(ev)
+                if ev.get("event") == "run_finished":
+                    break
+        except (WebSocketDisconnect, Exception):  # noqa: BLE001
+            pass
+        finally:
+            with _suppress():
+                await websocket.close()
+
+    # -- live sandbox terminal (docker exec) ----------------------
+    @app.websocket("/ws/runs/{run_id}/terminal")
+    async def run_terminal_ws(websocket: WebSocket, run_id: str) -> None:
+        await websocket.accept()
+        sys: System = app.state.system
+        run = app.state.runs.get(run_id)
+        mgr = sys.sandbox_manager
+        if run is None or not run.sandbox_container or mgr is None:
+            await websocket.send_text("\r\n[no live sandbox for this run]\r\n")
+            await websocket.close()
+            return
+        proc = await mgr.exec_process(run.sandbox_container, ["bash", "-i"])
+
+        async def pump_out() -> None:
+            assert proc.stdout is not None
+            while True:
+                chunk = await proc.stdout.read(1024)
+                if not chunk:
+                    break
+                await websocket.send_bytes(chunk)
+
+        out_task = asyncio.create_task(pump_out())
+        try:
+            while True:
+                msg = await websocket.receive_text()
+                if proc.stdin is not None:
+                    proc.stdin.write(msg.encode())
+                    await proc.stdin.drain()
+        except (WebSocketDisconnect, Exception):  # noqa: BLE001
+            pass
+        finally:
+            out_task.cancel()
+            with _suppress():
+                proc.kill()
+            with _suppress():
+                await websocket.close()
+
+    # -- run report ---------------------------------------------
+    @app.get("/runs/{run_id}/report")
+    async def run_report(run_id: str) -> dict[str, Any]:
+        return _build_report(app, run_id)
+
+    @app.get("/runs/{run_id}/report.md", response_class=PlainTextResponse)
+    async def run_report_md(run_id: str) -> str:
+        return _report_markdown(_build_report(app, run_id))
+
+    # -- evidence blobs (screenshots for the report page) ---------
+    @app.get("/evidence/{run_id}/{path:path}")
+    async def evidence_file(run_id: str, path: str) -> FileResponse:
+        root = FsPath(app.state.config.evidence_root).resolve()
+        target = (root / run_id / path).resolve()
+        if not str(target).startswith(str(root)) or not target.is_file():
+            raise HTTPException(404, "no such evidence file")
+        return FileResponse(target)
+
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
         return {"status": "ok"}
 
     return app
+
+
+_TERMINAL_RUN = {RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.DEAD_END}
+
+
+class _suppress:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return True
+
+
+def _build_report(app: FastAPI, run_id: str) -> dict[str, Any]:
+    run = app.state.runs.get(run_id)
+    if run is None:
+        raise HTTPException(404, f"no such run: {run_id}")
+    sys: System = app.state.system
+    events = sys.sink.read_events(run_id)
+    evidence = sorted(
+        p.name for p in (FsPath(app.state.config.evidence_root) / run_id).glob("*")
+        if p.is_file() and not p.name.endswith(".jsonl") and not p.name.endswith(".meta.json")
+    )
+    timeline = [
+        {k: e.get(k) for k in ("ts", "step", "event", "tool", "reasoning", "verdict",
+                               "reason", "action_type", "ok", "matched_strategy",
+                               "description", "code", "rule", "recovery", "status")
+         if k in e}
+        for e in events
+        if e.get("event") in {
+            "run_started", "decision", "guardrail", "action", "checkpoint",
+            "recoverable_condition", "business_outcome", "stuck", "hard_failure",
+            "locator_resolution", "intervention_opened", "control_transferred",
+            "human_action", "intervention_resolved", "sandbox_started", "run_finished",
+        }
+    ]
+    artifact = None
+    if run.artifact_id and run.artifact_version:
+        with _suppress():
+            artifact = sys.store.get(run.artifact_id, run.artifact_version).model_dump()
+
+    replays = []
+    if run.artifact_id:
+        for inv_id, res in app.state.replays.items():
+            r = app.state.runs.get(inv_id)
+            if r and r.artifact_id == run.artifact_id:
+                replays.append({"invocation_id": inv_id, "params": r.params, **res.model_dump()})
+
+    return {
+        "run": _run_dict(run),
+        "generated_at": time.time(),
+        "timeline": timeline,
+        "artifact": artifact,
+        "replays": replays,
+        "evidence": [f"/evidence/{run_id}/{name}" for name in evidence],
+    }
+
+
+def _report_markdown(rep: dict[str, Any]) -> str:
+    run = rep["run"]
+    lines = [
+        f"# Run report — {run['run_id']}",
+        "",
+        f"- **Mode:** {run['mode']}",
+        f"- **Goal:** {run.get('goal') or '—'}",
+        f"- **Target:** {run['app_target']}",
+        f"- **Status:** {run['status']} ({run.get('detail') or ''})",
+        f"- **Steps:** {run['step_count']}",
+    ]
+    if run.get("artifact_id"):
+        lines.append(f"- **Artifact:** {run['artifact_id']} v{run['artifact_version']}")
+    lines += ["", "## Timeline", ""]
+    for e in rep["timeline"]:
+        step = f"[{e['step']}] " if e.get("step") is not None else ""
+        bits = [f"**{e['event']}**"]
+        for k in ("tool", "verdict", "action_type", "code", "rule", "description", "status"):
+            if e.get(k):
+                bits.append(f"{k}={e[k]}")
+        line = f"- {step}{' '.join(bits)}"
+        if e.get("reasoning"):
+            line += f"\n  - _{e['reasoning']}_"
+        lines.append(line)
+    if rep.get("replays"):
+        lines += ["", "## Replay invocations", ""]
+        for r in rep["replays"]:
+            lines.append(f"- params={r.get('params')} → **{r['outcome']}**"
+                         + (f" `{r['business_outcome_code']}`" if r.get("business_outcome_code") else "")
+                         + (f" outputs={r['outputs']}" if r.get("outputs") else ""))
+    if rep.get("artifact"):
+        a = rep["artifact"]
+        lines += ["", "## Capability artifact", "",
+                  f"- input_schema: `{json.dumps(a['input_schema'])}`",
+                  f"- output_schema: `{json.dumps(a['output_schema'])}`",
+                  f"- checkpoint: `{json.dumps(a['checkpoint'])}`",
+                  f"- known_outcomes: {[r['code'] for r in a['known_outcomes']]}",
+                  "", "### Steps", ""]
+        for s in a["steps"]:
+            lines.append(f"{s['step_index']}. **{s['action_type']}** — {s['description']} "
+                         f"(idempotent={s['idempotent']})")
+            for ls in s["locator_spec"]:
+                lines.append(f"   - rank {ls['rank']} `{ls['kind']}` — {ls['rationale']}")
+    if rep.get("evidence"):
+        lines += ["", "## Evidence", ""] + [f"- {e}" for e in rep["evidence"]]
+    return "\n".join(lines) + "\n"
 
 
 # ---------------------------------------------------------------------------
@@ -298,6 +497,7 @@ def _run_dict(run: RunRecord) -> dict[str, Any]:
         "run_id": run.run_id, "mode": run.mode, "status": run.status, "tenant_id": run.tenant_id,
         "app_target": run.app_target, "goal": run.goal, "detail": run.detail, "step_count": run.step_count,
         "artifact_id": run.artifact_id, "artifact_version": run.artifact_version,
+        "novnc_url": run.novnc_url, "sandbox_container": run.sandbox_container,
     }
 
 

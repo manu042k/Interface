@@ -3,7 +3,7 @@
   "description": "Per-tenant allowlist. Default is DENY: anything not listed is blocked.",
   "tenants": {
     "default": {
-      "domains": ["127.0.0.1", "localhost"],
+      "domains": ["127.0.0.1", "localhost", "host.docker.internal"],
       "routes": [
         "^/$",
         "^/search$",
