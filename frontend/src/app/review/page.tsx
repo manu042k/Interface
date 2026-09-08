@@ -108,33 +108,51 @@ export default function ReviewPage() {
       </div>
 
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
-        <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 p-0 sm:max-w-2xl">
-          <DialogHeader className="border-b p-4">
-            <DialogTitle className="font-mono text-sm">
-              {open?.name} v{open?.version}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 border-b p-4">
-            <Button
-              variant="outline"
-              onClick={() => decide.mutate("reject")}
-              disabled={decide.isPending}
-            >
-              Reject
-            </Button>
-            <Button
-              onClick={() => decide.mutate("approve")}
-              disabled={decide.isPending}
-            >
-              Approve
-            </Button>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            {full.data ? (
-              <ArtifactView artifact={full.data as never} />
-            ) : (
-              <p className="text-muted-foreground text-sm">loading…</p>
+        <DialogContent
+          showCloseButton={false}
+          className="flex max-h-[88vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl"
+        >
+          <DialogHeader className="border-b px-5 py-4 text-left">
+            <div className="flex flex-wrap items-center gap-2">
+              <DialogTitle className="font-mono text-sm">
+                {open?.name}
+              </DialogTitle>
+              <span className="text-muted-foreground text-xs">
+                v{open?.version} · draft
+              </span>
+              <RiskBadge risk={open?.risk_class} />
+            </div>
+            {open?.goal && (
+              <p className="text-muted-foreground mt-1 text-sm">{open.goal}</p>
             )}
+          </DialogHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+            {full.isLoading && (
+              <p className="text-muted-foreground text-sm">loading artifact…</p>
+            )}
+            {full.data && <ArtifactView artifact={full.data as never} />}
+          </div>
+
+          <div className="bg-muted/30 flex items-center justify-between gap-3 border-t px-5 py-3">
+            <span className="text-muted-foreground text-xs">
+              Approving allows unattended replay.
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => decide.mutate("reject")}
+                disabled={decide.isPending}
+              >
+                Reject
+              </Button>
+              <Button
+                onClick={() => decide.mutate("approve")}
+                disabled={decide.isPending}
+              >
+                Approve
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
