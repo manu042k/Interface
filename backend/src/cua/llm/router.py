@@ -1,0 +1,141 @@
+"""ST-017: the rotating router.
+
+Behaviour (TDD §1.5):
+  * route to the highest-preference `healthy` provider;
+  * on 429 / quota / sustained 5xx-timeout: mark it `cooling_down` (TTL from
+    Retry-After when present, else a backoff), and immediately retry the SAME
+    logical request against the next provider — rotate, don't retry-in-place;
+  * a provider with a persistently high error rate is `degraded` and skipped;
+  * if every provider is cooling_down/degraded -> raise `AllProvidersExhausted`
+    (a distinct condition the Orchestrator pauses on, ST-020);
+  * log which provider served each call.
+
+State is in-memory (single-process monolith). A Redis-backed record is the
+scale-out swap and doesn't change this interface.
+"""
+
+from __future__ import annotations
+
+import time
+from dataclasses import dataclass, field
+from enum import StrEnum
+from typing import Any
+
+from .providers import (
+    ModelResponse,
+    Provider,
+    ProviderError,
+    ProviderUnavailable,
+    RateLimited,
+)
+
+
+class ProviderStatus(StrEnum):
+    HEALTHY = "healthy"
+    COOLING_DOWN = "cooling_down"
+    DEGRADED = "degraded"
+
+
+@dataclass
+class ProviderHealth:
+    name: str
+    status: ProviderStatus = ProviderStatus.HEALTHY
+    cooldown_until: float = 0.0
+    recent_errors: list[float] = field(default_factory=list)  # timestamps
+    served: int = 0
+
+    def note_error(self, now: float) -> None:
+        self.recent_errors = [t for t in self.recent_errors if now - t < 120] + [now]
+
+    def error_rate(self, now: float) -> float:
+        recent = [t for t in self.recent_errors if now - t < 120]
+        window = max(self.served + len(recent), 1)
+        return len(recent) / window
+
+    def available(self, now: float) -> bool:
+        if self.status == ProviderStatus.COOLING_DOWN and now >= self.cooldown_until:
+            self.status = ProviderStatus.HEALTHY
+        return self.status == ProviderStatus.HEALTHY
+
+
+class AllProvidersExhausted(RuntimeError):
+    """Every configured provider is cooling_down or degraded simultaneously."""
+
+
+class LLMRouter:
+    def __init__(
+        self,
+        providers: list[Provider],
+        *,
+        default_cooldown: float = 30.0,
+        degrade_error_rate: float = 0.5,
+        logger: Any | None = None,
+    ) -> None:
+        if not providers:
+            raise ValueError("router needs at least one provider")
+        self._providers = providers
+        self._health = {p.name: ProviderHealth(p.name) for p in providers}
+        self._default_cooldown = default_cooldown
+        self._degrade_rate = degrade_error_rate
+        self._log = logger
+
+    @property
+    def health(self) -> dict[str, ProviderHealth]:
+        return self._health
+
+    def _emit(self, event: str, **fields: Any) -> None:
+        if self._log is not None:
+            self._log.event(None, event, **fields)
+
+    async def call(self, system: str, user: str, tools: list[dict[str, Any]]) -> ModelResponse:
+        now = time.time()
+        tried: list[str] = []
+        last_exc: Exception | None = None
+
+        for provider in self._providers:
+            h = self._health[provider.name]
+            if not h.available(now):
+                continue
+            tried.append(provider.name)
+            try:
+                resp = await provider.complete(system, user, tools)
+                h.served += 1
+                self._emit("llm_call", provider=provider.name, tool=resp.tool, rotated=len(tried) > 1)
+                return resp
+            except RateLimited as exc:
+                last_exc = exc
+                ttl = exc.retry_after or self._default_cooldown
+                h.status = ProviderStatus.COOLING_DOWN
+                h.cooldown_until = time.time() + ttl
+                h.note_error(time.time())
+                self._emit("provider_rotate", provider=provider.name, reason="rate_limited", cooldown_s=ttl)
+                continue
+            except ProviderUnavailable as exc:
+                last_exc = exc
+                h.note_error(time.time())
+                if h.error_rate(time.time()) >= self._degrade_rate:
+                    h.status = ProviderStatus.DEGRADED
+                    self._emit("provider_degraded", provider=provider.name)
+                else:
+                    h.status = ProviderStatus.COOLING_DOWN
+                    h.cooldown_until = time.time() + self._default_cooldown
+                self._emit("provider_rotate", provider=provider.name, reason="unavailable")
+                continue
+            except ProviderError as exc:
+                # A bad-request / unparseable response is not a rotation signal by
+                # itself, but we still try the next provider once rather than
+                # failing the turn outright.
+                last_exc = exc
+                h.note_error(time.time())
+                self._emit("provider_rotate", provider=provider.name, reason="error")
+                continue
+
+        raise AllProvidersExhausted(
+            f"no healthy provider (tried={tried or 'none'}; last error: {last_exc})"
+        )
+
+    def reset(self) -> None:
+        for h in self._health.values():
+            h.status = ProviderStatus.HEALTHY
+            h.cooldown_until = 0.0
+            h.recent_errors.clear()
