@@ -18,28 +18,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-const EXAMPLES = [
-  {
-    label: "Read a savings balance",
-    goal: "look up member 12345 and read their current savings balance",
-    params: [{ k: "member_id", v: "12345" }],
-    name: "read_savings_balance",
-  },
-  {
-    label: "Open a sub-account → confirmation",
-    goal: "open a new Holiday Club sub-account for member 12345 and reach the confirmation screen",
-    params: [{ k: "member_id", v: "12345" }],
-    name: "open_sub_account",
-  },
-];
-
 export default function NewRunPage() {
   const router = useRouter();
-  const [goal, setGoal] = useState(EXAMPLES[0].goal);
+  const [goal, setGoal] = useState(
+    "look up member 12345 and read their current savings balance",
+  );
   const [target, setTarget] = useState(
     "http://host.docker.internal:8799/search",
   );
-  const [name, setName] = useState("read_savings_balance");
+  const [name, setName] = useState("");
   const [params, setParams] = useState<{ k: string; v: string }[]>([
     { k: "member_id", v: "12345" },
   ]);
@@ -51,12 +38,6 @@ export default function NewRunPage() {
     queryFn: api.activeRun,
     refetchInterval: 3000,
   });
-
-  function applyExample(ex: (typeof EXAMPLES)[number]) {
-    setGoal(ex.goal);
-    setName(ex.name);
-    setParams(ex.params.map((p) => ({ ...p })));
-  }
 
   async function submit() {
     setBusy(true);
@@ -101,11 +82,9 @@ export default function NewRunPage() {
       </header>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Goal</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent className="space-y-5 pt-6">
           <div className="space-y-2">
+            <Label htmlFor="goal">Goal</Label>
             <Textarea
               id="goal"
               rows={2}
@@ -114,42 +93,24 @@ export default function NewRunPage() {
               className="resize-none"
               placeholder="e.g. look up member 12345 and read their current savings balance"
             />
-            <div className="flex flex-wrap gap-2">
-              {EXAMPLES.map((ex) => (
-                <button
-                  key={ex.name}
-                  type="button"
-                  onClick={() => applyExample(ex)}
-                  className="text-muted-foreground hover:border-primary hover:text-foreground border-input rounded-full border px-3 py-1 text-xs transition-colors"
-                >
-                  {ex.label}
-                </button>
-              ))}
-            </div>
+            <p className="text-muted-foreground text-xs">
+              Plain language. The successful run is recorded as a replayable
+              capability.
+            </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="target">Target entry point</Label>
-              <Input
-                id="target"
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">Capability name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="read_savings_balance"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="target">Target entry point</Label>
+            <Input
+              id="target"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+            />
+            <p className="text-muted-foreground text-xs">
+              The sandbox reaches your host via{" "}
+              <code>host.docker.internal</code>.
+            </p>
           </div>
-          <p className="text-muted-foreground -mt-2 text-xs">
-            The sandbox reaches your host via <code>host.docker.internal</code>.
-          </p>
 
           <div className="space-y-2">
             <Label>Typed parameters</Label>
@@ -198,6 +159,21 @@ export default function NewRunPage() {
                 <Plus className="mr-1 h-4 w-4" /> Add parameter
               </Button>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-muted-foreground">
+              Capability name <span className="font-normal">(optional)</span>
+            </Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="auto — a slug of the goal"
+            />
+            <p className="text-muted-foreground text-xs">
+              The name the recorded capability is stored and invoked under.
+            </p>
           </div>
 
           <label className="flex items-center gap-2 text-sm">

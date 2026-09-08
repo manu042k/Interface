@@ -564,7 +564,16 @@ def _artifact_summary(a: Any) -> dict[str, Any]:
     }
 
 
+_STOPWORDS = {
+    "a", "an", "the", "and", "or", "to", "of", "for", "in", "on", "at", "with",
+    "their", "them", "this", "that", "then", "up", "read", "get", "find", "look",
+    "current", "please", "new",
+}
+
+
 def _slug(text: str) -> str:
     import re
 
-    return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")[:60] or "capability"
+    words = [w for w in re.split(r"[^a-z0-9]+", text.lower()) if w and w not in _STOPWORDS]
+    slug = "_".join(words[:5])[:48].strip("_")
+    return slug or "capability"
