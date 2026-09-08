@@ -279,6 +279,18 @@ class CapabilityArtifact(BaseModel):
     reviewed_at: float | None = None
     review_notes: str | None = None
 
+    # De-dup / stability: a hash of the meaningful flow structure. A discovery
+    # run that reproduces this exact flow bumps `confirmations` instead of
+    # creating a near-duplicate version; a run that differs creates vN+1 with
+    # `supersedes` set.
+    flow_fingerprint: str = ""
+    supersedes: int | None = None
+    confirmations: int = 0
+    last_confirmed_at: float | None = None
+    # how this row came to be, from the last record() call: new | new_version |
+    # reused | updated_draft. Informational.
+    record_outcome: str | None = None
+
     @model_validator(mode="after")
     def _steps_indexed(self) -> CapabilityArtifact:
         for i, step in enumerate(self.steps):
@@ -317,6 +329,9 @@ class RunRecord(BaseModel):
     novnc_url: str | None = None
     sandbox_container: str | None = None
     cdp_url: str | None = None
+
+    # How the resulting capability was persisted: new | new_version | reused | updated_draft
+    record_outcome: str | None = None
 
 
 class FailureDetail(BaseModel):

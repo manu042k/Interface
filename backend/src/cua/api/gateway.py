@@ -66,6 +66,7 @@ class RunView(BaseModel):
     step_count: int
     artifact_id: str | None = None
     artifact_version: int | None = None
+    record_outcome: str | None = None
     novnc_url: str | None = None
     sandbox_container: str | None = None
 
@@ -129,7 +130,9 @@ def create_app(config: Config | None = None) -> FastAPI:
                     )
                     run.artifact_id = artifact.artifact_id
                     run.artifact_version = artifact.version
-                    await sys.summarize_capability(artifact)  # record-time, best-effort
+                    run.record_outcome = artifact.record_outcome
+                    if artifact.record_outcome != "reused" and not artifact.agent_summary:
+                        await sys.summarize_capability(artifact)  # record-time, best-effort
             except Exception as exc:  # noqa: BLE001
                 run.status = RunStatus.FAILED
                 run.detail = f"orchestrator crashed: {exc}"
@@ -566,6 +569,7 @@ def _run_dict(run: RunRecord) -> dict[str, Any]:
         "run_id": run.run_id, "mode": run.mode, "status": run.status, "tenant_id": run.tenant_id,
         "app_target": run.app_target, "goal": run.goal, "detail": run.detail, "step_count": run.step_count,
         "artifact_id": run.artifact_id, "artifact_version": run.artifact_version,
+        "record_outcome": run.record_outcome,
         "novnc_url": run.novnc_url, "sandbox_container": run.sandbox_container,
     }
 
@@ -603,6 +607,8 @@ def _capability_card(a: Any, older_versions: int) -> dict[str, Any]:
         "artifact_id": a.artifact_id,
         "version": a.version,
         "older_versions": older_versions,
+        "confirmations": getattr(a, "confirmations", 0),
+        "supersedes": getattr(a, "supersedes", None),
         "vendor_app_id": a.vendor_app_id,
         "app_version": a.app_version,
         "risk_class": a.risk_class,

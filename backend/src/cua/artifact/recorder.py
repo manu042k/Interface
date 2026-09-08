@@ -40,6 +40,46 @@ from ..models import (
 )
 from ..redaction import redact_text
 
+
+def flow_fingerprint(a: CapabilityArtifact) -> str:
+    """A hash of the *meaningful* flow structure — used to tell a re-run that
+    reproduced an existing capability from one that genuinely changed.
+
+    Included: ordered (action, top-locator kind + normalized params, param name /
+    output field), the checkpoint kind+params, and the set of known-outcome
+    codes. Excluded: step descriptions, locator rationale, literal values that
+    are parameters, timestamps, review state.
+    """
+    import hashlib
+    import json
+
+    parts: list[Any] = []
+    for s in a.steps:
+        loc = s.locator_spec[0] if s.locator_spec else None
+        loc_sig = None
+        if loc is not None:
+            p = {k: v for k, v in loc.params.items() if not k.startswith("_")}
+            loc_sig = [loc.kind, sorted((k, str(v)) for k, v in p.items())]
+        bind = None
+        if s.value_binding and s.value_binding.param:
+            bind = f"param:{s.value_binding.param}"
+        elif s.value_binding and s.value_binding.literal is not None:
+            bind = f"literal:{s.value_binding.literal}"
+        parts.append([
+            s.action_type.value,
+            loc_sig,
+            bind,
+            s.output_binding.field if s.output_binding else None,
+            (s.step_checkpoint.kind if s.step_checkpoint else None),
+        ])
+    payload = {
+        "steps": parts,
+        "checkpoint": [a.checkpoint.kind, sorted((k, str(v)) for k, v in a.checkpoint.params.items())],
+        "outcomes": sorted(r.code for r in a.known_outcomes),
+    }
+    return hashlib.sha1(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()[:16]
+
+
 _ACTIONABLE = {"click", "type", "select", "navigate", "wait_for", "extract", "assert_state"}
 _RISKY_URL_RE = re.compile(r"/(create|submit|confirm|delete|remove|transfer|post|approve)(/|$|\?)", re.I)
 _TOKEN_RE = re.compile(r"[a-z][a-z0-9_\-]{0,20}")  # looks like a name/id attr, not a label
@@ -106,6 +146,7 @@ class ArtifactRecorder:
             risk_class=risk,
             created_from_run_id=transcript.run_id,
         )
+        artifact.flow_fingerprint = flow_fingerprint(artifact)
         # ST-024: redact the whole thing before it leaves the recorder.
         return CapabilityArtifact.model_validate(_redact_model(artifact.model_dump()))
 

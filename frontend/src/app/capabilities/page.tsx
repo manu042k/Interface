@@ -11,6 +11,7 @@ import {
   RotateCcw,
   ChevronDown,
   Crosshair,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Capability, type ReplayResult } from "@/lib/api";
@@ -88,11 +89,21 @@ function CapabilityCard({
           <RiskBadge risk={cap.risk_class} />
           <span className="text-muted-foreground text-xs">
             v{cap.version}
+            {cap.supersedes != null && ` · supersedes v${cap.supersedes}`}
             {cap.older_versions > 0 && ` · ${cap.older_versions} older`}
           </span>
           <span className="text-muted-foreground text-xs">
             · {cap.vendor_app_id}
           </span>
+          {cap.confirmations > 0 && (
+            <span
+              className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"
+              title={`${cap.confirmations} later discovery run${cap.confirmations === 1 ? "" : "s"} reproduced this exact flow — no new version needed`}
+            >
+              <CheckCircle2 className="h-3 w-3" />
+              confirmed {cap.confirmations}×
+            </span>
+          )}
           <Button
             size="sm"
             className="ml-auto"

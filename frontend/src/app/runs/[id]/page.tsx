@@ -113,13 +113,20 @@ export default function RunPage() {
             <>
               <span className="text-muted-foreground">·</span>
               <Link
-                href="/review"
+                href="/capabilities"
                 className="text-primary underline underline-offset-2"
               >
-                artifact {run.artifact_id.slice(0, 8)} v{run.artifact_version}
+                {run.record_outcome === "reused" ? "matched" : "recorded"}{" "}
+                {run.artifact_id.slice(0, 8)} v{run.artifact_version}
               </Link>
               <span className="text-muted-foreground">
-                (draft — review to approve)
+                {run.record_outcome === "reused"
+                  ? "(reproduced an existing capability — confirmation logged, no new draft)"
+                  : run.record_outcome === "updated_draft"
+                    ? "(flow changed — updated the pending draft, review to approve)"
+                    : run.record_outcome === "new_version"
+                      ? "(flow differs from the approved version — saved as a new draft, review to approve)"
+                      : "(new draft — review to approve)"}
               </span>
             </>
           )}

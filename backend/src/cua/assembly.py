@@ -21,7 +21,7 @@ from .escalation.session_broker import SessionBroker
 from .events import RunLogger
 from .llm.providers import OpenAICompatProvider, Provider, ScriptedProvider
 from .llm.router import LLMRouter
-from .models import CapabilityArtifact
+from .models import ArtifactStatus, CapabilityArtifact
 from .observability import FileSink
 from .policy.engine import PolicyEngine
 from .replay.executor import ReplayExecutor
@@ -56,11 +56,39 @@ class System:
         self, transcript: DiscoveryTranscript, *, name: str, vendor_app_id: str = "mockbank",
         app_version: str = "7.2",
     ) -> CapabilityArtifact:
-        """Build a draft artifact from a successful discovery transcript and persist it."""
-        artifact = self.recorder.build_artifact(
+        """Build + persist a capability from a successful discovery transcript,
+        de-duplicating against what's already stored:
+
+          - reproduces an existing version exactly  -> bump `confirmations`, reuse it
+          - latest version is an un-reviewed draft  -> overwrite that draft in place
+          - differs from the latest (approved) one  -> save vN+1 with `supersedes`
+          - nothing stored yet                      -> save v1 draft
+
+        `artifact.record_outcome` (transient) is set to one of
+        new | new_version | reused | updated_draft.
+        """
+        built = self.recorder.build_artifact(
             transcript, name=name, vendor_app_id=vendor_app_id, app_version=app_version
         )
-        return self.store.save_draft(artifact)
+        fp = built.flow_fingerprint
+
+        same = self.store.find_by_fingerprint(name, vendor_app_id, fp)
+        if same is not None:
+            confirmed = self.store.bump_confirmation(same.artifact_id, same.version, transcript.run_id)
+            confirmed.record_outcome = "reused"
+            return confirmed
+
+        latest = self.store.latest(name, vendor_app_id)
+        if latest is not None and latest.status == ArtifactStatus.DRAFT:
+            saved = self.store.replace_draft(built, artifact_id=latest.artifact_id, version=latest.version)
+            saved.record_outcome = "updated_draft"
+            return saved
+
+        if latest is not None:
+            built.supersedes = latest.version
+        saved = self.store.save_draft(built)
+        saved.record_outcome = "new_version" if latest else "new"
+        return saved
 
     async def summarize_capability(self, artifact: CapabilityArtifact) -> str:
         """Record-time: ask the model for a catalog reference blurb (never in

@@ -180,6 +180,61 @@ class ArtifactStore:
             ).fetchone()
         return CapabilityArtifact.model_validate_json(row["body"]) if row else None
 
+    # -- de-dup on record ------------------------------------------
+    def latest(self, name: str, vendor_app_id: str, *, scope_kind: str = "base") -> CapabilityArtifact | None:
+        with self._connect() as con:
+            row = con.execute(
+                """SELECT body FROM artifacts WHERE name = ? AND vendor_app_id = ? AND scope_kind = ?
+                   ORDER BY version DESC LIMIT 1""",
+                (name, vendor_app_id, scope_kind),
+            ).fetchone()
+        return CapabilityArtifact.model_validate_json(row["body"]) if row else None
+
+    def find_by_fingerprint(
+        self, name: str, vendor_app_id: str, fingerprint: str, *, scope_kind: str = "base"
+    ) -> CapabilityArtifact | None:
+        if not fingerprint:
+            return None
+        for a in self.list(name=name, vendor_app_id=vendor_app_id):
+            if a.tenant_scope.kind == scope_kind and a.flow_fingerprint == fingerprint:
+                return a
+        return None
+
+    def bump_confirmation(self, artifact_id: str, version: int, run_id: str | None = None) -> CapabilityArtifact:
+        with self._lock, self._connect() as con:
+            row = con.execute(
+                "SELECT body FROM artifacts WHERE artifact_id = ? AND version = ?", (artifact_id, version)
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"no artifact {artifact_id} v{version}")
+            a = CapabilityArtifact.model_validate_json(row["body"])
+            a.confirmations += 1
+            a.last_confirmed_at = time.time()
+            con.execute(
+                "UPDATE artifacts SET body = ? WHERE artifact_id = ? AND version = ?",
+                (a.model_dump_json(), artifact_id, version),
+            )
+        return a
+
+    def replace_draft(self, artifact: CapabilityArtifact, *, artifact_id: str, version: int) -> CapabilityArtifact:
+        """Overwrite an un-reviewed draft's body in place (keeps its id + version)."""
+        with self._lock, self._connect() as con:
+            cur = con.execute(
+                "SELECT status FROM artifacts WHERE artifact_id = ? AND version = ?", (artifact_id, version)
+            ).fetchone()
+            if cur is None:
+                raise KeyError(f"no artifact {artifact_id} v{version}")
+            if cur["status"] != ArtifactStatus.DRAFT:
+                raise ValueError("replace_draft only overwrites an un-reviewed draft")
+            artifact.artifact_id = artifact_id
+            artifact.version = version
+            artifact.status = ArtifactStatus.DRAFT
+            con.execute(
+                "UPDATE artifacts SET body = ?, name = ?, created_at = ? WHERE artifact_id = ? AND version = ?",
+                (artifact.model_dump_json(), artifact.name, time.time(), artifact_id, version),
+            )
+        return artifact
+
     # -- ST-026: base/override resolution ------------------------------
     def resolve_for_tenant(
         self, name: str, tenant_id: str, *, vendor_app_id: str = "generic"

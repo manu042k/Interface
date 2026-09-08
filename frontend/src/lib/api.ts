@@ -30,6 +30,7 @@ export type RunView = {
   step_count: number;
   artifact_id: string | null;
   artifact_version: number | null;
+  record_outcome: "new" | "new_version" | "reused" | "updated_draft" | null;
   novnc_url: string | null;
   sandbox_container: string | null;
 };
@@ -39,6 +40,8 @@ export type Capability = {
   artifact_id: string;
   version: number;
   older_versions: number;
+  confirmations: number;
+  supersedes: number | null;
   vendor_app_id: string;
   app_version: string;
   risk_class: string;

@@ -114,3 +114,66 @@ async def test_tenant_override_resolution(system, mockbank):
     # no override for tenant 'cu_two' -> resolves to base
     r = system.store.resolve_for_tenant("read_savings_balance", "cu_two", vendor_app_id="mockbank")
     assert r is not None and r.tenant_scope.kind == "base"
+
+
+def _drift_next_fingerprint(system, monkeypatch):
+    """Make the next build_artifact() produce a genuinely different flow
+    fingerprint, as if discovery found a changed/added path."""
+    orig = system.recorder.build_artifact
+    tag = {"n": 0}
+
+    def mutated(*a, **k):
+        art = orig(*a, **k)
+        tag["n"] += 1
+        art.flow_fingerprint = f"{art.flow_fingerprint}-drift{tag['n']}"
+        return art
+
+    monkeypatch.setattr(system.recorder, "build_artifact", mutated)
+
+
+# --- de-dup on record ----------------------------------------------
+async def test_record_reuses_identical_flow(system, mockbank):
+    t1 = await _discover_balance(system, mockbank)
+    a1 = system.record(t1, name="read_savings_balance", vendor_app_id="mockbank")
+    assert a1.record_outcome == "new"
+    assert a1.flow_fingerprint
+
+    t2 = await _discover_balance(system, mockbank)
+    a2 = system.record(t2, name="read_savings_balance", vendor_app_id="mockbank")
+    assert a2.record_outcome == "reused"
+    assert (a2.artifact_id, a2.version) == (a1.artifact_id, a1.version)
+    assert a2.confirmations == 1
+    assert a2.last_confirmed_at is not None
+    # nothing new persisted
+    assert len(system.store.list(name="read_savings_balance", vendor_app_id="mockbank")) == 1
+
+
+async def test_record_overwrites_unreviewed_draft(system, mockbank, monkeypatch):
+    t1 = await _discover_balance(system, mockbank)
+    a1 = system.record(t1, name="member_flow", vendor_app_id="mockbank")
+    assert a1.record_outcome == "new" and a1.status == ArtifactStatus.DRAFT
+
+    _drift_next_fingerprint(system, monkeypatch)
+    t2 = await _discover_balance(system, mockbank)
+    a2 = system.record(t2, name="member_flow", vendor_app_id="mockbank")
+    assert a2.record_outcome == "updated_draft"
+    assert (a2.artifact_id, a2.version) == (a1.artifact_id, a1.version)
+    assert a2.flow_fingerprint != a1.flow_fingerprint
+    rows = system.store.list(name="member_flow", vendor_app_id="mockbank")
+    assert len(rows) == 1 and rows[0].flow_fingerprint == a2.flow_fingerprint
+
+
+async def test_record_versions_when_approved_flow_changes(system, mockbank, monkeypatch):
+    t1 = await _discover_balance(system, mockbank)
+    a1 = system.record(t1, name="member_flow", vendor_app_id="mockbank")
+    system.store.promote(a1.artifact_id, a1.version, "approve", reviewer="alice")
+
+    _drift_next_fingerprint(system, monkeypatch)
+    t2 = await _discover_balance(system, mockbank)
+    a2 = system.record(t2, name="member_flow", vendor_app_id="mockbank")
+    assert a2.record_outcome == "new_version"
+    assert a2.version == a1.version + 1
+    assert a2.supersedes == a1.version
+    assert a2.status == ArtifactStatus.DRAFT
+    # the approved v1 is untouched and still resolvable
+    assert system.store.get(a1.artifact_id, 1).status == ArtifactStatus.APPROVED
