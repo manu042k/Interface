@@ -65,6 +65,8 @@ class DiscoveryTranscript:
     done_outputs: dict[str, Any] = field(default_factory=dict)
     final_state: SurfaceState | None = None
     stuck_reason: str | None = None
+    session_id: str | None = None
+    intervention_id: str | None = None
 
 
 class Orchestrator:
@@ -78,6 +80,8 @@ class Orchestrator:
         policy: PolicyEngine,
         router: LLMRouter,
         logger_factory: Any,
+        escalation: Any | None = None,
+        broker: Any | None = None,
     ) -> None:
         self.cfg = config
         self.adapter = adapter
@@ -86,6 +90,8 @@ class Orchestrator:
         self.policy = policy
         self.router = router
         self._logger_factory = logger_factory  # (run_id) -> RunLogger
+        self.escalation = escalation
+        self.broker = broker
 
     async def run_discovery(
         self,
@@ -229,11 +235,25 @@ class Orchestrator:
                 step += 1
 
             transcript.final_state = transcript.final_state or await self.perception.observe(self.adapter, session)
+            transcript.session_id = session
             run.step_count = step
             run.ended_at = time.time()
+
+            # ST-037: a stuck run raises an intervention with full context and
+            # HOLDS its session (not torn down) so a human can take over exactly
+            # where automation stopped.
+            if run.status == RunStatus.STUCK and self.escalation is not None:
+                if self.broker is not None:
+                    self.broker.register_session(session, session)
+                iv = await self.escalation.open_intervention(
+                    run=run, session_id=session, step_index=step,
+                    reason=run.detail or transcript.stuck_reason or "stuck",
+                    goal=goal, transcript_tail=history,
+                )
+                transcript.intervention_id = iv.intervention_id
+
             return run, transcript
         finally:
-            # keep session for escalation if stuck; else close.
             if run.status == RunStatus.STUCK:
                 log.event(None, "session_held", session=session, reason="stuck — awaiting escalation")
             else:

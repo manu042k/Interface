@@ -222,6 +222,56 @@ def create_app(config: Config | None = None) -> FastAPI:
             for a in arts
         ]
 
+    # -- ST-037..ST-040: escalation & operator console ---------------
+    @app.get("/interventions")
+    async def list_interventions(status: str | None = "open") -> list[dict[str, Any]]:
+        return app.state.system.console.inbox(status=status or "open")
+
+    @app.get("/interventions/{intervention_id}")
+    async def get_intervention(intervention_id: str) -> dict[str, Any]:
+        try:
+            return app.state.system.console.context(intervention_id)
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    @app.post("/interventions/{intervention_id}/claim")
+    async def claim_intervention(intervention_id: str, body: dict[str, str]) -> dict[str, Any]:
+        try:
+            return app.state.system.console.claim(intervention_id, operator=body["operator"])
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @app.post("/interventions/{intervention_id}/take-control")
+    async def take_control(intervention_id: str, body: dict[str, str]) -> dict[str, Any]:
+        try:
+            return app.state.system.console.take_control(intervention_id, operator=body["operator"])
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @app.post("/interventions/{intervention_id}/actions")
+    async def operator_action(intervention_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return await app.state.system.console.perform(
+                intervention_id, body["operator"], body["action"]
+            )
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @app.post("/interventions/{intervention_id}/release")
+    async def release_control(intervention_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        from ..models import Condition
+
+        cp = body.get("goal_checkpoint")
+        checkpoint = Condition(**cp) if cp else None
+        try:
+            return await app.state.system.console.release_control(
+                intervention_id, body["operator"], goal_checkpoint=checkpoint
+            )
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(409, str(exc)) from exc
+
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
         return {"status": "ok"}

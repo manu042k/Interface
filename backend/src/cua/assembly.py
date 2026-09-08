@@ -15,6 +15,9 @@ from .config import Config
 from .discovery.agent import DiscoveryAgent
 from .discovery.offline_pilot import offline_fallback
 from .discovery.orchestrator import DiscoveryTranscript, Orchestrator
+from .escalation.operator_console import OperatorConsole
+from .escalation.service import EscalationService
+from .escalation.session_broker import SessionBroker
 from .events import RunLogger
 from .llm.providers import OpenAICompatProvider, Provider, ScriptedProvider
 from .llm.router import LLMRouter
@@ -41,6 +44,9 @@ class System:
     recorder: ArtifactRecorder
     locator_engine: LocatorResolutionEngine
     replay: ReplayExecutor
+    broker: SessionBroker
+    escalation: EscalationService
+    console: OperatorConsole
 
     def logger(self, run_id: str) -> RunLogger:
         return RunLogger(self.sink, run_id)
@@ -80,6 +86,13 @@ def build_system(config: Config, *, extra: dict[str, Any] | None = None) -> Syst
     router = LLMRouter(_build_providers(config), logger=router_logger)
     agent = DiscoveryAgent(router)
 
+    broker = SessionBroker()
+    escalation = EscalationService(
+        broker=broker, adapter=adapter, perception=perception,
+        logger_factory=lambda rid: RunLogger(sink, rid),
+    )
+    console = OperatorConsole(escalation=escalation, adapter=adapter)
+
     orchestrator = Orchestrator(
         config=config,
         adapter=adapter,
@@ -88,6 +101,8 @@ def build_system(config: Config, *, extra: dict[str, Any] | None = None) -> Syst
         policy=policy,
         router=router,
         logger_factory=lambda rid: RunLogger(sink, rid),
+        escalation=escalation,
+        broker=broker,
     )
     store = ArtifactStore(config.db_path)
     recorder = ArtifactRecorder()
@@ -101,5 +116,5 @@ def build_system(config: Config, *, extra: dict[str, Any] | None = None) -> Syst
     )
     return System(
         config, sink, adapter, perception, policy, router, agent, orchestrator,
-        store, recorder, locator_engine, replay,
+        store, recorder, locator_engine, replay, broker, escalation, console,
     )
