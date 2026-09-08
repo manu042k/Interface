@@ -10,10 +10,18 @@ type Step = {
   output_binding?: { field: string; shape: string } | null;
 };
 
+type JsonSchema = {
+  properties?: Record<
+    string,
+    { type?: string; example?: unknown; "x-shape"?: string; "x-sensitive"?: boolean }
+  >;
+  required?: string[];
+};
+
 type Artifact = {
-  input_schema: unknown;
-  output_schema: unknown;
-  checkpoint: unknown;
+  input_schema: JsonSchema;
+  output_schema: JsonSchema;
+  checkpoint: { kind?: string; params?: Record<string, unknown> } | null;
   risk_class: string;
   steps: Step[];
   known_outcomes: { code: string; when: unknown }[];
@@ -21,12 +29,73 @@ type Artifact = {
 };
 
 export function ArtifactView({ artifact }: { artifact: Artifact }) {
+  const inputs = Object.entries(artifact.input_schema?.properties ?? {});
+  const outputs = Object.entries(artifact.output_schema?.properties ?? {});
+  const cp = artifact.checkpoint;
   return (
     <div className="space-y-4 text-sm">
-      <div className="grid gap-2">
-        <Field label="input_schema" value={artifact.input_schema} />
-        <Field label="output_schema" value={artifact.output_schema} />
-        <Field label="checkpoint" value={artifact.checkpoint} />
+      <div className="grid gap-3">
+        <div>
+          <span className="text-muted-foreground text-xs uppercase">takes</span>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {inputs.length === 0 && (
+              <span className="text-muted-foreground text-xs">no inputs</span>
+            )}
+            {inputs.map(([name, v]) => (
+              <code key={name} className="bg-muted rounded px-1.5 py-0.5 text-xs">
+                {name}
+                <span className="text-muted-foreground">
+                  {" : "}
+                  {v.type ?? "string"}
+                </span>
+                {v["x-sensitive"] && (
+                  <span className="text-warning"> · sensitive</span>
+                )}
+              </code>
+            ))}
+          </div>
+        </div>
+        <div>
+          <span className="text-muted-foreground text-xs uppercase">
+            returns
+          </span>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {outputs.length === 0 && (
+              <span className="text-muted-foreground text-xs">no outputs</span>
+            )}
+            {outputs.map(([name, v]) => (
+              <code key={name} className="bg-muted rounded px-1.5 py-0.5 text-xs">
+                {name}
+                <span className="text-muted-foreground">
+                  {" : "}
+                  {v["x-shape"] ?? v.type ?? "string"}
+                </span>
+              </code>
+            ))}
+          </div>
+        </div>
+        <div>
+          <span className="text-muted-foreground text-xs uppercase">
+            checkpoint
+          </span>
+          <p className="mt-1 text-xs">
+            {cp?.kind ? (
+              <>
+                <code className="bg-muted rounded px-1.5 py-0.5">{cp.kind}</code>
+                {cp.params && Object.keys(cp.params).length > 0 && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    {Object.entries(cp.params)
+                      .map(([k, val]) => `${k}=${String(val)}`)
+                      .join(", ")}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-muted-foreground">none</span>
+            )}
+          </p>
+        </div>
         <div>
           <span className="text-muted-foreground text-xs uppercase">
             known outcomes
@@ -98,17 +167,6 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
           ))}
         </ol>
       </div>
-    </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: unknown }) {
-  return (
-    <div>
-      <span className="text-muted-foreground text-xs uppercase">{label}</span>
-      <pre className="mt-1 overflow-auto rounded bg-black/5 p-2 text-xs">
-        {JSON.stringify(value)}
-      </pre>
     </div>
   );
 }
