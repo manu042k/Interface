@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Radio, ArrowRight } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, type RunRow } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/badges";
 
 const LIVE = new Set(["pending", "running", "stuck"]);
@@ -32,7 +33,8 @@ export default function RunsPage() {
     refetchInterval: 2500,
   });
 
-  const live = (data ?? []).filter((r) => LIVE.has(r.status));
+  const runs = data ?? [];
+  const live = runs.filter((r) => LIVE.has(r.status));
 
   return (
     <div className="space-y-5">
@@ -48,70 +50,110 @@ export default function RunsPage() {
         </Button>
       </header>
 
-      {live.length > 0 && (
-        <div className="border-primary/40 bg-primary/8 flex items-center justify-between rounded-lg border p-3">
-          <span className="flex items-center gap-2 text-sm">
-            <Radio className="text-primary h-4 w-4 animate-pulse" />
-            {live.length} run{live.length > 1 ? "s" : ""} in progress
-          </span>
-          <Button asChild size="sm" variant="outline">
-            <Link href={`/runs/${live[0].run_id}`}>
-              View live run <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </div>
-      )}
-
-      <div className="bg-card rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Goal</TableHead>
-              <TableHead>Mode</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Steps</TableHead>
-              <TableHead>Started</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(data ?? []).map((r) => (
-              <TableRow key={r.run_id}>
-                <TableCell className="max-w-md truncate">
-                  {r.goal ?? <span className="text-muted-foreground">—</span>}
-                </TableCell>
-                <TableCell className="text-muted-foreground">{r.mode}</TableCell>
-                <TableCell>
-                  <StatusBadge status={r.status} />
-                </TableCell>
-                <TableCell>{r.step_count}</TableCell>
-                <TableCell className="text-muted-foreground text-xs">
-                  {ago(r.started_at)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/runs/${r.run_id}`}>Open</Link>
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {data?.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-muted-foreground py-8 text-center"
-                >
-                  No runs yet. Start one from{" "}
-                  <Link href="/" className="text-primary underline">
-                    New run
-                  </Link>
-                  .
-                </TableCell>
-              </TableRow>
+      <Tabs defaultValue="all">
+        <TabsList>
+          <TabsTrigger value="all">All ({runs.length})</TabsTrigger>
+          <TabsTrigger value="live">
+            {live.length > 0 && (
+              <Radio className="text-primary h-3.5 w-3.5 animate-pulse" />
             )}
-          </TableBody>
-        </Table>
-      </div>
+            Live ({live.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="mt-4">
+          <RunsTable rows={runs} empty="No runs yet." />
+        </TabsContent>
+
+        <TabsContent value="live" className="mt-4 space-y-3">
+          {live.length > 0 && (
+            <div className="border-primary/40 bg-primary/8 flex items-center justify-between rounded-lg border p-3">
+              <span className="flex items-center gap-2 text-sm">
+                <Radio className="text-primary h-4 w-4 animate-pulse" />
+                {live.length} run{live.length > 1 ? "s" : ""} in progress
+              </span>
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/runs/${live[0].run_id}`}>
+                  Open latest <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
+          )}
+          <RunsTable
+            rows={live}
+            live
+            empty="No runs in progress. Start one from New run."
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function RunsTable({
+  rows,
+  live = false,
+  empty,
+}: {
+  rows: RunRow[];
+  live?: boolean;
+  empty: string;
+}) {
+  return (
+    <div className="bg-card rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Goal</TableHead>
+            <TableHead>Mode</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Steps</TableHead>
+            <TableHead>Started</TableHead>
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => (
+            <TableRow key={r.run_id}>
+              <TableCell className="max-w-md truncate">
+                {r.goal ?? <span className="text-muted-foreground">—</span>}
+              </TableCell>
+              <TableCell className="text-muted-foreground">{r.mode}</TableCell>
+              <TableCell>
+                <StatusBadge status={r.status} />
+              </TableCell>
+              <TableCell>{r.step_count}</TableCell>
+              <TableCell className="text-muted-foreground text-xs">
+                {ago(r.started_at)}
+              </TableCell>
+              <TableCell className="text-right">
+                <Button
+                  asChild
+                  size="sm"
+                  variant={live ? "default" : "outline"}
+                >
+                  <Link href={`/runs/${r.run_id}`}>
+                    {live ? "View live" : "Open"}
+                  </Link>
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+          {rows.length === 0 && (
+            <TableRow>
+              <TableCell
+                colSpan={6}
+                className="text-muted-foreground py-8 text-center"
+              >
+                {empty}{" "}
+                <Link href="/" className="text-primary underline">
+                  New run
+                </Link>
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 }

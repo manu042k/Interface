@@ -35,6 +35,18 @@ export type RunView = {
   sandbox_container: string | null;
 };
 
+export type RunRow = {
+  run_id: string;
+  mode: string;
+  status: string;
+  goal: string | null;
+  started_at: number;
+  ended_at: number | null;
+  step_count: number;
+  artifact_id: string | null;
+  has_sandbox: boolean;
+};
+
 export type Capability = {
   name: string;
   artifact_id: string;
@@ -149,20 +161,7 @@ export const api = {
       body: JSON.stringify(body),
     }),
   run: (id: string) => j<RunView>(`/runs/${id}`),
-  runs: () =>
-    j<
-      Array<{
-        run_id: string;
-        mode: string;
-        status: string;
-        goal: string | null;
-        started_at: number;
-        ended_at: number | null;
-        step_count: number;
-        artifact_id: string | null;
-        has_sandbox: boolean;
-      }>
-    >("/runs"),
+  runs: () => j<RunRow[]>("/runs"),
   activeRun: () =>
     j<{ run_id: string; status: string; goal: string | null; mode: string } | null>(
       "/runs/active",
