@@ -9,11 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -111,13 +111,13 @@ export default function ReviewPage() {
         </Table>
       </div>
 
-      <Sheet open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
-        <SheetContent className="w-full gap-0 p-0 sm:max-w-xl">
-          <SheetHeader className="border-b">
-            <SheetTitle className="font-mono text-sm">
+      <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
+        <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 p-0 sm:max-w-2xl">
+          <DialogHeader className="border-b p-4">
+            <DialogTitle className="font-mono text-sm">
               {open?.name} v{open?.version}
-            </SheetTitle>
-          </SheetHeader>
+            </DialogTitle>
+          </DialogHeader>
           <div className="flex items-end gap-2 border-b p-4">
             <div className="flex-1 space-y-1.5">
               <Label>Reviewer</Label>
@@ -126,20 +126,29 @@ export default function ReviewPage() {
                 onChange={(e) => setReviewer(e.target.value)}
               />
             </div>
-            <Button onClick={() => decide.mutate("approve")}>Approve</Button>
-            <Button variant="outline" onClick={() => decide.mutate("reject")}>
+            <Button
+              onClick={() => decide.mutate("approve")}
+              disabled={decide.isPending}
+            >
+              Approve
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => decide.mutate("reject")}
+              disabled={decide.isPending}
+            >
               Reject
             </Button>
           </div>
-          <ScrollArea className="h-[calc(100vh-9.5rem)] p-4">
+          <ScrollArea className="min-h-0 flex-1 p-4">
             {full.data ? (
               <ArtifactView artifact={full.data as never} />
             ) : (
               <p className="text-muted-foreground text-sm">loading…</p>
             )}
           </ScrollArea>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
