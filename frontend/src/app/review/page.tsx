@@ -7,7 +7,6 @@ import { api, type ArtifactSummary } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -140,13 +139,13 @@ export default function ReviewPage() {
               Reject
             </Button>
           </div>
-          <ScrollArea className="min-h-0 flex-1 p-4">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
             {full.data ? (
               <ArtifactView artifact={full.data as never} />
             ) : (
               <p className="text-muted-foreground text-sm">loading…</p>
             )}
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
