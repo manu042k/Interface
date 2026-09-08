@@ -43,6 +43,10 @@ from ..redaction import redact_text
 _ACTIONABLE = {"click", "type", "select", "navigate", "wait_for", "extract", "assert_state"}
 _RISKY_URL_RE = re.compile(r"/(create|submit|confirm|delete|remove|transfer|post|approve)(/|$|\?)", re.I)
 _SECRETISH_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{8,}$")  # mixed alnum, 8+ — conservative
+# Interstitials are runtime-variable: they belong in recoverable_rules, not the
+# linear step list. A click made *while one was on screen* is dropped from steps
+# and covered by a recoverable rule instead.
+_INTERSTITIAL_MARKERS = ("session notice", "your session will expire", "please acknowledge")
 
 
 class ArtifactRecorder:
@@ -60,7 +64,10 @@ class ArtifactRecorder:
         forced_params: dict[str, str] = {}
         idx = 0
 
-        actionable = [e for e in transcript.entries if e.tool_call.tool in _ACTIONABLE and e.action_ok]
+        actionable = [
+            e for e in transcript.entries
+            if e.tool_call.tool in _ACTIONABLE and e.action_ok and not _is_interstitial_dismiss(e)
+        ]
 
         for entry in actionable:
             step = self._entry_to_step(entry, idx, transcript.params, param_props, forced_params)
@@ -176,13 +183,15 @@ class ArtifactRecorder:
         if any(w in g for w in ("look up", "member", "search", "find")):
             out.append(BusinessOutcomeRule(
                 code="member_not_found",
-                when=Condition(kind="text_present", params={"any": ["No members matched", "was not found", "not found"]}),
+                when=Condition(kind="text_present", params={"any": ["No members matched", "was not found"]}),
                 message="The requested member does not exist.",
+                from_step=1,
             ))
             out.append(BusinessOutcomeRule(
                 code="permission_denied",
-                when=Condition(kind="text_present", params={"any": ["restricted", "do not have permission", "not authorized"]}),
+                when=Condition(kind="text_present", params={"any": ["do not have permission", "member record is restricted"]}),
                 message="Caller is not permitted to view this record.",
+                from_step=1,
             ))
         if "sub-account" in g or "sub account" in g:
             out.append(BusinessOutcomeRule(
@@ -194,10 +203,11 @@ class ArtifactRecorder:
         return out
 
     def _seed_recoverables(self, transcript: DiscoveryTranscript) -> list[RecoverableRule]:
-        rules: list[RecoverableRule] = []
-        saw_notice = any("Acknowledge" in str(e.tool_call.args) for e in transcript.entries)
-        if saw_notice:
-            rules.append(RecoverableRule(
+        # Recoverable rules describe KNOWN app behaviour, not what happened this
+        # run — in production they come from a per-vendor-app rule library curated
+        # during review. Seeded here from the flow shape + app family.
+        rules: list[RecoverableRule] = [
+            RecoverableRule(
                 name="session_notice_interstitial",
                 when=Condition(kind="text_present", params={"text": "Session Notice"}),
                 action="dismiss",
@@ -206,7 +216,8 @@ class ArtifactRecorder:
                     rationale="the interstitial's only continue affordance; stable literal label",
                 )],
                 settle=Condition(kind="text_absent", params={"text": "Session Notice"}),
-            ))
+            )
+        ]
         # transient slow load is generic
         rules.append(RecoverableRule(
             name="transient_slow_load",
@@ -277,6 +288,14 @@ def _rank_locators(target: Any, matched: str | None) -> list[LocatorStrategy]:
     if matched:
         cands[0].params.setdefault("_discovery_matched", matched)
     return cands
+
+
+def _is_interstitial_dismiss(entry: TranscriptEntry) -> bool:
+    if entry.tool_call.tool != "click":
+        return False
+    st = entry.state_before
+    blob = f"{st.title}\n{st.ax_summary}\n{st.dom_excerpt}".lower() if st else ""
+    return any(m in blob for m in _INTERSTITIAL_MARKERS)
 
 
 def _target_hint(target: Any) -> str:

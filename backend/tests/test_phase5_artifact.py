@@ -31,9 +31,15 @@ async def test_recorder_builds_faithful_artifact(system, mockbank):
     transcript = await _discover_balance(system, mockbank)
     art = system.recorder.build_artifact(transcript, name="read_savings_balance", vendor_app_id="mockbank")
 
-    tools = [e.tool_call.tool for e in transcript.entries if e.tool_call.tool in {
-        "click", "type", "select", "navigate", "extract", "assert_state", "wait_for"} and e.action_ok]
-    assert [s.action_type.value for s in art.steps] == tools  # 1:1, no observe/failed steps
+    from cua.artifact.recorder import _is_interstitial_dismiss
+
+    tools = [
+        e.tool_call.tool for e in transcript.entries
+        if e.tool_call.tool in {"click", "type", "select", "navigate", "extract", "assert_state", "wait_for"}
+        and e.action_ok and not _is_interstitial_dismiss(e)
+    ]
+    # 1:1 with executed, successful, non-interstitial actionable steps
+    assert [s.action_type.value for s in art.steps] == tools
 
     # extract step -> output schema
     assert "savings_balance" in art.output_schema["properties"]

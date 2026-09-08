@@ -21,6 +21,8 @@ from .llm.router import LLMRouter
 from .models import CapabilityArtifact
 from .observability import FileSink
 from .policy.engine import PolicyEngine
+from .replay.executor import ReplayExecutor
+from .replay.locator import LocatorResolutionEngine
 from .surface.perception import Perception
 from .surface.playwright_adapter import PlaywrightAdapter
 
@@ -37,6 +39,8 @@ class System:
     orchestrator: Orchestrator
     store: ArtifactStore
     recorder: ArtifactRecorder
+    locator_engine: LocatorResolutionEngine
+    replay: ReplayExecutor
 
     def logger(self, run_id: str) -> RunLogger:
         return RunLogger(self.sink, run_id)
@@ -87,4 +91,15 @@ def build_system(config: Config, *, extra: dict[str, Any] | None = None) -> Syst
     )
     store = ArtifactStore(config.db_path)
     recorder = ArtifactRecorder()
-    return System(config, sink, adapter, perception, policy, router, agent, orchestrator, store, recorder)
+    locator_engine = LocatorResolutionEngine(logger=RunLogger(sink, "locator"))
+    replay = ReplayExecutor(
+        adapter=adapter,
+        perception=perception,
+        policy=policy,
+        locator_engine=locator_engine,
+        logger_factory=lambda rid: RunLogger(sink, rid),
+    )
+    return System(
+        config, sink, adapter, perception, policy, router, agent, orchestrator,
+        store, recorder, locator_engine, replay,
+    )

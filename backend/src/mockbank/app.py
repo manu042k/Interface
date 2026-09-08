@@ -87,8 +87,8 @@ def search() -> str:
         "<td><input type=\"text\" name=\"q\" size=\"28\"></td>\n"
         "<td><input type=\"submit\" name=\"go\" value=\"Search\"></td></tr>\n"
         "</table></form>\n"
-        "<font face=\"Verdana\" size=\"1\">Try 12345, 22222, 34567. "
-        "00000 = not found, 99999 = restricted.</font>"
+        "<font face=\"Verdana\" size=\"1\">Known test IDs: 12345, 22222, 34567. "
+        "Others exercise alternate paths.</font>"
     )
     return _p("Member Search", body)
 
@@ -164,8 +164,10 @@ def member_detail(mid: str):
         )), 404
 
     # Unexpected interstitial: shown once per browser session before detail.
+    # MOCKBANK_INTERSTITIAL=0 disables it (clean happy-path demos/tests).
+    interstitial_on = os.environ.get("MOCKBANK_INTERSTITIAL", "1") != "0"
     acked = request.cookies.get("sessnotice") == "1"
-    if not acked and request.args.get("ack") != "1":
+    if interstitial_on and not acked and request.args.get("ack") != "1":
         body = (
             "<table border=\"1\" cellpadding=\"10\" cellspacing=\"0\" width=\"560\" bgcolor=\"#ffe0e0\">\n"
             "<tr><td><font face=\"Verdana\" size=\"2\"><b>Session Notice</b><br><br>"
