@@ -110,15 +110,15 @@ def create_app(config: Config | None = None) -> FastAPI:
     @app.post("/runs", response_model=StartRunResponse, status_code=202)
     async def start_run(req: StartRunRequest) -> StartRunResponse:
         sys: System = app.state.system
-        _validate_target_or_400(sys, req.tenant, req.target)
+        target = _validate_target_or_400(sys, req.tenant, req.target)
 
-        run = RunRecord(mode=RunMode.DISCOVERY, tenant_id=req.tenant, app_target=req.target, goal=req.goal)
+        run = RunRecord(mode=RunMode.DISCOVERY, tenant_id=req.tenant, app_target=target, goal=req.goal)
         app.state.runs[run.run_id] = run
 
         async def _execute() -> None:
             try:
                 _finished, transcript = await sys.orchestrator.run_discovery(
-                    goal=req.goal, target=req.target, tenant=req.tenant,
+                    goal=req.goal, target=target, tenant=req.tenant,
                     params=req.params, run=run, confirm_risky=req.confirm_risky,
                 )
                 app.state.transcripts[run.run_id] = transcript
@@ -206,7 +206,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         if artifact.status != ArtifactStatus.APPROVED:
             raise HTTPException(409, f"artifact {artifact_id} v{req.version} is {artifact.status}, not approved — not replay-eligible")
 
-        _validate_target_or_400(sys, req.tenant, req.target)
+        target = _validate_target_or_400(sys, req.tenant, req.target)
 
         errs = sys.replay.validate_params(artifact, req.params)
         if errs:
@@ -214,7 +214,7 @@ def create_app(config: Config | None = None) -> FastAPI:
 
         invocation_id = "inv_" + uuid.uuid4().hex[:12]
         run = RunRecord(
-            run_id=invocation_id, mode=RunMode.REPLAY, tenant_id=req.tenant, app_target=req.target,
+            run_id=invocation_id, mode=RunMode.REPLAY, tenant_id=req.tenant, app_target=target,
             artifact_id=artifact_id, artifact_version=req.version, params=req.params,
         )
         app.state.runs[invocation_id] = run
@@ -222,7 +222,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         async def _do() -> None:
             run.status = RunStatus.RUNNING
             result = await sys.replay.execute(
-                artifact, req.params, target=req.target, tenant=req.tenant,
+                artifact, req.params, target=target, tenant=req.tenant,
                 run_id=invocation_id, idempotency_key=req.idempotency_key, run=run,
             )
             app.state.replays[invocation_id] = result
@@ -535,15 +535,29 @@ def _report_markdown(rep: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _validate_target_or_400(sys: System, tenant: str, target: str) -> None:
+def _normalize_target(sys: System, target: str) -> str:
+    """From inside a Docker sandbox, localhost/127.0.0.1 mean the container, not
+    the host — rewrite them to host.docker.internal so a human can just type the
+    URL they'd use in their own browser. No-op when the sandbox is off."""
+    if not (sys.sandbox_manager is not None):
+        return target
+    parsed = urlparse(target)
+    if (parsed.hostname or "").lower() in {"localhost", "127.0.0.1", "0.0.0.0"}:
+        return target.replace(parsed.hostname, "host.docker.internal", 1)
+    return target
+
+
+def _validate_target_or_400(sys: System, tenant: str, target: str) -> str:
     parsed = urlparse(target)
     if not parsed.scheme or not parsed.hostname:
         raise HTTPException(422, f"target must be an absolute URL, got {target!r}")
+    target = _normalize_target(sys, target)
     decision = sys.policy.check(
         ActionContext(tenant_id=tenant, action_type=ActionType.NAVIGATE, target_url=target)
     )
     if decision.verdict == PolicyVerdict.BLOCK:
         raise HTTPException(422, f"target not permitted by allowlist for tenant {tenant!r}: {decision.reason}")
+    return target
 
 
 def _run_dict(run: RunRecord) -> dict[str, Any]:

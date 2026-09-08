@@ -18,9 +18,7 @@ export default function NewRunPage() {
   const [goal, setGoal] = useState(
     "look up member 12345 and read their current savings balance",
   );
-  const [target, setTarget] = useState(
-    "http://host.docker.internal:8799/search",
-  );
+  const [target, setTarget] = useState("http://localhost:8799/search");
   const [params, setParams] = useState<{ k: string; v: string }[]>([
     { k: "member_id", v: "12345" },
   ]);
@@ -100,9 +98,24 @@ export default function NewRunPage() {
               onChange={(e) => setTarget(e.target.value)}
             />
             <p className="text-muted-foreground text-xs">
-              The sandbox reaches your host via{" "}
-              <code>host.docker.internal</code>.
+              The URL the agent starts from — any screen of an allow-listed app.
+              Each run opens it in a throwaway Docker container you watch live.
             </p>
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              {[
+                ["Search", "http://localhost:8799/search"],
+                ["Member 12345", "http://localhost:8799/member/12345"],
+              ].map(([label, url]) => (
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => setTarget(url)}
+                  className="text-muted-foreground hover:border-primary hover:text-foreground border-input rounded-full border px-2.5 py-0.5 text-xs transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-2">
