@@ -1,0 +1,19 @@
+{
+  "kind": "replay",
+  "artifact_id": "23b214975e2f42e48ff38ba11e0bf405",
+  "version": 1,
+  "target": "http://127.0.0.1:8799/search",
+  "params": {
+    "member_id": "99999"
+  },
+  "result": {
+    "outcome": "business_outcome",
+    "outputs": null,
+    "business_outcome_code": "permission_denied",
+    "recovered_conditions": [],
+    "failure_detail": null,
+    "evidence_refs": [],
+    "steps_executed": 1,
+    "duration_seconds": 0.692683219909668
+  }
+}

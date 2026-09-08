@@ -39,9 +39,19 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("ssn", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
     # Full payment-card number (13-19 digits, optional separators). Luhn-checked below.
     ("card", re.compile(r"\b(?:\d[ -]?){13,19}\b")),
-    # Full bank account number: a long bare digit run (>= 8) NOT already covered.
-    ("account", re.compile(r"\b\d{8,17}\b")),
+    # Full bank account number: a long bare digit run (12-17). Shorter runs are
+    # too often plain IDs; epoch timestamps are excluded in the substitution.
+    ("account", re.compile(r"\b\d{12,17}\b")),
 ]
+
+
+def _looks_like_epoch(digits: str) -> bool:
+    """A 10-digit (~2001-2033) or 13-digit (ms) Unix timestamp — not an account."""
+    if len(digits) == 10 and digits[0] == "1":
+        return 1_000_000_000 <= int(digits) <= 2_000_000_000
+    if len(digits) == 13 and digits[0] == "1":
+        return 1_000_000_000_000 <= int(digits) <= 2_000_000_000_000
+    return False
 
 # Keys whose values we always redact wholesale, regardless of content.
 _SENSITIVE_KEYS = {
@@ -81,9 +91,9 @@ def redact_text(text: str) -> tuple[str, list[str]]:
                 if not _luhn_ok(span):
                     return span  # not actually a card number — leave it
             if _kind == "account":
-                # Avoid nuking obviously-not-account long numbers (e.g. timestamps)
-                if len(re.sub(r"\D", "", span)) > 17:
-                    return span
+                digits = re.sub(r"\D", "", span)
+                if len(digits) > 17 or _looks_like_epoch(digits):
+                    return span  # timestamp / oversized run — not an account
             if _kind == "secret":
                 # keep the key, redact only the value (group 2)
                 hits.append(_kind)
