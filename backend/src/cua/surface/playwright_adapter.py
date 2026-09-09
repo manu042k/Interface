@@ -50,11 +50,16 @@ def _match_option(want: str, opts: list[dict[str, str]]) -> dict[str, str] | Non
             lab = o["label"].lower()
             if w in lab or lab in w or (o["value"] and w in o["value"].lower()):
                 return {"value": o["value"]} if o["value"] else {"label": o["label"]}
-    if w.isdigit():  # a bare index, skipping a leading blank/prompt option
+    if w.isdigit():
+        # "branch 1" almost always means the FIRST branch, not option value "1"
+        # or 0-based index 1 — try 1-based first, then 0-based, skipping a
+        # leading blank/prompt option.
         i = int(w)
-        for cand in (i, i - 1):
-            if 0 <= cand < len(opts):
-                o = opts[cand]
+        # skip a leading blank/prompt option (value="" by convention)
+        real = [k for k, o in enumerate(opts) if o["value"]] or list(range(len(opts)))
+        for cand in (i - 1, i):
+            if 0 <= cand < len(real):
+                o = opts[real[cand]]
                 return {"value": o["value"]} if o["value"] else {"label": o["label"]}
     return None
 
@@ -503,9 +508,20 @@ class PlaywrightAdapter(SurfaceAdapter):
                         + ", ".join(f"{o['label']!r}" for o in opts[:20])
                     )
                 else:
-                    # short timeout — the option definitely exists now
-                    await loc.select_option(pick, timeout=min(timeout, 4000))
-                    res.ok = True
+                    # the option definitely exists — use explicit kwargs (a
+                    # positional dict is coerced to a string and never matches)
+                    try:
+                        if pick.get("value"):
+                            await loc.select_option(value=pick["value"], timeout=3000)
+                        else:
+                            await loc.select_option(label=pick["label"], timeout=3000)
+                        res.ok = True
+                    except Exception as exc:  # noqa: BLE001
+                        res.ok = False
+                        res.error = (
+                            f"select_option({pick}) failed: {str(exc).splitlines()[0]}. "
+                            f"options: " + ", ".join(f"{o['label']!r}" for o in opts[:20])
+                        )
 
             elif t == ActionType.EXTRACT:
                 loc, strat = await self._locator(sess, action)
