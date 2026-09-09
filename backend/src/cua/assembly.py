@@ -117,7 +117,9 @@ def _build_providers(config: Config) -> list[Provider]:
         if name == "scripted":
             providers.append(ScriptedProvider(fallback=offline_fallback))
         else:
-            providers.append(OpenAICompatProvider(name, pc.base_url, pc.api_key, pc.model))
+            providers.append(
+                OpenAICompatProvider(name, pc.base_url, pc.api_key, pc.model, rpm=pc.rpm)
+            )
     return providers
 
 

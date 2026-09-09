@@ -56,12 +56,17 @@ class Provider(Protocol):
 
 
 class OpenAICompatProvider:
-    def __init__(self, name: str, base_url: str, api_key: str, model: str, *, timeout: float = 75.0) -> None:
+    def __init__(
+        self, name: str, base_url: str, api_key: str, model: str,
+        *, timeout: float = 75.0, rpm: int = 0,
+    ) -> None:
         self.name = name
         self._base = base_url.rstrip("/")
         self._key = api_key
         self._model = model
         self._timeout = timeout
+        # requests/min ceiling the router paces to (0 = unthrottled)
+        self.rpm = rpm
 
     async def complete(self, system: str, user: str, tools: list[dict[str, Any]]) -> ModelResponse:
         payload = {

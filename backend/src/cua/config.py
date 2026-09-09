@@ -54,6 +54,9 @@ class ProviderConfig:
     base_url: str
     api_key: str
     model: str
+    # Client-side pacing: max requests/min the router will send this provider
+    # (0 = unthrottled). Keeps free tiers from 429-ing on bursts.
+    rpm: int = 0
 
 
 @dataclass(frozen=True)
@@ -95,6 +98,16 @@ class Config:
 _PROVIDER_ENV = {
     "openrouter": ("OPENROUTER_BASE_URL", "OPENROUTER_API_KEY", "OPENROUTER_MODEL"),
     "nvidia_nim": ("NVIDIA_NIM_BASE_URL", "NVIDIA_NIM_API_KEY", "NVIDIA_NIM_MODEL"),
+    "groq": ("GROQ_BASE_URL", "GROQ_API_KEY", "GROQ_MODEL"),
+}
+
+# Per-provider requests/min ceiling the router paces to. `<NAME>_RPM` overrides;
+# otherwise `CUA_PROVIDER_RPM` (default 0 = unthrottled) applies. Defaults below
+# are conservative free-tier limits.
+_PROVIDER_RPM_DEFAULT = {
+    "openrouter": 20,
+    "nvidia_nim": 15,
+    "groq": 25,
 }
 
 
@@ -147,6 +160,10 @@ def load_config(
             base_url=_optional(base_env, _default_base_url(name)),
             api_key=api_key,
             model=_optional(model_env, _default_model(name)),
+            rpm=_int(
+                f"{name.upper()}_RPM",
+                _int("CUA_PROVIDER_RPM", _PROVIDER_RPM_DEFAULT.get(name, 0)),
+            ),
         )
 
     return Config(
@@ -170,11 +187,13 @@ def _default_base_url(name: str) -> str:
     return {
         "openrouter": "https://openrouter.ai/api/v1",
         "nvidia_nim": "https://integrate.api.nvidia.com/v1",
+        "groq": "https://api.groq.com/openai/v1",
     }[name]
 
 
 def _default_model(name: str) -> str:
     return {
         "openrouter": "anthropic/claude-sonnet-4",
-        "nvidia_nim": "meta/llama-3.3-70b-instruct",
+        "nvidia_nim": "deepseek-ai/deepseek-v4-flash-0731",
+        "groq": "llama-3.3-70b-versatile",
     }[name]
