@@ -86,6 +86,11 @@ class Config:
     use_sandbox: bool
     sandbox_image: str
     novnc_host: str
+    # When a replay runs in a sandbox, pace it so the live noVNC feed is
+    # actually watchable: a warmup before the first action (so the iframe
+    # connects) and this delay between steps. 0 = run flat out. Ignored for
+    # headless replays - there is nothing to watch.
+    replay_watch_delay_ms: int
 
     extra: dict[str, str] = field(default_factory=dict)
 
@@ -191,6 +196,7 @@ def load_config(
         use_sandbox=_bool("CUA_USE_SANDBOX", False),
         sandbox_image=_optional("CUA_SANDBOX_IMAGE", "cua-sandbox:latest"),
         novnc_host=_optional("CUA_NOVNC_HOST", "localhost"),
+        replay_watch_delay_ms=_int("CUA_REPLAY_WATCH_DELAY_MS", 900),
     )
 
 

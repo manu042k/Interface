@@ -506,7 +506,8 @@ def _build_report(app: FastAPI, run_id: str) -> dict[str, Any]:
             "run_started", "decision", "guardrail", "action", "checkpoint",
             "recoverable_condition", "business_outcome", "stuck", "hard_failure",
             "locator_resolution", "intervention_opened", "control_transferred",
-            "human_action", "intervention_resolved", "sandbox_started", "run_finished",
+            "human_action", "intervention_resolved", "sandbox_started", "watch_warmup",
+            "run_finished",
         }
     ]
     artifact = None

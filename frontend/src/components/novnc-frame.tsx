@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Monitor, ExternalLink, CheckCircle2, Lock, Hand } from "lucide-react";
+import {
+  Monitor,
+  ExternalLink,
+  CheckCircle2,
+  Lock,
+  Hand,
+  Loader2,
+} from "lucide-react";
 
 // Native framebuffer size of the sandbox display (see backend/sandbox_image).
 const FB_W = 1280;
@@ -11,10 +18,13 @@ export function NoVncFrame({
   novncUrl,
   interactive,
   ended,
+  starting,
 }: {
   novncUrl: string | null;
   interactive: boolean;
   ended?: boolean;
+  /** run is live and a sandbox is still spinning up - not "headless, no feed" */
+  starting?: boolean;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
@@ -48,12 +58,25 @@ export function NoVncFrame({
     return (
       <div className="bg-card text-muted-foreground grid h-full min-h-0 place-items-center rounded-lg border">
         <div className="text-center">
-          <Monitor className="mx-auto mb-2 h-6 w-6" />
-          <p className="text-sm">
-            No live sandbox for this run.
-            <br />
-            Start the gateway with <code>CUA_USE_SANDBOX=1</code>.
-          </p>
+          {starting ? (
+            <>
+              <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
+              <p className="text-sm">
+                Starting the live sandbox…
+                <br />
+                the feed appears here once the container is up.
+              </p>
+            </>
+          ) : (
+            <>
+              <Monitor className="mx-auto mb-2 h-6 w-6" />
+              <p className="text-sm">
+                No live sandbox for this run.
+                <br />
+                Start the gateway with <code>CUA_USE_SANDBOX=1</code>.
+              </p>
+            </>
+          )}
         </div>
       </div>
     );

@@ -170,6 +170,7 @@ def build_system(config: Config, *, extra: dict[str, Any] | None = None) -> Syst
         sandbox_manager=sandbox_manager,
         escalation=escalation,
         broker=broker,
+        watch_delay_ms=config.replay_watch_delay_ms,
     )
     return System(
         config, sink, adapter, perception, policy, router, agent, orchestrator,

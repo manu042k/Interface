@@ -62,6 +62,7 @@ class ReplayExecutor:
         sandbox_manager: Any | None = None,
         escalation: Any | None = None,
         broker: Any | None = None,
+        watch_delay_ms: int = 0,
     ) -> None:
         self.adapter = adapter
         self.perception = perception
@@ -69,6 +70,9 @@ class ReplayExecutor:
         self.locators = locator_engine
         self._logger_factory = logger_factory
         self.sandbox_manager = sandbox_manager
+        # Pace a *sandboxed* replay so its live noVNC feed is watchable; 0 and/or
+        # a headless replay run flat out.
+        self.watch_delay_ms = watch_delay_ms
         # Optional human-in-the-loop path for a replay that hits an
         # unrecoverable condition (brief §3.6): route an intervention, hold the
         # live session for a human, then resume. When unset, a hard failure is
@@ -121,8 +125,19 @@ class ReplayExecutor:
             target=target, tenant=tenant, run=run, logger=log,
         )
         session = surface.session_handle
+
+        # Watch pacing: only when this replay actually has a live sandbox feed.
+        watch_s = (self.watch_delay_ms / 1000) if surface.sandbox is not None else 0.0
+        if watch_s > 0:
+            # give the noVNC iframe time to connect before anything moves
+            warmup = max(watch_s, 4.0)
+            log.event(None, "watch_warmup", description=f"holding {warmup:.0f}s for the live feed to connect")
+            await asyncio.sleep(warmup)
+
         try:
             for step in artifact.steps:
+                if watch_s > 0 and step.step_index > 0:
+                    await asyncio.sleep(watch_s)
                 state = await self.perception.observe(self.adapter, session)
 
                 bo = await self._match_business_outcome(artifact, state, step.step_index)
@@ -160,6 +175,8 @@ class ReplayExecutor:
                     run.step_count = step.step_index + 1
 
             # -- final checkpoint --------------------------------
+            if watch_s > 0:
+                await asyncio.sleep(watch_s)  # let the last action's result land on screen
             final_state = await self.perception.observe(self.adapter, session)
             ok = await self._check(artifact.checkpoint, final_state, session, outputs)
             log.checkpoint(None, ok, artifact.checkpoint.description or artifact.checkpoint.kind)

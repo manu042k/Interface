@@ -345,6 +345,12 @@ export default function RunPage() {
             novncUrl={run?.novnc_url ?? null}
             interactive={!!inControl}
             ended={false}
+            starting={
+              !run?.novnc_url &&
+              (run?.status === "pending" || run?.status === "running") &&
+              !!run?.started_at &&
+              Date.now() / 1000 - run.started_at < 15
+            }
           />
           <EventTimeline runId={id} />
         </div>
