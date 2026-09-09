@@ -39,6 +39,8 @@ _TOOL_TO_ACTION = {
     "wait_for": ActionType.WAIT_FOR,
     "extract": ActionType.EXTRACT,
     "assert_state": ActionType.ASSERT_STATE,
+    "scroll": ActionType.SCROLL,
+    "press_key": ActionType.PRESS_KEY,
 }
 
 
@@ -255,9 +257,25 @@ class Orchestrator:
                 transcript.entries.append(entry)
 
                 desc = _describe_call(call)
-                history.append(desc if ok else f"{desc} -> FAILED: {result.error}")
                 if not ok:
+                    history.append(f"{desc} -> FAILED: {result.error}")
                     note = f"The last action failed: {result.error}. Re-observe and adapt, or call stuck."
+                elif call.tool == "extract" and result.extracted is not None:
+                    val = str(result.extracted)
+                    history.append(f"{desc} -> got {val[:80]!r}")
+                else:
+                    history.append(desc)
+
+                # break repeat-loops: the model re-issuing the same action over
+                # and over (typically extract) means it isn't recognising it's
+                # done. Nudge it explicitly.
+                if ok and history[-3:].count(history[-1]) >= 2:
+                    note = (
+                        "You have already performed this exact action and it succeeded. "
+                        "If you have collected the data the goal asks for, call done now "
+                        "with the outputs. Otherwise choose a genuinely different action, "
+                        "or call stuck."
+                    )
                 step += 1
 
             transcript.final_state = transcript.final_state or await self.perception.observe(self.adapter, session)
@@ -339,6 +357,11 @@ class Orchestrator:
             )
         if t == "assert_state":
             return Action(type=ActionType.ASSERT_STATE, condition=a.get("condition", {})), None
+        if t == "scroll":
+            tgt = {"text": a["to_text"]} if a.get("to_text") else None
+            return Action(type=ActionType.SCROLL, target_description=tgt, value=str(a.get("direction", "down"))), None
+        if t == "press_key":
+            return Action(type=ActionType.PRESS_KEY, value=str(a.get("key", "Enter"))), None
         raise ValueError(f"non-actionable tool: {t}")
 
 

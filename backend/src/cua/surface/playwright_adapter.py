@@ -353,6 +353,29 @@ class PlaywrightAdapter(SurfaceAdapter):
                 if not ok:
                     res.error = f"assertion failed: {action.condition}"
 
+            elif t == ActionType.SCROLL:
+                tgt = action.target_description
+                text = tgt.get("text") if isinstance(tgt, dict) else None
+                if text:
+                    await page.get_by_text(text, exact=False).first.scroll_into_view_if_needed(timeout=timeout)
+                else:
+                    d = (action.value or "down").lower()
+                    if d == "top":
+                        await page.evaluate("window.scrollTo(0, 0)")
+                    elif d == "bottom":
+                        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                    elif d == "up":
+                        await page.mouse.wheel(0, -700)
+                    else:
+                        await page.mouse.wheel(0, 700)
+                await self._settle(page)
+                res.ok = True
+
+            elif t == ActionType.PRESS_KEY:
+                await page.keyboard.press(action.value or "Enter")
+                await self._settle(page)
+                res.ok = True
+
             else:
                 raise SurfaceError(f"unsupported action type: {t}")
 

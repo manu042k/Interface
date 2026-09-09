@@ -206,7 +206,7 @@ def _default_base_url(name: str) -> str:
 def _default_model(name: str) -> str:
     return {
         "openai": "gpt-4.1-mini",
-        "openrouter": "google/gemini-2.0-flash-001",
+        "openrouter": "openai/gpt-4o-mini",
         "nvidia_nim": "deepseek-ai/deepseek-v4-flash-0731",
         "groq": "openai/gpt-oss-20b",
     }[name]

@@ -358,6 +358,9 @@ class ReplayExecutor:
         if t == ActionType.EXTRACT:
             return Action(type=t, target_description=concrete_target, expected_shape=step.output_binding.shape if step.output_binding else "string")
         value = self._resolve_value(step.value_binding, params) if step.value_binding else None
+        if t == ActionType.SCROLL and value and value not in {"down", "up", "top", "bottom"}:
+            # a recorded scroll-to-text step
+            return Action(type=t, target_description={"text": value}, value="down")
         return Action(type=t, target_description=concrete_target, value=value)
 
     @staticmethod

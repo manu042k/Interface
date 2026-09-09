@@ -80,7 +80,10 @@ def flow_fingerprint(a: CapabilityArtifact) -> str:
     return hashlib.sha1(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()[:16]
 
 
-_ACTIONABLE = {"click", "type", "select", "navigate", "wait_for", "extract", "assert_state"}
+_ACTIONABLE = {
+    "click", "type", "select", "navigate", "wait_for",
+    "extract", "assert_state", "scroll", "press_key",
+}
 _RISKY_URL_RE = re.compile(r"/(create|submit|confirm|delete|remove|transfer|post|approve)(/|$|\?)", re.I)
 _TOKEN_RE = re.compile(r"[a-z][a-z0-9_\-]{0,20}")  # looks like a name/id attr, not a label
 _SECRETISH_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{8,}$")  # mixed alnum, 8+ — conservative
@@ -180,6 +183,10 @@ class ArtifactRecorder:
         elif tool == "navigate":
             url = str(args.get("url", ""))
             value_binding = _bind_url(url, params)
+        elif tool == "press_key":
+            value_binding = ValueBinding(literal=str(args.get("key", "Enter")))
+        elif tool == "scroll":
+            value_binding = ValueBinding(literal=str(args.get("to_text") or args.get("direction", "down")))
 
         if tool == "extract":
             field = args.get("as") or "value"
@@ -411,7 +418,7 @@ def _condition_from_arg(cond: Any) -> Condition:
 
 
 def _is_idempotent(tool: str, entry: TranscriptEntry) -> bool:
-    if tool in {"navigate", "wait_for", "extract", "assert_state"}:
+    if tool in {"navigate", "wait_for", "extract", "assert_state", "scroll", "press_key"}:
         return True
     url_after = str(entry.action_result.get("url_after", ""))
     if tool == "click" and _RISKY_URL_RE.search(url_after):

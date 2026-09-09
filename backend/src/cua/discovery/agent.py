@@ -16,7 +16,8 @@ from ..models import SurfaceState, ToolCall
 
 VOCAB = {
     "observe", "click", "type", "select", "navigate",
-    "wait_for", "extract", "assert_state", "done", "stuck",
+    "wait_for", "extract", "assert_state", "scroll", "press_key",
+    "done", "stuck",
 }
 
 
@@ -72,6 +73,12 @@ TOOL_SCHEMA: list[dict[str, Any]] = [
            "as": {"type": "string", "description": "output field name"}}, ["target", "expected_shape", "as"]),
     _tool("assert_state", "Verify a condition holds mid-flow or as the checkpoint.",
           {"condition": {"type": "object"}}, ["condition"]),
+    _tool("scroll", "Scroll the page when the control or content you need is off-screen.",
+          {"direction": {"type": "string", "enum": ["down", "up", "top", "bottom"]},
+           "to_text": {"type": "string", "description": "optional: scroll until this visible text is in view"}},
+          ["direction"]),
+    _tool("press_key", "Press a keyboard key - Enter/Tab/Escape, or a function key like F7 that legacy consoles use for navigation.",
+          {"key": {"type": "string"}}, ["key"]),
     _tool("done", "Goal achieved. Return the typed outputs.", {"outputs": {"type": "object"}}, ["outputs"]),
     _tool("stuck", "Cannot safely proceed. Escalate to a human.",
           {"reason": {"type": "string"}, "context": {"type": "object"}}, ["reason"]),
@@ -86,6 +93,7 @@ Rules:
 - Identify controls by role+name, label, visible text, or row label ("near") — not by guessing CSS.
 - Never enter real credentials or invent data. Use only values from the goal/params.
 - Bounded waits only. If a control is missing or the screen is unexpected and you cannot safely proceed, call stuck with a clear reason.
+- If the control or value you need is below the fold, scroll first. Do not repeat the same extract - once you have read a value it is captured; move on.
 - When the goal's success condition is visibly true, call assert_state to check it, then done with the extracted outputs.
 
 Progress discipline (important):

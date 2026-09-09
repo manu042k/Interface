@@ -39,6 +39,8 @@ class ActionType(StrEnum):
     WAIT_FOR = "wait_for"
     EXTRACT = "extract"
     ASSERT_STATE = "assert_state"
+    SCROLL = "scroll"
+    PRESS_KEY = "press_key"
 
 
 class RiskClass(StrEnum):
@@ -421,6 +423,8 @@ class ToolCall(BaseModel):
         "wait_for",
         "extract",
         "assert_state",
+        "scroll",
+        "press_key",
         "done",
         "stuck",
     ]
