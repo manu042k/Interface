@@ -306,6 +306,16 @@ class Orchestrator:
                 else:
                     history.append(desc)
 
+                # A passing assert_state is the finish line. Nudge hard toward
+                # `done` so the model doesn't wander off and redo work it has
+                # already completed (observed on a real the legacy console edit run).
+                if ok and call.tool == "assert_state":
+                    note = (
+                        "That check PASSED. If it is the goal's success condition, your "
+                        "NEXT call must be done with the outputs - do not click, type, "
+                        "navigate or scroll again."
+                    )
+
                 # --- no-progress loop guard -------------------------------
                 # An action that "succeeds" but leaves the screen exactly as it
                 # was, repeated, means the run is stuck in a loop the model
