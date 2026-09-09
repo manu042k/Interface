@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, API_BASE, type RunReport as RunReportData } from "@/lib/api";
 import {
@@ -8,6 +9,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { OutcomeBadge, StatusBadge } from "@/components/badges";
 import { ArtifactView } from "@/components/artifact-view";
 
@@ -74,21 +88,27 @@ function buildBlocks(
   return { blocks, orphanShots, docs };
 }
 
-function Shot({ src }: { src: string }) {
+function Thumb({
+  src,
+  onOpen,
+}: {
+  src: string;
+  onOpen: (src: string) => void;
+}) {
   return (
-    <a
-      href={API_BASE + src}
-      target="_blank"
-      rel="noreferrer"
-      className="block"
+    <button
+      type="button"
+      onClick={() => onOpen(src)}
+      className="block w-full max-w-[220px] overflow-hidden rounded border transition hover:opacity-80 hover:ring-2 hover:ring-primary/40"
+      title="Click to enlarge"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={API_BASE + src}
         alt={src}
-        className="max-h-64 w-full rounded border object-contain object-top transition-opacity hover:opacity-80"
+        className="h-24 w-full object-cover object-top"
       />
-    </a>
+    </button>
   );
 }
 
@@ -155,10 +175,7 @@ function TimelineRow({ e }: { e: Record<string, unknown> }) {
     "";
 
   return (
-    <li className="border-border/40 flex flex-wrap items-baseline gap-x-2 border-b py-1 last:border-0">
-      <span className="text-muted-foreground w-12 shrink-0 text-xs tabular-nums">
-        {e.step != null ? `s${String(e.step)}` : "·"}
-      </span>
+    <div className="flex flex-wrap items-baseline gap-x-2 py-0.5">
       <span
         className={
           bad
@@ -177,11 +194,9 @@ function TimelineRow({ e }: { e: Record<string, unknown> }) {
         </span>
       ))}
       {detail && (
-        <span className="text-muted-foreground w-full pl-14 text-xs">
-          ↳ {detail}
-        </span>
+        <span className="text-muted-foreground w-full text-xs">↳ {detail}</span>
       )}
-    </li>
+    </div>
   );
 }
 
@@ -199,6 +214,7 @@ export function RunReport({
   /** the run page already has a header + stats bar, so it hides this card */
   showSummary?: boolean;
 }) {
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const { data: rep } = useQuery<RunReportData>({
     queryKey: ["report", id],
     queryFn: () => api.report(id),
@@ -210,6 +226,7 @@ export function RunReport({
     );
   const run = rep.run;
   const { blocks, orphanShots, docs } = buildBlocks(rep.timeline, rep.evidence);
+  const hasEvidence = rep.evidence.some((e) => e.endsWith(".png"));
 
   return (
     <div className="space-y-4">
@@ -246,40 +263,55 @@ export function RunReport({
         </Card>
       )}
 
-      {/* one row per step: its events on the left, its screenshot on the right */}
+      {/* one table row per step: step no · action(s) · evidence */}
       <Card className="print-card min-w-0">
         <CardHeader>
           <CardTitle className="text-base">
-            Timeline{rep.evidence.length > 0 ? " & evidence" : ""}
+            Timeline{hasEvidence ? " & evidence" : ""}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ol className="divide-border/50 divide-y text-sm">
-            {blocks.map((b, i) => (
-              <li
-                key={i}
-                className="grid gap-3 py-2 first:pt-0 last:pb-0 lg:grid-cols-[1.7fr_1fr]"
-              >
-                <div className="min-w-0 space-y-1">
-                  {b.events.map((e, j) => (
-                    <TimelineRow key={j} e={e} />
-                  ))}
-                </div>
-                {b.shots.length > 0 && (
-                  <div className="min-w-0 space-y-2 lg:justify-self-end">
-                    {b.shots.map((s) => (
-                      <Shot key={s} src={s} />
-                    ))}
-                  </div>
+        <CardContent className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-14">Step</TableHead>
+                <TableHead>Action</TableHead>
+                {hasEvidence && (
+                  <TableHead className="w-[240px]">Evidence</TableHead>
                 )}
-              </li>
-            ))}
-          </ol>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {blocks.map((b, i) => (
+                <TableRow key={i} className="align-top">
+                  <TableCell className="text-muted-foreground pt-2 font-mono text-xs tabular-nums">
+                    {b.step != null ? `s${b.step}` : "·"}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <div className="space-y-0.5">
+                      {b.events.map((e, j) => (
+                        <TimelineRow key={j} e={e} />
+                      ))}
+                    </div>
+                  </TableCell>
+                  {hasEvidence && (
+                    <TableCell className="py-2">
+                      <div className="space-y-2">
+                        {b.shots.map((s) => (
+                          <Thumb key={s} src={s} onOpen={setLightbox} />
+                        ))}
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
           {orphanShots.length > 0 && (
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {orphanShots.map((s) => (
-                <Shot key={s} src={s} />
+                <Thumb key={s} src={s} onOpen={setLightbox} />
               ))}
             </div>
           )}
@@ -301,6 +333,22 @@ export function RunReport({
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!lightbox} onOpenChange={(o) => !o && setLightbox(null)}>
+        <DialogContent className="w-auto max-w-[95vw] border-none bg-transparent p-0 shadow-none sm:max-w-[95vw]">
+          <DialogTitle className="sr-only">Evidence screenshot</DialogTitle>
+          {lightbox && (
+            <a href={API_BASE + lightbox} target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={API_BASE + lightbox}
+                alt={lightbox}
+                className="max-h-[90vh] w-auto max-w-full rounded-lg border shadow-2xl"
+              />
+            </a>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {rep.replays.length > 0 && (
         <Card className="print-card">
