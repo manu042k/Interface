@@ -24,6 +24,7 @@ import { StatusBadge } from "@/components/badges";
 import { NoVncFrame } from "@/components/novnc-frame";
 import { EventTimeline } from "@/components/event-timeline";
 import { HandoffPanel } from "@/components/handoff-panel";
+import { RunReport } from "@/components/run-report";
 
 const TERMINAL = new Set(["completed", "failed", "dead_end"]);
 
@@ -110,12 +111,6 @@ export default function RunPage() {
   const tokens = (run?.tokens_in ?? 0) + (run?.tokens_out ?? 0);
   const isReplay = run?.mode === "replay";
 
-  const { data: replay } = useQuery({
-    queryKey: ["replay", id],
-    queryFn: () => api.replay(id),
-    enabled: !!isReplay && ended,
-  });
-
   const cancel = useMutation({
     mutationFn: () => api.cancelRun(id),
     onSuccess: () => {
@@ -133,7 +128,7 @@ export default function RunPage() {
           <h1 className="truncate text-2xl font-semibold tracking-tight">
             {run?.name || run?.goal || "…"}
           </h1>
-          {run?.name && run?.goal && (
+          {run?.name && run?.goal && run.name !== run.goal && (
             <p className="text-muted-foreground mt-0.5 line-clamp-2 text-sm">
               {run.goal}
             </p>
@@ -157,10 +152,10 @@ export default function RunPage() {
               Cancel run
             </Button>
           )}
-          {run?.artifact_id && (
-            <Button asChild size="sm">
+          {ended && (
+            <Button asChild size="sm" variant="outline">
               <Link href={`/runs/${id}/report`}>
-                <FileText className="mr-1.5 h-4 w-4" /> Report
+                <FileText className="mr-1.5 h-4 w-4" /> Full report / print
               </Link>
             </Button>
           )}
@@ -339,45 +334,21 @@ export default function RunPage() {
         </div>
       )}
 
-      {isReplay && ended && replay && (
-        <div className="bg-card divide-border/50 shrink-0 divide-y rounded-lg border px-3 py-1">
-          <DetailRow label="Outcome">{replay.outcome ?? run?.detail}</DetailRow>
-          {replay.business_outcome_code && (
-            <DetailRow label="Business outcome">
-              {replay.business_outcome_code}
-            </DetailRow>
-          )}
-          {!!replay.recovered_conditions?.length && (
-            <DetailRow label="Recovered">
-              {replay.recovered_conditions.join(", ")}
-            </DetailRow>
-          )}
-          {replay.outputs && Object.keys(replay.outputs).length > 0 && (
-            <DetailRow label="Outputs">
-              <pre className="bg-muted overflow-x-auto rounded p-2 text-[11px]">
-                {JSON.stringify(replay.outputs, null, 2)}
-              </pre>
-            </DetailRow>
-          )}
-          {replay.failure_detail && (
-            <DetailRow label="Failure">
-              step {replay.failure_detail.step_index}: expected{" "}
-              {replay.failure_detail.expected}, observed{" "}
-              {replay.failure_detail.observed}
-            </DetailRow>
-          )}
+      {ended ? (
+        /* the live view is dead once the run finishes - show the report here */
+        <div className="min-h-0 flex-1">
+          <RunReport id={id} showSummary={false} />
+        </div>
+      ) : (
+        <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1.4fr_1fr]">
+          <NoVncFrame
+            novncUrl={run?.novnc_url ?? null}
+            interactive={!!inControl}
+            ended={false}
+          />
+          <EventTimeline runId={id} />
         </div>
       )}
-
-      {/* Live view + timeline */}
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1.4fr_1fr]">
-        <NoVncFrame
-          novncUrl={run?.novnc_url ?? null}
-          interactive={!!inControl}
-          ended={ended && !isStuck}
-        />
-        <EventTimeline runId={id} />
-      </div>
     </div>
   );
 }
