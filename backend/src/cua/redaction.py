@@ -122,7 +122,12 @@ def _redact_with_report(payload: Any, _key: str | None = None) -> tuple[Any, lis
         out: dict[Any, Any] = {}
         for k, v in payload.items():
             key_l = str(k).strip().lower().replace("-", "_")
-            if key_l in _SENSITIVE_KEYS:
+            # A sensitive key holding a scalar is the secret itself -> mask it
+            # wholesale. A sensitive key holding a dict/list is a structural node
+            # (e.g. a JSON-Schema fragment at `properties.password`), NOT the
+            # value - recurse so we redact any leaf secrets without destroying
+            # the shape a downstream validator depends on.
+            if key_l in _SENSITIVE_KEYS and not isinstance(v, (dict, list, tuple)):
                 out[k] = REDACTION_MARKER.format(kind="key:" + key_l)
                 kinds.append("key:" + key_l)
                 continue

@@ -90,6 +90,29 @@ def test_redact_is_noop_on_clean_data():
     assert redact(payload) == payload
 
 
+def test_redact_keeps_schema_shape_under_a_sensitive_key():
+    # A JSON-Schema fragment lives at input_schema.properties.password — it is a
+    # structural node, not the secret. Redaction must recurse into it, not
+    # replace it with a string marker (which broke Draft202012Validator).
+    from jsonschema import Draft202012Validator
+
+    from cua.redaction import redact
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "password": {"type": "string", "x-sensitive": True},
+            "operator": {"type": "string", "example": "teller1"},
+        },
+        "required": ["operator", "password"],
+    }
+    out = redact({"input_schema": schema, "password": "hunter2super"})
+    assert out["input_schema"]["properties"]["password"] == {"type": "string", "x-sensitive": True}
+    assert out["input_schema"]["required"] == ["operator", "password"]
+    assert "REDACTED" in str(out["password"])  # the scalar secret is still masked
+    Draft202012Validator(out["input_schema"])  # must not raise
+
+
 # --- ST-004: observability sink -----------------------------------------
 def test_file_sink_orders_events_and_redacts(tmp_path):
     from cua.observability import FileSink
