@@ -46,3 +46,21 @@ def test_write_path_redacts(tmp_path):
     blob = (tmp_path / "runC" / "events.jsonl").read_text()
     assert "s3cr3tPassw0rd" not in blob
     assert "REDACTED" in blob
+
+
+def test_on_screen_full_account_number_never_reaches_the_log(tmp_path):
+    # MockBank puts a full 16-digit account number on the member page on
+    # purpose; it lands in an observe event's dom_excerpt and must be redacted
+    # on the way to disk (brief 3.4).
+    sink = FileSink(tmp_path)
+    log = RunLogger(sink, "runD")
+    log.event(
+        2, "observe",
+        dom_excerpt="<td>Account No.</td><td>4000123456789010</td><td>Savings</td><td>$4,182.55</td>",
+        ax_summary="Member 12345 | Account No. 4000123456789010",
+    )
+    blob = (tmp_path / "runD" / "events.jsonl").read_text()
+    assert "4000123456789010" not in blob
+    assert "REDACTED" in blob
+    # the non-sensitive balance is kept for debuggability
+    assert "4,182.55" in blob

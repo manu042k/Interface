@@ -273,6 +273,9 @@ def member_detail(mid: str):
         f"  <tr bgcolor=\"#eeeeee\"><td colspan=\"2\"><font face=\"Verdana\" size=\"2\"><b>Member {mid} &mdash; {escape(m['name'])}</b></font></td></tr>\n"
         f"  <tr><td width=\"180\"><font face=\"Verdana\" size=\"2\">Status</font></td><td><font face=\"Verdana\" size=\"2\">{escape(m['status'])}</font></td></tr>\n"
         f"  <tr><td><font face=\"Verdana\" size=\"2\">Home Branch</font></td><td><font face=\"Verdana\" size=\"2\">{escape(m['branch'])}</font></td></tr>\n"
+        # Full account number IS on screen - it must never reach an artifact or
+        # log un-redacted (the whole point of the redaction seam).
+        f"  <tr><td><font face=\"Verdana\" size=\"2\">Account No.</font></td><td><font face=\"Verdana\" size=\"2\">{escape(m['full_account_number'])}</font></td></tr>\n"
         f"{decoy_row}"
         "  <tr><td valign=\"top\"><font face=\"Verdana\" size=\"2\">Balances</font></td><td>\n"
         "     <table border=\"1\" cellpadding=\"4\" cellspacing=\"0\">\n"
