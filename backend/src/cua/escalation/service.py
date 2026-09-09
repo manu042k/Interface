@@ -114,6 +114,25 @@ class EscalationService:
             raise KeyError(f"no such intervention: {intervention_id}")
         return self._interventions[intervention_id]
 
+    def abandon(self, intervention_id: str, reason: str = "no operator responded") -> InterventionRequest:
+        """Close an unclaimed intervention because the wait for a human expired.
+        Releases automation's held lease so the session/sandbox can be reclaimed."""
+        iv = self.get(intervention_id)
+        session_id = iv.context.get("session_id")
+        auto = self._auto_leases.pop(session_id, None) if session_id else None
+        if auto is not None:
+            try:
+                self.broker.release(auto)
+            except Exception:  # noqa: BLE001
+                pass
+        iv.status = InterventionStatus.RESOLVED
+        iv.resolved_at = time.time()
+        iv.resolution = f"abandoned: {reason}"
+        self._logger_factory(iv.run_id).event(
+            iv.step_index, "intervention_abandoned", intervention_id=intervention_id, reason=reason
+        )
+        return iv
+
     # -- ST-038/039: claim + control transfer -----------------------
     def claim(self, intervention_id: str, operator: str) -> InterventionRequest:
         iv = self.get(intervention_id)

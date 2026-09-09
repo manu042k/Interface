@@ -127,7 +127,7 @@ class Orchestrator:
         note: str | None = None
         last_call: ToolCall | None = None  # for "what the agent was attempting" on escalation
         last_ok_tool: str | None = None  # last action that actually ran, for the done gate
-        done_nudged = False
+        done_nudged = 0  # rejected `done` calls (no successful verify before them)
         policy_blocks = 0  # consecutive guardrail rejections the model can't fix by retrying
 
         from ..sandbox.session import close_run_surface, open_run_surface
@@ -196,19 +196,38 @@ class Orchestrator:
                     continue
 
                 if call.tool == "done":
-                    # A `done` must be earned by a preceding verification - the
-                    # assert_state/extract that ran just before is what the
-                    # recorder keeps as the replay checkpoint. Nudge once if the
-                    # model tries to finish straight off a click/type.
-                    if last_ok_tool not in ("assert_state", "extract") and not done_nudged:
-                        done_nudged = True
+                    # A `done` must be earned by a preceding verification that
+                    # SUCCEEDED - the assert_state/extract that ran just before is
+                    # what the recorder keeps as the replay checkpoint. This is
+                    # checked EVERY time, not once: a model that fabricates an
+                    # answer, gets nudged, fails an assert, then re-issues `done`
+                    # must not slip a bogus capability through.
+                    if last_ok_tool not in ("assert_state", "extract"):
+                        done_nudged += 1
+                        history.append("done -> REJECTED: no successful verify precedes it")
+                        if done_nudged >= 3:
+                            reason = (
+                                "the agent keeps calling done without a verification that "
+                                "passes - the success condition cannot be confirmed on screen"
+                            )
+                            resumed_note = await self._escalate_and_wait(
+                                run, transcript, session, step, reason, goal, history, log,
+                                handoff_wait_s, last_call,
+                            )
+                            if resumed_note is None:
+                                break
+                            note, last_sig, repeats, done_nudged = resumed_note, None, 0, 0
+                            deadline = time.time() + self.cfg.run_timeout_seconds
+                            step += 1
+                            continue
                         note = (
-                            "Not yet. Before done you must call assert_state with the goal's "
-                            "success condition - prefer text_present of the exact confirmation "
-                            "wording on the current screen (that assertion becomes the replay "
-                            "checkpoint). If it passes, then call done."
+                            "Not done. Before done you MUST call assert_state with the goal's "
+                            "success condition (text_present of the exact confirmation wording on "
+                            "the CURRENT screen) and it must return ok. If that assert_state "
+                            "FAILS, the goal is not achieved - do not call done, re-observe or "
+                            "call stuck. Never report a value you cannot see on screen."
                         )
-                        history.append("done -> REJECTED: verify with assert_state first")
+                        step += 1
                         continue
                     transcript.done_outputs = dict(call.args.get("outputs", {}))
                     transcript.final_state = state
@@ -474,7 +493,27 @@ class Orchestrator:
                     "continue toward the goal from here. Only call done after verifying the "
                     "success condition with assert_state / extract."
                 )
-        log.event(step, "handoff_timeout", intervention_id=iv.intervention_id)
+        # The wait expired. If a human is actively on it (CLAIMED), leave the run
+        # STUCK and the session held - they're still working. If nobody ever
+        # claimed it, stop waiting: end the run and release the sandbox rather
+        # than hold a container forever for an operator who isn't coming.
+        try:
+            final = self.escalation.get(iv.intervention_id)
+        except Exception:  # noqa: BLE001
+            final = None
+        if final is not None and final.status == InterventionStatus.CLAIMED:
+            log.event(step, "handoff_timeout", intervention_id=iv.intervention_id,
+                      detail="operator still in control - leaving run stuck")
+            return None
+        try:
+            self.escalation.abandon(iv.intervention_id, f"no operator in {wait_s:.0f}s")
+        except Exception:  # noqa: BLE001
+            pass
+        run.status = RunStatus.DEAD_END
+        run.detail = f"stuck at step {step} and no operator responded within {wait_s:.0f}s"
+        log.event(step, "handoff_timeout", intervention_id=iv.intervention_id,
+                  detail="unclaimed - ending run, releasing sandbox")
+        log.run_finished("dead_end", reason=run.detail)
         return None
 
     # -- helpers ---------------------------------------------------

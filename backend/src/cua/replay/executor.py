@@ -505,6 +505,20 @@ class ReplayExecutor:
                 failure.failure_detail = None
             return False
 
+        # Wait expired. If nobody ever claimed it, close the intervention so the
+        # sandbox isn't held forever for an operator who isn't coming; the caller
+        # then returns the hard_failure as normal. A CLAIMED-but-unresolved
+        # intervention is left alone (operator still working).
+        try:
+            final = self.escalation.get(iv.intervention_id)
+        except Exception:  # noqa: BLE001
+            final = None
+        if final is None or final.status != InterventionStatus.CLAIMED:
+            try:
+                self.escalation.abandon(iv.intervention_id, f"no operator in {wait_s:.0f}s")
+            except Exception:  # noqa: BLE001
+                pass
+            run.status = RunStatus.FAILED
         log.event(step.step_index, "handoff_timeout", intervention_id=iv.intervention_id)
         return False
 
