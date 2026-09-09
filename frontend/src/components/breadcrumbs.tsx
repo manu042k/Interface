@@ -41,7 +41,7 @@ export function Breadcrumbs() {
         href="/"
         className="text-muted-foreground hover:text-foreground shrink-0 font-medium"
       >
-        Trace
+        Replay
       </Link>
       {crumbs.map((c, i) => {
         const last = i === crumbs.length - 1;

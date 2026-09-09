@@ -7,7 +7,7 @@ import { AppShell } from "@/components/app-shell";
 const inter = Inter({ variable: "--font-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Trace",
+  title: "Replay",
   description:
     "LLM-driven discovery, deterministic replay, live sandbox, human handoff.",
 };
