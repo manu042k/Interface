@@ -70,15 +70,12 @@ export function HandoffPanel({
     setBusy(true);
     releasing.current = true;
     try {
-      const out = await api.release(
-        iv.intervention_id,
-        iv.claimed_by ?? OPERATOR,
-        { kind: "text_present", params: { text: "Savings" } },
-      );
-      step(
-        `handed back - resumed=${out.resumed}, checkpoint_holds=${out.checkpoint_already_holds}`,
-      );
-      toast.success(out.detail);
+      // release without a goal checkpoint: control returns to automation and it
+      // continues from where it is (the previous hard-coded MockBank checkpoint
+      // could never hold on any other site, leaving the run wedged).
+      const out = await api.release(iv.intervention_id, iv.claimed_by ?? OPERATOR);
+      step(`handed back - control returned to automation`);
+      toast.success(out.detail || "Control returned to automation");
       setIv(null);
       onResolved();
     } catch (e) {
