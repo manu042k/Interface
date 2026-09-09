@@ -125,6 +125,7 @@ class Orchestrator:
         deadline = time.time() + self.cfg.run_timeout_seconds
         history: list[str] = []
         note: str | None = None
+        last_call: ToolCall | None = None  # for "what the agent was attempting" on escalation
 
         from ..sandbox.session import close_run_surface, open_run_surface
 
@@ -175,6 +176,8 @@ class Orchestrator:
                     break
 
                 log.decision(step, call.tool, call.args, call.reasoning)
+                if call.tool not in ("observe", "stuck", "done"):
+                    last_call = call
 
                 if call.usage:
                     run.llm_calls += 1
@@ -201,7 +204,8 @@ class Orchestrator:
                 if call.tool == "stuck":
                     reason = call.args.get("reason", "unspecified")
                     resumed_note = await self._escalate_and_wait(
-                        run, transcript, session, step, reason, goal, history, log, handoff_wait_s
+                        run, transcript, session, step, reason, goal, history, log,
+                        handoff_wait_s, last_call,
                     )
                     if resumed_note is None:
                         break  # no operator came back - end as STUCK
@@ -306,7 +310,8 @@ class Orchestrator:
                 if repeats >= 3:
                     reason = f"no progress: repeated {call.tool} 4x with no screen change"
                     resumed_note = await self._escalate_and_wait(
-                        run, transcript, session, step, reason, goal, history, log, handoff_wait_s
+                        run, transcript, session, step, reason, goal, history, log,
+                        handoff_wait_s, last_call,
                     )
                     if resumed_note is None:
                         break
@@ -353,6 +358,7 @@ class Orchestrator:
                 iv = await self.escalation.open_intervention(
                     run=run, session_id=session, step_index=step,
                     reason=run.detail or transcript.stuck_reason or "stuck",
+                    attempting=_attempting_str(last_call, goal),
                     goal=goal, transcript_tail=history,
                 )
                 transcript.intervention_id = iv.intervention_id
@@ -372,6 +378,7 @@ class Orchestrator:
 
     async def _escalate_and_wait(
         self, run, transcript, session, step, reason, goal, history, log, wait_s,
+        last_call: ToolCall | None = None,
     ) -> str | None:
         """Pause discovery: raise an intervention, hold the session, and BLOCK
         until an operator hands control back. Returns a resume `note` for the
@@ -386,11 +393,13 @@ class Orchestrator:
         if self.escalation is None:
             return None
 
+        attempting = _attempting_str(last_call, goal)
+
         if self.broker is not None:
             self.broker.register_session(session, session)
         iv = await self.escalation.open_intervention(
             run=run, session_id=session, step_index=step,
-            reason=reason, goal=goal, transcript_tail=history,
+            reason=reason, attempting=attempting, goal=goal, transcript_tail=history,
         )
         transcript.intervention_id = iv.intervention_id
         if wait_s <= 0:
@@ -489,3 +498,27 @@ def _describe_call(call: ToolCall) -> str:
     if call.tool == "extract":
         return f"extract {a.get('as')} <- {a.get('target')} as {a.get('expected_shape')}"
     return f"{call.tool} {a.get('target') or a.get('condition') or ''}".strip()
+
+
+def _attempting_str(call: ToolCall | None, goal: str | None) -> str | None:
+    """A plain-language line for the operator: what the agent was trying to do
+    when it gave up. Its stated intent + the concrete control/value it wanted."""
+    if call is None:
+        return f"work toward the goal: {goal}" if goal else None
+    a = call.args
+    target = a.get("target") or a.get("url") or a.get("condition") or a.get("key")
+    verb = {
+        "click": "click", "type": "type into", "select": "pick an option in",
+        "navigate": "navigate to", "wait_for": "wait for", "extract": "read",
+        "assert_state": "verify", "scroll": "scroll to", "press_key": "press key on",
+    }.get(call.tool, call.tool)
+    val = ""
+    if call.tool == "type":
+        val = " (a value it was given; hidden here)"
+    elif call.tool in ("select", "press_key", "scroll") and a.get("value"):
+        val = f" = {a['value']!r}"
+    piece = f"{verb} {target}{val}".strip()
+    intent = (call.reasoning or "").strip().rstrip(".")
+    if intent:
+        return f"{intent} — by trying to {piece}"
+    return f"trying to {piece}"

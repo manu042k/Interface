@@ -64,6 +64,8 @@ async def test_stuck_discovery_opens_intervention_with_context(system):
     iv = sys.escalation.get(transcript.intervention_id)
     # ST-037: context bundle
     assert iv.reason
+    # the operator is told WHAT the agent was going for, not just that it stopped
+    assert iv.attempting and iv.attempting == iv.context["attempting"]
     assert iv.context["current_url"]
     assert iv.context["screenshot_ref"]  # a richer signal was captured
     assert iv.context["transcript_tail"]

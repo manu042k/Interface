@@ -14,6 +14,7 @@ type Iv = {
   claimed_by: string | null;
   step_index: number;
   reason: string;
+  attempting: string | null;
 };
 
 export function HandoffPanel({
@@ -93,7 +94,15 @@ export function HandoffPanel({
           <p className="font-medium">
             The run is stuck at step {iv.step_index} - a human is needed.
           </p>
-          <p className="text-muted-foreground text-sm">{iv.reason}</p>
+          {iv.attempting && (
+            <p className="mt-1 text-sm">
+              <span className="text-muted-foreground">The agent was trying to: </span>
+              {iv.attempting}
+            </p>
+          )}
+          <p className="text-muted-foreground mt-1 text-xs">
+            Why it stopped: {iv.reason}
+          </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {!inControl ? (

@@ -39,7 +39,8 @@ export default function InterventionsPage() {
             <TableRow>
               <TableHead>Goal</TableHead>
               <TableHead>Step</TableHead>
-              <TableHead>Reason</TableHead>
+              <TableHead>Agent was attempting</TableHead>
+              <TableHead>Why it stopped</TableHead>
               <TableHead>Tenant</TableHead>
               <TableHead />
             </TableRow>
@@ -51,7 +52,12 @@ export default function InterventionsPage() {
                   {i.goal}
                 </TableCell>
                 <TableCell>{i.step_index}</TableCell>
-                <TableCell className="max-w-sm truncate">{i.reason}</TableCell>
+                <TableCell className="max-w-sm truncate">
+                  {i.attempting ?? "-"}
+                </TableCell>
+                <TableCell className="text-muted-foreground max-w-xs truncate text-xs">
+                  {i.reason}
+                </TableCell>
                 <TableCell>{i.tenant}</TableCell>
                 <TableCell className="text-right">
                   <Button asChild size="sm" variant="outline">

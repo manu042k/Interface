@@ -377,6 +377,7 @@ def create_app(config: Config | None = None) -> FastAPI:
             "claimed_by": iv.claimed_by,
             "step_index": iv.step_index,
             "reason": iv.reason,
+            "attempting": iv.attempting,
             "goal": iv.goal,
         }
 

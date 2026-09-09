@@ -126,6 +126,7 @@ export type Intervention = {
   run_id: string;
   step_index: number;
   reason: string;
+  attempting: string | null;
   opened_at: number;
   status: string;
 };
@@ -227,6 +228,7 @@ export const api = {
       claimed_by: string | null;
       step_index: number;
       reason: string;
+      attempting: string | null;
     } | null>(`/runs/${runId}/intervention`),
   interventionContext: (id: string) =>
     j<Record<string, unknown>>(`/interventions/${id}`),

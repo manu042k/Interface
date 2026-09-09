@@ -370,6 +370,10 @@ class InterventionRequest(BaseModel):
     goal: str | None = None
     step_index: int
     reason: str
+    # What the automation was trying to do when it gave up - the model's stated
+    # intent plus the concrete control/value it was going for, so the operator
+    # knows what to finish rather than reverse-engineering it from a screenshot.
+    attempting: str | None = None
     opened_at: float = Field(default_factory=_now)
 
     context: dict[str, Any] = Field(default_factory=dict)  # screenshot_ref, transcript_tail, current_url

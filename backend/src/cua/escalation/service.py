@@ -52,6 +52,7 @@ class EscalationService:
         session_id: str,
         step_index: int,
         reason: str,
+        attempting: str | None = None,
         capability_name: str | None = None,
         goal: str | None = None,
         transcript_tail: list[str] | None = None,
@@ -85,15 +86,20 @@ class EscalationService:
             goal=goal or run.goal,
             step_index=step_index,
             reason=reason,
+            attempting=attempting,
             context={
                 "screenshot_ref": screenshot_ref,
                 "transcript_tail": (transcript_tail or [])[-8:],
                 "current_url": current_url,
                 "session_id": session_id,
+                "attempting": attempting,
             },
         )
         self._interventions[iv.intervention_id] = iv
-        log.event(step_index, "intervention_opened", intervention_id=iv.intervention_id, reason=reason)
+        log.event(
+            step_index, "intervention_opened", intervention_id=iv.intervention_id,
+            reason=reason, attempting=attempting,
+        )
         return iv
 
     # -- queries --------------------------------------------------

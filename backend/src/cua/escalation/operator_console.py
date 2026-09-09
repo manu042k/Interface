@@ -33,6 +33,7 @@ class OperatorConsole:
                 "run_id": iv.run_id,
                 "step_index": iv.step_index,
                 "reason": iv.reason,
+                "attempting": iv.attempting,
                 "opened_at": iv.opened_at,
                 "status": iv.status,
             }
@@ -45,6 +46,7 @@ class OperatorConsole:
             "intervention_id": iv.intervention_id,
             "goal": iv.goal,
             "reason": iv.reason,
+            "attempting": iv.attempting,
             "step_index": iv.step_index,
             "screenshot_ref": iv.context.get("screenshot_ref"),
             "current_url": iv.context.get("current_url"),

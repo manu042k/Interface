@@ -436,6 +436,13 @@ class ReplayExecutor:
             f"expected {fd.expected if fd else _expected_str(step)}, "
             f"observed {fd.observed if fd else 'unknown'}"
         )
+        bound = ""
+        if step.value_binding is not None:
+            bound = (
+                f" the value of param '{step.value_binding.param}'"
+                if step.value_binding.param else " a recorded value"
+            )
+        attempting = f"step {step.step_index}: {step.action_type.value} - {step.description}{bound}"
         run.status = RunStatus.STUCK
         run.detail = reason
         log.stuck(step.step_index, reason)
@@ -452,7 +459,8 @@ class ReplayExecutor:
         )
         iv = await self.escalation.open_intervention(
             run=iv_run, session_id=session, step_index=step.step_index,
-            reason=reason, capability_name=artifact.name, goal=artifact.goal_description,
+            reason=reason, attempting=attempting, capability_name=artifact.name,
+            goal=artifact.goal_description,
             transcript_tail=[f"recovered: {c}" for c in recovered],
         )
         log.event(step.step_index, "awaiting_operator", intervention_id=iv.intervention_id, wait_s=wait_s)
