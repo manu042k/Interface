@@ -132,3 +132,61 @@ async def test_non_idempotent_recheck_prevents_double_submit(sys_with_capability
     )
     assert result.outcome in {ReplayOutcome.SUCCESS, ReplayOutcome.RECOVERABLE_THEN_SUCCESS}
     assert calls["n"] == 1  # clicked exactly once, no blind retry
+
+
+# --- §3.6: a stuck replay escalates to a human, then resumes ----
+async def test_stuck_replay_escalates_and_resumes_after_handback(sys_with_capability):
+    """An unrecoverable step raises an intervention, holds the live session, and
+    replay continues once an operator hands control back (brief §3.6)."""
+    import asyncio
+
+    from cua.models import FailureDetail, InterventionStatus, ReplayResult
+
+    system, art, mockbank = sys_with_capability
+    target_step = 1  # fail the 2nd recorded step exactly once
+
+    real_run_step = system.replay._run_step
+    fired = {"n": 0}
+
+    async def flaky_run_step(artifact, step, *a, **kw):
+        if step.step_index == target_step and fired["n"] == 0:
+            fired["n"] = 1
+            return ReplayResult(
+                outcome=ReplayOutcome.HARD_FAILURE,
+                failure_detail=FailureDetail(
+                    step_index=step.step_index, expected="the next screen", observed="stale screen"
+                ),
+            )
+        return await real_run_step(artifact, step, *a, **kw)
+
+    system.replay._run_step = flaky_run_step  # type: ignore[method-assign]
+
+    task = asyncio.create_task(
+        system.replay.execute(
+            art, {"member_id": "12345"}, target=f"{mockbank}/search",
+            run_id="inv_esc", handoff_wait_s=10.0,
+        )
+    )
+
+    # wait for the intervention, then run the real claim -> take-control ->
+    # release flow (the same calls the operator console makes)
+    for _ in range(80):
+        await asyncio.sleep(0.1)
+        ivs = system.escalation.list_interventions()
+        if ivs:
+            break
+    assert ivs, "replay never opened an intervention"
+    iv = ivs[0]
+    assert iv.run_id == "inv_esc"
+    assert iv.status == InterventionStatus.OPEN
+    assert iv.context["current_url"] and iv.context["session_id"]
+
+    system.escalation.claim(iv.intervention_id, "op_test")
+    system.escalation.take_control(iv.intervention_id, "op_test")
+    await system.escalation.resume(iv.intervention_id, resolution="handed back by test")
+
+    result = await asyncio.wait_for(task, timeout=15)
+    assert result.outcome == ReplayOutcome.RECOVERABLE_THEN_SUCCESS
+    assert "human_intervention" in result.recovered_conditions
+    assert result.outputs["savings_balance"]["amount"] == 4182.55
+    assert system.escalation.get(iv.intervention_id).status == InterventionStatus.RESOLVED

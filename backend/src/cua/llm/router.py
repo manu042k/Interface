@@ -144,7 +144,11 @@ class LLMRouter:
                     await self._pace(h)
                     resp = await provider.complete(system, user, tools)
                     h.served += 1
-                    self._emit("llm_call", provider=provider.name, tool=resp.tool, rotated=len(tried) > 1)
+                    self._emit(
+                        "llm_call", provider=provider.name,
+                        model=getattr(provider, "_model", None) or getattr(provider, "model", None),
+                        tool=resp.tool, rotated=len(tried) > 1,
+                    )
                     return resp
                 except OutOfBalance as exc:
                     last_exc = exc

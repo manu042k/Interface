@@ -108,6 +108,13 @@ export default function RunPage() {
   const ended = !!run && TERMINAL.has(run.status);
   const ok = run?.status === "completed";
   const tokens = (run?.tokens_in ?? 0) + (run?.tokens_out ?? 0);
+  const isReplay = run?.mode === "replay";
+
+  const { data: replay } = useQuery({
+    queryKey: ["replay", id],
+    queryFn: () => api.replay(id),
+    enabled: !!isReplay && ended,
+  });
 
   const cancel = useMutation({
     mutationFn: () => api.cancelRun(id),
@@ -287,11 +294,13 @@ export default function RunPage() {
           ) : (
             <XCircle className="text-destructive h-4 w-4" />
           )}
-          <span className="font-medium">Run {run?.status}</span>
+          <span className="font-medium">
+            {isReplay ? "Replay" : "Run"} {run?.status}
+          </span>
           {run?.detail && (
             <span className="text-muted-foreground">- {run.detail}</span>
           )}
-          {run?.artifact_id && (
+          {run?.artifact_id && !isReplay && (
             <>
               <span className="text-muted-foreground">·</span>
               <Link
@@ -311,6 +320,51 @@ export default function RunPage() {
                       : "(new draft - review to approve)"}
               </span>
             </>
+          )}
+          {run?.artifact_id && isReplay && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">
+                deterministic replay of{" "}
+                <Link
+                  href="/capabilities"
+                  className="text-primary underline underline-offset-2"
+                >
+                  {run.artifact_id.slice(0, 8)} v{run.artifact_version}
+                </Link>{" "}
+                (no LLM in the loop)
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
+      {isReplay && ended && replay && (
+        <div className="bg-card divide-border/50 shrink-0 divide-y rounded-lg border px-3 py-1">
+          <DetailRow label="Outcome">{replay.outcome ?? run?.detail}</DetailRow>
+          {replay.business_outcome_code && (
+            <DetailRow label="Business outcome">
+              {replay.business_outcome_code}
+            </DetailRow>
+          )}
+          {!!replay.recovered_conditions?.length && (
+            <DetailRow label="Recovered">
+              {replay.recovered_conditions.join(", ")}
+            </DetailRow>
+          )}
+          {replay.outputs && Object.keys(replay.outputs).length > 0 && (
+            <DetailRow label="Outputs">
+              <pre className="bg-muted overflow-x-auto rounded p-2 text-[11px]">
+                {JSON.stringify(replay.outputs, null, 2)}
+              </pre>
+            </DetailRow>
+          )}
+          {replay.failure_detail && (
+            <DetailRow label="Failure">
+              step {replay.failure_detail.step_index}: expected{" "}
+              {replay.failure_detail.expected}, observed{" "}
+              {replay.failure_detail.observed}
+            </DetailRow>
           )}
         </div>
       )}

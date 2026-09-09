@@ -168,6 +168,8 @@ def build_system(config: Config, *, extra: dict[str, Any] | None = None) -> Syst
         locator_engine=locator_engine,
         logger_factory=lambda rid: RunLogger(sink, rid),
         sandbox_manager=sandbox_manager,
+        escalation=escalation,
+        broker=broker,
     )
     return System(
         config, sink, adapter, perception, policy, router, agent, orchestrator,

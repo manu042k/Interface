@@ -60,6 +60,8 @@ class ReplayExecutor:
         locator_engine: LocatorResolutionEngine,
         logger_factory: Any,
         sandbox_manager: Any | None = None,
+        escalation: Any | None = None,
+        broker: Any | None = None,
     ) -> None:
         self.adapter = adapter
         self.perception = perception
@@ -67,6 +69,12 @@ class ReplayExecutor:
         self.locators = locator_engine
         self._logger_factory = logger_factory
         self.sandbox_manager = sandbox_manager
+        # Optional human-in-the-loop path for a replay that hits an
+        # unrecoverable condition (brief §3.6): route an intervention, hold the
+        # live session for a human, then resume. When unset, a hard failure is
+        # terminal (the offline default used by tests / the CLI).
+        self.escalation = escalation
+        self.broker = broker
 
     # -- ST-030 boundary validation ------------------------------------
     @staticmethod
@@ -84,6 +92,7 @@ class ReplayExecutor:
         run_id: str,
         idempotency_key: str | None = None,
         run: Any | None = None,
+        handoff_wait_s: float = 0.0,
     ) -> ReplayResult:
         started = time.time()
         log: RunLogger = self._logger_factory(run_id)
@@ -132,10 +141,23 @@ class ReplayExecutor:
                 recovered.extend(did_recover)
 
                 res = await self._run_step(artifact, step, session, state, params, outputs, log, recovered)
+                if res is not None and res.outcome == ReplayOutcome.HARD_FAILURE:
+                    # brief §3.6: an unrecoverable replay condition is an
+                    # escalation trigger, not just a stop. Route an intervention,
+                    # hold the live session for a human, then resume from here.
+                    if await self._escalate_replay(
+                        run, artifact, session, step, res, log, params, outputs, recovered, handoff_wait_s
+                    ):
+                        recovered.append("human_intervention")
+                        if run is not None:
+                            run.step_count = step.step_index + 1
+                        continue
                 if res is not None:
                     res.recovered_conditions = recovered
                     res.duration_seconds = time.time() - started
                     return res
+                if run is not None:
+                    run.step_count = step.step_index + 1
 
             # -- final checkpoint --------------------------------
             final_state = await self.perception.observe(self.adapter, session)
@@ -374,6 +396,91 @@ class ReplayExecutor:
         text = binding.literal or ""
         # {param} templating for URLs
         return re.sub(r"\{(\w+)\}", lambda m: str(params.get(m.group(1), m.group(0))), text)
+
+    async def _escalate_replay(
+        self, run, artifact, session, step, failure, log, params, outputs, recovered, wait_s,
+    ) -> bool:
+        """Pause replay on an unrecoverable step: raise an intervention, hold the
+        live session, and BLOCK until a human hands control back (brief §3.6).
+
+        Returns True if, after the hand-back, the step's expected state now holds
+        (the human completed it) so replay can continue; False if there is no
+        escalation path, no operator came, or the step is still failing.
+        """
+        from ..models import InterventionStatus, RunMode, RunRecord, RunStatus
+
+        if self.escalation is None or wait_s <= 0 or run is None:
+            return False
+
+        fd = failure.failure_detail
+        reason = (
+            f"replay stuck at step {step.step_index} ({step.action_type.value}): "
+            f"expected {fd.expected if fd else _expected_str(step)}, "
+            f"observed {fd.observed if fd else 'unknown'}"
+        )
+        run.status = RunStatus.STUCK
+        run.detail = reason
+        log.stuck(step.step_index, reason)
+
+        if self.broker is not None:
+            try:
+                self.broker.register_session(session, session)
+            except Exception:  # noqa: BLE001
+                pass
+
+        iv_run = run if isinstance(run, RunRecord) else RunRecord(
+            run_id=getattr(run, "run_id", "replay"), mode=RunMode.REPLAY,
+            tenant_id=artifact.tenant_scope.tenant_id or "default", app_target=run.app_target,
+        )
+        iv = await self.escalation.open_intervention(
+            run=iv_run, session_id=session, step_index=step.step_index,
+            reason=reason, capability_name=artifact.name, goal=artifact.goal_description,
+            transcript_tail=[f"recovered: {c}" for c in recovered],
+        )
+        log.event(step.step_index, "awaiting_operator", intervention_id=iv.intervention_id, wait_s=wait_s)
+
+        end = time.time() + wait_s
+        while time.time() < end:
+            await asyncio.sleep(1.5)
+            try:
+                cur = self.escalation.get(iv.intervention_id)
+            except Exception:  # noqa: BLE001
+                break
+            if cur.status != InterventionStatus.RESOLVED:
+                continue
+
+            acts = getattr(cur, "human_actions_log", []) or []
+            summary = "; ".join(
+                f"{a.get('type')}({a.get('target') or a.get('value') or a.get('url') or ''})".strip("()")
+                for a in acts
+            ) or "no explicit actions recorded"
+            log.event(step.step_index, "operator_handed_back",
+                      intervention_id=iv.intervention_id, actions=summary)
+            run.status = RunStatus.RUNNING
+            run.detail = None
+
+            # Did the human actually get us past this step? Re-observe and
+            # verify rather than assume — same discipline as the rest of replay.
+            post = await self.perception.observe(self.adapter, session)
+            if step.step_checkpoint is not None:
+                ok = await self._check(step.step_checkpoint, post, session, outputs)
+                log.event(step.step_index, "post_handback_checkpoint", ok=ok)
+                if ok:
+                    return True
+            # no checkpoint, or it doesn't hold yet — try the recorded step once more
+            retry = await self._run_step(artifact, step, session, post, params, outputs, log, recovered)
+            log.event(step.step_index, "post_handback_retry",
+                      ok=retry is None or retry.outcome != ReplayOutcome.HARD_FAILURE)
+            if retry is None:
+                return True
+            if retry.outcome == ReplayOutcome.BUSINESS_OUTCOME:
+                failure.outcome = retry.outcome
+                failure.business_outcome_code = retry.business_outcome_code
+                failure.failure_detail = None
+            return False
+
+        log.event(step.step_index, "handoff_timeout", intervention_id=iv.intervention_id)
+        return False
 
     async def _hard_failure(
         self, session, log, *, step_index, expected, observed, started, recovered, no_duration=False

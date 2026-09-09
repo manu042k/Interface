@@ -177,6 +177,7 @@ export const api = {
     j<{ run_id: string; status: string; goal: string | null; mode: string } | null>(
       "/runs/active",
     ),
+  replay: (id: string) => j<ReplayResult>(`/replays/${id}`),
   report: (id: string) => j<RunReport>(`/runs/${id}/report`),
   reportMdUrl: (id: string) => `${API_BASE}/runs/${id}/report.md`,
 

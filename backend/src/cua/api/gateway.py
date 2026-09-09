@@ -286,20 +286,36 @@ def create_app(config: Config | None = None) -> FastAPI:
         run = RunRecord(
             run_id=invocation_id, mode=RunMode.REPLAY, tenant_id=req.tenant, app_target=target,
             artifact_id=artifact_id, artifact_version=req.version, params=req.params,
+            name=artifact.name,
+            # a replay reproduces an already-approved capability - it never
+            # records a new draft, so mark it as such for the run UI.
+            record_outcome="reused",
         )
         app.state.runs[invocation_id] = run
         app.state.persist_runs()
 
         async def _do() -> None:
+            run.started_at = time.time()
             run.status = RunStatus.RUNNING
-            result = await sys.replay.execute(
-                artifact, req.params, target=target, tenant=req.tenant,
-                run_id=invocation_id, idempotency_key=req.idempotency_key, run=run,
-            )
+            try:
+                result = await sys.replay.execute(
+                    artifact, req.params, target=target, tenant=req.tenant,
+                    run_id=invocation_id, idempotency_key=req.idempotency_key, run=run,
+                    # an unrecoverable step blocks for a human hand-back (§3.6)
+                    # rather than failing outright; tests call execute() directly
+                    # with the default 0.0 and stay fast.
+                    handoff_wait_s=900.0,
+                )
+            except Exception as exc:  # noqa: BLE001 - surface any replay crash on the run
+                run.status = RunStatus.FAILED
+                run.detail = f"replay error: {exc}"
+                run.ended_at = time.time()
+                app.state.persist_runs()
+                raise
             app.state.replays[invocation_id] = result
             run.status = RunStatus.COMPLETED if result.outcome.value in {"success", "recoverable_then_success", "business_outcome"} else RunStatus.FAILED
             run.detail = result.outcome.value
-            run.ended_at = run.ended_at or None
+            run.ended_at = time.time()
             app.state.persist_runs()
 
         task = asyncio.create_task(_do())
