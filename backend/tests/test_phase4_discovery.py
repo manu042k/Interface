@@ -50,6 +50,9 @@ async def test_guardrail_block_is_fed_back(system, mockbank):
     )
     assert run.status in {RunStatus.STUCK, RunStatus.DEAD_END}
     assert any(e.guardrail_verdict == "block" for e in transcript.entries)
+    # a guardrail rejection can't be fixed by retrying: it force-escalates after
+    # the 2nd block instead of burning every step
+    assert run.step_count <= 6
 
 
 async def test_all_providers_exhausted_pauses_then_stuck(offline_config, mockbank):

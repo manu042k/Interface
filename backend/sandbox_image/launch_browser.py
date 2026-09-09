@@ -102,7 +102,18 @@ def main() -> int:
         except Exception:  # noqa: BLE001 — best effort
             pass
 
-        page.goto(url, wait_until="domcontentloaded")
+        # Best-effort warm-up navigation. A target that is down/slow at this
+        # instant must NOT take the whole browser down - the worker attaches
+        # over CDP and does its own page.goto anyway. Land on about:blank so
+        # the noVNC view isn't blank-white and Chrome stays alive.
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=10_000)
+        except Exception as e:  # noqa: BLE001
+            print(f"[launch_browser] warm-up goto {url!r} failed: {e}", flush=True)
+            try:
+                page.goto("about:blank")
+            except Exception:  # noqa: BLE001
+                pass
 
         while True:
             time.sleep(1)

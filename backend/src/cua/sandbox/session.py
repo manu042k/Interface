@@ -47,7 +47,21 @@ async def open_run_surface(
     if logger is not None:
         logger.event(None, "sandbox_started", container=handle.container, novnc_url=handle.novnc_url)
 
-    session = await adapter.open_session(target, tenant, cdp_url=handle.cdp_url)
+    try:
+        session = await adapter.open_session(target, tenant, cdp_url=handle.cdp_url)
+    except Exception as exc:
+        # attach failed after the container came up - tear it down so it doesn't
+        # leak, and fall back to a headless session so the run can still proceed.
+        if logger is not None:
+            logger.event(None, "sandbox_attach_failed", container=handle.container, detail=str(exc))
+        try:
+            await sandbox_manager.stop(handle)
+        except Exception:  # noqa: BLE001
+            pass
+        run.sandbox_container = None
+        run.novnc_url = None
+        run.cdp_url = None
+        return RunSurface(session_handle=await adapter.open_session(target, tenant))
     return RunSurface(session_handle=session, sandbox=handle)
 
 

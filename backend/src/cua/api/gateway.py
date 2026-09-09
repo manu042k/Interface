@@ -120,6 +120,17 @@ def create_app(config: Config | None = None) -> FastAPI:
     app.state.tasks: dict[str, asyncio.Task] = {}
     app.state.replays: dict[str, Any] = {}
 
+    @app.on_event("startup")
+    async def _reap_orphan_sandboxes() -> None:
+        # any cua-sandbox-* container alive now is from a previous process and
+        # will never be reclaimed - kill them so they don't pile up.
+        mgr = getattr(app.state.system, "sandbox_manager", None)
+        if mgr is not None:
+            try:
+                await mgr.stop_all()
+            except Exception:  # noqa: BLE001
+                pass
+
     def _persist_runs() -> None:
         try:
             app.state.run_store.save_all(app.state.runs)
@@ -132,6 +143,10 @@ def create_app(config: Config | None = None) -> FastAPI:
     async def _shutdown() -> None:
         sys: System | None = app.state.system
         if sys is not None:
+            mgr = getattr(sys, "sandbox_manager", None)
+            if mgr is not None:
+                with _suppress():
+                    await mgr.stop_all()
             await sys.shutdown()
 
     # -- ST-021: discovery ------------------------------------------

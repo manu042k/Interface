@@ -128,6 +128,7 @@ class Orchestrator:
         last_call: ToolCall | None = None  # for "what the agent was attempting" on escalation
         last_ok_tool: str | None = None  # last action that actually ran, for the done gate
         done_nudged = False
+        policy_blocks = 0  # consecutive guardrail rejections the model can't fix by retrying
 
         from ..sandbox.session import close_run_surface, open_run_surface
 
@@ -242,24 +243,38 @@ class Orchestrator:
                 )
                 log.guardrail(step, decision.verdict, decision.reason)
 
-                if decision.verdict == PolicyVerdict.BLOCK:
-                    history.append(f"{call.tool} BLOCKED by guardrail: {decision.reason}")
-                    note = f"Your last action was blocked by policy: {decision.reason}. Choose a permitted action or call stuck."
-                    transcript.entries.append(
-                        TranscriptEntry(step, state, call, action, False, {"blocked": decision.reason}, decision.verdict)
+                if decision.verdict in (
+                    PolicyVerdict.BLOCK,
+                    *(() if confirm_risky else (PolicyVerdict.REQUIRE_CONFIRMATION,)),
+                ):
+                    policy_blocks += 1
+                    kind = (
+                        "blocked" if decision.verdict == PolicyVerdict.BLOCK
+                        else "require_confirmation"
                     )
-                    step += 1
-                    continue
-
-                if decision.verdict == PolicyVerdict.REQUIRE_CONFIRMATION and not confirm_risky:
-                    history.append(f"{call.tool} needs human confirmation: {decision.reason}")
+                    history.append(f"{call.tool} {kind} by guardrail: {decision.reason}")
+                    transcript.entries.append(
+                        TranscriptEntry(step, state, call, action, False, {kind: decision.reason}, decision.verdict)
+                    )
+                    # This is not something the model can fix by retrying - the
+                    # route/action is off-policy or needs a human. Nudge once,
+                    # then force the escalation rather than let it burn steps.
+                    if policy_blocks >= 2:
+                        reason = f"guardrail keeps rejecting this action: {decision.reason}"
+                        resumed_note = await self._escalate_and_wait(
+                            run, transcript, session, step, reason, goal, history, log,
+                            handoff_wait_s, last_call,
+                        )
+                        if resumed_note is None:
+                            break
+                        note, last_sig, repeats, policy_blocks = resumed_note, None, 0, 0
+                        deadline = time.time() + self.cfg.run_timeout_seconds
+                        step += 1
+                        continue
                     note = (
-                        f"That action is risky/irreversible and needs human confirmation "
-                        f"({decision.reason}). It was not performed. Call stuck to escalate, "
-                        f"or choose a safe alternative."
-                    )
-                    transcript.entries.append(
-                        TranscriptEntry(step, state, call, action, False, {"require_confirmation": decision.reason}, decision.verdict)
+                        f"That action was rejected by policy ({decision.reason}). Retrying "
+                        f"the same action will NOT work. Either do something genuinely "
+                        f"different that the goal allows, or call stuck now to bring in a human."
                     )
                     step += 1
                     continue
@@ -289,6 +304,7 @@ class Orchestrator:
                 desc = _describe_call(call)
                 if ok:
                     last_ok_tool = call.tool
+                    policy_blocks = 0  # progress - forget earlier guardrail rejections
                 if not ok:
                     history.append(f"{desc} -> FAILED: {result.error}")
                     note = f"The last action failed: {result.error}. Re-observe and adapt, or call stuck."
