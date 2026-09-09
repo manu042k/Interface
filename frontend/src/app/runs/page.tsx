@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Radio, ArrowRight } from "lucide-react";
+import { Radio } from "lucide-react";
 import { api, type RunRow } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,20 +60,7 @@ export default function RunsPage() {
           <RunsTable rows={runs} empty="No runs yet." />
         </TabsContent>
 
-        <TabsContent value="live" className="mt-4 space-y-3">
-          {live.length > 0 && (
-            <div className="border-primary/40 bg-primary/8 flex items-center justify-between rounded-lg border p-3">
-              <span className="flex items-center gap-2 text-sm">
-                <Radio className="text-primary h-4 w-4 animate-pulse" />
-                {live.length} run{live.length > 1 ? "s" : ""} in progress
-              </span>
-              <Button asChild size="sm" variant="outline">
-                <Link href={`/runs/${live[0].run_id}`}>
-                  Open latest <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </div>
-          )}
+        <TabsContent value="live" className="mt-4">
           <RunsTable
             rows={live}
             live

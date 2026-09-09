@@ -31,7 +31,13 @@ def main() -> int:
             elif browser_name == "chrome":
                 channel = "chrome"
             launch_args = [
+                # fill the whole Xvfb display so the noVNC view isn't mostly
+                # empty desktop — the page, not the window chrome, is what
+                # matters here.
                 f"--window-size={width},{height}",
+                "--window-position=0,0",
+                "--start-maximized",
+                "--force-device-scale-factor=1",
                 "--remote-debugging-address=0.0.0.0",
                 f"--remote-debugging-port={chromium_cdp_port}",
                 "--disable-dev-shm-usage",
@@ -65,7 +71,7 @@ def main() -> int:
                 headless=False,
                 args=launch_args,
                 channel=channel,
-                viewport={"width": width, "height": height},
+                no_viewport=True,
             )
         except PlaywrightError as e:
             # On Linux Arm64, Playwright does not support chrome/msedge channels.
@@ -76,7 +82,7 @@ def main() -> int:
                     headless=False,
                     args=launch_args,
                     channel=None,
-                    viewport={"width": width, "height": height},
+                    no_viewport=True,
                 )
             else:
                 raise
