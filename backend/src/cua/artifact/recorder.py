@@ -39,7 +39,11 @@ from ..models import (
     Step,
     ValueBinding,
 )
-from ..redaction import redact_text
+from ..redaction import _SENSITIVE_KEYS, redact_text
+
+
+def _is_sensitive_key(k: str) -> bool:
+    return str(k).strip().lower().replace("-", "_") in _SENSITIVE_KEYS
 
 
 def flow_fingerprint(a: CapabilityArtifact) -> str:
@@ -125,7 +129,11 @@ class ArtifactRecorder:
 
         # inputs: supplied params + any forced-to-param typed values
         for k, v in transcript.params.items():
-            param_props.setdefault(k, {"type": "string", "example": redact_text(str(v))[0]})
+            if _is_sensitive_key(k):
+                # a credential param — declare it, never echo its value as an example
+                param_props.setdefault(k, {"type": "string", "x-sensitive": True})
+            else:
+                param_props.setdefault(k, {"type": "string", "example": redact_text(str(v))[0]})
         for k in forced_params:
             param_props.setdefault(k, {"type": "string", "x-sensitive": True})
 
@@ -424,10 +432,12 @@ def _dedupe_consecutive(entries: list[TranscriptEntry]) -> list[TranscriptEntry]
             p, c = out[-1].tool_call, e.tool_call
             same = (
                 p.tool == c.tool
-                and p.tool in {"extract", "assert_state", "wait_for", "observe"}
+                and p.tool in {"extract", "assert_state", "wait_for", "observe", "select", "type"}
                 and p.args.get("target") == c.args.get("target")
                 and p.args.get("as") == c.args.get("as")
                 and p.args.get("condition") == c.args.get("condition")
+                and p.args.get("option") == c.args.get("option")
+                and p.args.get("value") == c.args.get("value")
             )
             if same:
                 continue
