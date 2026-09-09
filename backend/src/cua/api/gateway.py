@@ -152,6 +152,7 @@ def create_app(config: Config | None = None) -> FastAPI:
                     goal=req.goal, target=target, tenant=req.tenant,
                     params=req.params, run=run, confirm_risky=req.confirm_risky,
                     success_check=req.success_check,
+                    handoff_wait_s=900.0,  # a stuck run waits for a human, then resumes
                 )
                 app.state.transcripts[run.run_id] = transcript
                 if run.status == RunStatus.COMPLETED:

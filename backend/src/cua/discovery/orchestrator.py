@@ -110,6 +110,9 @@ class Orchestrator:
         exhausted_ceiling: int = 20,
         max_steps: int | None = None,
         success_check: dict[str, Any] | None = None,
+        # >0 makes a stuck discovery BLOCK for a human hand-back and then resume.
+        # 0 (default, used by tests) opens the intervention and returns STUCK.
+        handoff_wait_s: float = 0.0,
     ) -> tuple[RunRecord, DiscoveryTranscript]:
         params = params or {}
         step_budget = max_steps if max_steps is not None else self.cfg.max_steps
@@ -197,12 +200,14 @@ class Orchestrator:
 
                 if call.tool == "stuck":
                     reason = call.args.get("reason", "unspecified")
-                    transcript.stuck_reason = reason
-                    transcript.final_state = state
-                    run.status = RunStatus.STUCK
-                    run.detail = reason
-                    log.stuck(step, reason)
-                    break
+                    resumed_note = await self._escalate_and_wait(
+                        run, transcript, session, step, reason, goal, history, log, handoff_wait_s
+                    )
+                    if resumed_note is None:
+                        break  # no operator came back - end as STUCK
+                    note, last_sig, repeats = resumed_note, None, 0
+                    deadline = time.time() + self.cfg.run_timeout_seconds  # fresh budget
+                    continue
 
                 # actionable tool -> build Action, guardrail, execute
                 action, extract_as = self._to_action(call, params)
@@ -291,12 +296,15 @@ class Orchestrator:
                         "different (scroll, a different control) or call stuck."
                     )
                 if repeats >= 3:
-                    run.status = RunStatus.STUCK
-                    run.detail = f"no progress: repeated {call.tool} 4x with no screen change"
-                    transcript.stuck_reason = run.detail
-                    transcript.final_state = state
-                    log.stuck(step, run.detail)
-                    break
+                    reason = f"no progress: repeated {call.tool} 4x with no screen change"
+                    resumed_note = await self._escalate_and_wait(
+                        run, transcript, session, step, reason, goal, history, log, handoff_wait_s
+                    )
+                    if resumed_note is None:
+                        break
+                    note, last_sig, repeats = resumed_note, None, 0
+                    deadline = time.time() + self.cfg.run_timeout_seconds
+                    continue
 
                 # --- goal checkpoint auto-complete -----------------------
                 # If the caller gave a success condition, end the run the moment
@@ -325,10 +333,13 @@ class Orchestrator:
             run.step_count = step
             run.ended_at = time.time()
 
-            # ST-037: a stuck run raises an intervention with full context and
-            # HOLDS its session (not torn down) so a human can take over exactly
-            # where automation stopped.
-            if run.status == RunStatus.STUCK and self.escalation is not None:
+            # ST-037: a stuck run that was NOT already escalated in-loop raises an
+            # intervention here and HOLDS its session for a human.
+            if (
+                run.status == RunStatus.STUCK
+                and self.escalation is not None
+                and not transcript.intervention_id
+            ):
                 if self.broker is not None:
                     self.broker.register_session(session, session)
                 iv = await self.escalation.open_intervention(
@@ -350,6 +361,60 @@ class Orchestrator:
                     adapter=self.adapter, sandbox_manager=self.sandbox_manager,
                     surface=surface, run=run, logger=log,
                 )
+
+    async def _escalate_and_wait(
+        self, run, transcript, session, step, reason, goal, history, log, wait_s,
+    ) -> str | None:
+        """Pause discovery: raise an intervention, hold the session, and BLOCK
+        until an operator hands control back. Returns a resume `note` for the
+        agent, or None if there is no escalation path / no operator ever came."""
+        from ..models import InterventionStatus
+
+        run.status = RunStatus.STUCK
+        run.detail = reason
+        transcript.stuck_reason = reason
+        log.stuck(step, reason)
+
+        if self.escalation is None:
+            return None
+
+        if self.broker is not None:
+            self.broker.register_session(session, session)
+        iv = await self.escalation.open_intervention(
+            run=run, session_id=session, step_index=step,
+            reason=reason, goal=goal, transcript_tail=history,
+        )
+        transcript.intervention_id = iv.intervention_id
+        if wait_s <= 0:
+            return None  # no in-loop wait (tests / non-interactive callers)
+        log.event(step, "awaiting_operator", intervention_id=iv.intervention_id, wait_s=wait_s)
+
+        end = time.time() + wait_s
+        while time.time() < end:
+            await asyncio.sleep(1.5)
+            try:
+                cur = self.escalation.get(iv.intervention_id)
+            except Exception:  # noqa: BLE001
+                break
+            if cur.status == InterventionStatus.RESOLVED:
+                acts = getattr(cur, "human_actions_log", []) or []
+                summary = "; ".join(
+                    f"{a.get('type')}({a.get('target') or a.get('value') or a.get('url') or ''})".strip("()")
+                    for a in acts
+                ) or "no explicit actions recorded"
+                run.status = RunStatus.RUNNING
+                run.detail = None
+                log.event(step, "operator_handed_back", intervention_id=iv.intervention_id, actions=summary)
+                return (
+                    f"An operator took control at step {step} and has now handed it back. "
+                    f"What the operator did: {summary}. "
+                    "Do NOT assume the goal is finished. Call observe first to re-read the "
+                    "CURRENT screen, work out exactly what state the page is in now, then "
+                    "continue toward the goal from here. Only call done after verifying the "
+                    "success condition with assert_state / extract."
+                )
+        log.event(step, "handoff_timeout", intervention_id=iv.intervention_id)
+        return None
 
     # -- helpers ---------------------------------------------------
     async def _decide_with_backoff(

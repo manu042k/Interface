@@ -82,7 +82,6 @@ function DetailRow({
 
 export default function RunPage() {
   const { id } = useParams<{ id: string }>();
-  const [handled, setHandled] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
   const { data: run, refetch } = useQuery({
@@ -92,7 +91,9 @@ export default function RunPage() {
       q.state.data && TERMINAL.has(q.state.data.status) ? false : 1500,
   });
 
-  const isStuck = run?.status === "stuck" && !handled;
+  // A stuck run now resumes automation after hand-back, so `stuck` is a
+  // transient state, not an end state.
+  const isStuck = run?.status === "stuck";
 
   // The live canvas stays view-only for the whole run. Input unlocks only once
   // the model has escalated (run → stuck) AND an operator has claimed the
@@ -104,8 +105,7 @@ export default function RunPage() {
     refetchInterval: 2000,
   });
   const inControl = isStuck && intervention?.status === "claimed";
-  const ended =
-    !!run && (TERMINAL.has(run.status) || (run.status === "stuck" && handled));
+  const ended = !!run && TERMINAL.has(run.status);
   const ok = run?.status === "completed";
   const tokens = (run?.tokens_in ?? 0) + (run?.tokens_out ?? 0);
 
@@ -271,33 +271,23 @@ export default function RunPage() {
       )}
 
       {isStuck && (
-        <HandoffPanel
-          runId={id}
-          onResolved={() => {
-            setHandled(true);
-            refetch();
-          }}
-        />
+        <HandoffPanel runId={id} onResolved={() => refetch()} />
       )}
 
       {ended && (
         <div
           className={`flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm ${
-            ok || run?.status === "stuck"
+            ok
               ? "border-success/40 bg-success/8"
               : "border-destructive/40 bg-destructive/8"
           }`}
         >
-          {ok || run?.status === "stuck" ? (
+          {ok ? (
             <CheckCircle2 className="text-success h-4 w-4" />
           ) : (
             <XCircle className="text-destructive h-4 w-4" />
           )}
-          <span className="font-medium">
-            {run?.status === "stuck" && handled
-              ? "Operator handled this run; control returned to automation."
-              : `Run ${run?.status}`}
-          </span>
+          <span className="font-medium">Run {run?.status}</span>
           {run?.detail && (
             <span className="text-muted-foreground">- {run.detail}</span>
           )}
