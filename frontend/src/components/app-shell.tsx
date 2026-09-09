@@ -79,11 +79,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
         )}
-
-        <p className="text-muted-foreground mt-auto px-2 pt-4 text-xs leading-relaxed">
-          The model discovers. The artifact becomes a capability. Deterministic
-          replay is how the agent invokes it.
-        </p>
       </aside>
 
       <main className="min-w-0 flex-1 overflow-y-auto px-6 py-8 md:px-10">
