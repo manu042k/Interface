@@ -73,3 +73,28 @@ async def test_typed_target_host_is_auto_allowed(offline_config, mockbank):
 async def test_unknown_run_404(client):
     r = await client.get("/runs/nope")
     assert r.status_code == 404
+
+
+async def test_start_run_rejects_junk_goal_and_target(client):
+    # a throwaway goal never reaches the LLM
+    r = await client.post("/runs", json={"goal": "asdf", "target": f"{client._mockbank}/search"})
+    assert r.status_code == 422 and "goal" in r.text
+    # a non-URL target is a clean 422, not a stack trace
+    r = await client.post("/runs", json={
+        "goal": "look up member 12345 and read their savings balance", "target": "banana",
+    })
+    assert r.status_code == 422 and "URL" in r.text
+    # a bare hostname with no dot is rejected too
+    r = await client.post("/runs", json={
+        "goal": "look up member 12345 and read their savings balance", "target": "http://foo/bar",
+    })
+    assert r.status_code == 422
+
+
+async def test_target_probe_reports_reachability(client):
+    good = await client.get("/targets/probe", params={"url": f"{client._mockbank}/search"})
+    assert good.json()["ok"] is True and good.json()["status"] == 200
+    bad = await client.get("/targets/probe", params={"url": "http://127.0.0.1:9/none"})
+    assert bad.json()["ok"] is False and bad.json()["reason"] == "unreachable"
+    invalid = await client.get("/targets/probe", params={"url": "banana"})
+    assert invalid.json()["ok"] is False and invalid.json()["reason"] == "invalid"

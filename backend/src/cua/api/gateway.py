@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 import uuid
 from pathlib import Path as FsPath
@@ -28,7 +29,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ..artifact.store import PromotionDecision
 from ..assembly import System, build_system
@@ -36,6 +37,31 @@ from ..config import Config, load_config
 from ..models import ActionType, ArtifactStatus, RunMode, RunRecord, RunStatus
 from ..policy.engine import ActionContext, PolicyVerdict
 from .run_store import RunStore
+
+_MASH_RE = re.compile(r"^(.)\1*$|^(..)\2*$")  # "aaaa", "asasas"
+
+
+def _clean_goal(v: str) -> str:
+    """Reject an empty / throwaway goal before it starts a real LLM run."""
+    g = (v or "").strip()
+    if len(g) < 12:
+        raise ValueError("goal is too short — describe what the agent should do (at least ~12 characters)")
+    words = [w for w in re.split(r"\s+", g) if len(w) >= 2]
+    if len(words) < 3:
+        raise ValueError("goal must be a sentence — at least 3 words saying what to do and where")
+    if not re.search(r"[A-Za-z]", g) or _MASH_RE.match(g.replace(" ", "")):
+        raise ValueError("goal looks like placeholder text — write a real instruction")
+    return g
+
+
+def _clean_target(v: str) -> str:
+    t = (v or "").strip()
+    p = urlparse(t)
+    if p.scheme not in {"http", "https"} or not p.hostname:
+        raise ValueError("target must be an absolute http(s) URL, e.g. https://app.example.com/search")
+    if "." not in p.hostname and p.hostname != "localhost":
+        raise ValueError(f"target host {p.hostname!r} is not a valid hostname")
+    return t
 
 
 class StartRunRequest(BaseModel):
@@ -51,6 +77,16 @@ class StartRunRequest(BaseModel):
     # Optional success Condition (e.g. {"kind":"text_present","params":{"text":"..."}}).
     # When it holds the run auto-completes - no need for the model to call done.
     success_check: dict[str, Any] | None = None
+
+    @field_validator("goal")
+    @classmethod
+    def _v_goal(cls, v: str) -> str:
+        return _clean_goal(v)
+
+    @field_validator("target")
+    @classmethod
+    def _v_target(cls, v: str) -> str:
+        return _clean_target(v)
 
 
 class StartRunResponse(BaseModel):
@@ -190,6 +226,31 @@ def create_app(config: Config | None = None) -> FastAPI:
 
         app.state.tasks[run.run_id] = asyncio.create_task(_execute())
         return StartRunResponse(run_id=run.run_id, status=run.status)
+
+    @app.get("/targets/probe")
+    async def probe_target(url: str) -> dict[str, Any]:
+        """Best-effort 'is this a live page' check for the New-Run form. Not
+        authoritative — some hosts block HEAD/GET from a server — so the UI
+        treats a miss as a warning, not a hard stop."""
+        import httpx
+
+        try:
+            clean = _clean_target(url)
+        except ValueError as exc:
+            return {"ok": False, "reason": "invalid", "detail": str(exc)}
+        # probe the URL as typed — this runs in the gateway process on the host,
+        # not inside the sandbox, so no host.docker.internal rewrite.
+        try:
+            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
+                resp = await client.get(clean, headers={"user-agent": "cua-target-probe/1.0"})
+            return {
+                "ok": resp.status_code < 400,
+                "status": resp.status_code,
+                "final_url": str(resp.url),
+                "reason": "ok" if resp.status_code < 400 else "http_error",
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "reason": "unreachable", "detail": f"{type(exc).__name__}: {exc}"}
 
     @app.get("/runs")
     async def list_runs(limit: int = 50) -> list[dict[str, Any]]:

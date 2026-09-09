@@ -10,10 +10,19 @@ async function j<T>(path: string, init?: RequestInit): Promise<T> {
   const text = await res.text();
   const body = text ? JSON.parse(text) : null;
   if (!res.ok) {
+    const d = body?.detail;
     const msg =
-      typeof body?.detail === "string"
-        ? body.detail
-        : JSON.stringify(body?.detail ?? body);
+      typeof d === "string"
+        ? d
+        : Array.isArray(d) && d[0]?.msg
+          ? // FastAPI validation error: "<field>: <message>"
+            d
+              .map(
+                (e: { loc?: unknown[]; msg?: string }) =>
+                  `${(e.loc ?? []).slice(1).join(".") || "request"}: ${(e.msg ?? "").replace(/^Value error, /, "")}`,
+              )
+              .join("; ")
+          : JSON.stringify(d ?? body);
     throw new Error(msg || `${res.status} ${res.statusText}`);
   }
   return body as T;
@@ -171,6 +180,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  probeTarget: (url: string) =>
+    j<{
+      ok: boolean;
+      reason: string;
+      status?: number;
+      final_url?: string;
+      detail?: string;
+    }>(`/targets/probe?url=${encodeURIComponent(url)}`),
   run: (id: string) => j<RunView>(`/runs/${id}`),
   cancelRun: (id: string) =>
     j<RunView>(`/runs/${id}/cancel`, { method: "POST" }),
