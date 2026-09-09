@@ -55,7 +55,7 @@ class ActionContext:
     extra: dict[str, Any] | None = None
 
 
-_DEFAULT_ACTIONS = ["click", "type", "select", "navigate", "wait_for", "extract", "assert_state"]
+_DEFAULT_ACTIONS = ["click", "type", "select", "navigate", "wait_for", "extract", "assert_state", "scroll", "press_key"]
 
 
 class PolicyEngine:

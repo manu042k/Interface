@@ -62,11 +62,13 @@ export function NoVncFrame({
   const base = novncUrl.replace(/\/$/, "");
   // The iframe is fixed at the framebuffer size (1280x720); a CSS transform
   // scales the whole thing to fit the panel, so the browser fills the view with
-  // no letterbox and correct aspect. view_only + pointer-events:none lock input
-  // until an operator takes over the handoff.
-  const src =
-    `${base}/vnc_lite.html?path=websockify&autoconnect=1&reconnect=1&resize=scale` +
-    (interactive ? "" : "&view_only=1");
+  // no letterbox and correct aspect.
+  //
+  // The URL is deliberately CONSTANT for the whole run - it must not change when
+  // the operator claims the handoff, or the iframe reloads and the noVNC session
+  // drops. Input is locked purely at the parent: pointer-events:none on the
+  // iframe + a transparent overlay while `interactive` is false.
+  const src = `${base}/vnc_lite.html?path=websockify&autoconnect=1&reconnect=1&resize=scale`;
 
   return (
     <div className="bg-card flex h-full min-h-0 flex-col overflow-hidden rounded-lg border">

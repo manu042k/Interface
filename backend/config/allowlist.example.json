@@ -13,7 +13,7 @@
         "^/member/[0-9]+/sub-account/new(\\?.*)?$",
         "^/member/[0-9]+/sub-account/create$"
       ],
-      "action_types": ["click", "type", "select", "navigate", "wait_for", "extract", "assert_state"],
+      "action_types": ["click", "type", "select", "navigate", "wait_for", "extract", "assert_state", "scroll", "press_key"],
       "risk_policy": {
         "risky_irreversible": "require_confirmation",
         "risky_route_patterns": ["/sub-account/create$"],
