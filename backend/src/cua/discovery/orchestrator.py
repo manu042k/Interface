@@ -237,17 +237,26 @@ class Orchestrator:
                     # the agent skipped part of the task (e.g. saved an update
                     # form without touching a single field). Push back once.
                     _skip = {"branch", "tenant", "operator", "password"}
-                    unused = [
+                    form_params = {
                         k for k, v in params.items()
-                        if k not in used_params and k not in _skip and len(str(v)) >= 4
-                    ]
-                    if unused and unused_param_nudged < 2:
+                        if k not in _skip and len(str(v)) >= 4
+                    }
+                    # Only block when the agent filled NONE of the form params
+                    # (the "opened the form and just clicked Save" case). If it
+                    # entered some, the checkpoint is the real gate — a partial
+                    # fill with a passing success check is a completion, not a
+                    # wedge. One nudge only.
+                    if (
+                        form_params
+                        and not (form_params & used_params)
+                        and unused_param_nudged < 1
+                    ):
                         unused_param_nudged += 1
-                        history.append(f"done -> REJECTED: params never entered: {unused}")
+                        history.append(f"done -> REJECTED: no form fields filled ({sorted(form_params)})")
                         note = (
-                            f"You have not entered these supplied parameters into any field: "
-                            f"{', '.join(unused)}. The goal provided them because the flow needs "
-                            "them on a form. Go back to the form, fill each one, submit, then done."
+                            f"You clicked submit without entering ANY of the values the goal "
+                            f"supplied: {', '.join(sorted(form_params))}. Go back to the form, "
+                            "type each one into its field, submit, then done."
                         )
                         step += 1
                         continue
