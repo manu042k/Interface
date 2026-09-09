@@ -1,10 +1,10 @@
 {
-  "artifact_id": "efc4fffb1a2649de9e23f7853f74a200",
+  "artifact_id": "2d0c8caf0198420f8797bfe6b2d2c33a",
   "version": 1,
   "status": "approved",
   "name": "read_savings_balance",
   "goal_description": "look up member 12345 and read their current savings balance",
-  "agent_summary": null,
+  "agent_summary": "This capability allows an AI agent to retrieve the current savings balance for a specified member by their ID in the mockbank application. It should be called when there is a need to check a member's financial status, returning the savings balance or indicating if the member was not found or if permission was denied. It is classified as safe and reversible, but care should be taken to handle the potential outcomes appropriately.",
   "vendor_app_id": "mockbank",
   "app_version": "7.2",
   "tenant_scope": {
@@ -40,16 +40,16 @@
     {
       "step_index": 0,
       "action_type": "type",
-      "description": "enter the member id in the search box",
+      "description": "To search for the member by their ID.",
       "locator_spec": [
         {
-          "kind": "role_name",
+          "kind": "dom_anchor",
           "params": {
-            "role": "textbox",
-            "_discovery_matched": "role=textbox (sole)"
+            "css": "[name=\"q\"]",
+            "_discovery_matched": "name=\"q\""
           },
           "rank": 0,
-          "rationale": "ARIA role only — usable when the control is the sole one of its role on the screen; verify uniqueness at replay"
+          "rationale": "form-control name attribute — legacy server-rendered forms expose these and they are stable across releases"
         }
       ],
       "value_binding": {
@@ -66,33 +66,16 @@
     {
       "step_index": 1,
       "action_type": "click",
-      "description": "submit the member search",
+      "description": "To initiate the search for the member with ID 12345.",
       "locator_spec": [
         {
-          "kind": "role_name",
+          "kind": "dom_anchor",
           "params": {
-            "role": "button",
-            "name": "Search",
-            "_discovery_matched": "role=button name='Search'"
+            "css": "[name=\"go\"]",
+            "_discovery_matched": "name=\"go\""
           },
           "rank": 0,
-          "rationale": "ARIA role + accessible name: the most portable identifier, survives markup/id churn and works on desktop AX trees too"
-        },
-        {
-          "kind": "text",
-          "params": {
-            "text": "Search"
-          },
-          "rank": 1,
-          "rationale": "the same label as visible text — a fallback if the accessibility name is computed differently at replay"
-        },
-        {
-          "kind": "role_name",
-          "params": {
-            "role": "button"
-          },
-          "rank": 2,
-          "rationale": "ARIA role only — usable when the control is the sole one of its role on the screen; verify uniqueness at replay"
+          "rationale": "form-control name attribute — legacy server-rendered forms expose these and they are stable across releases"
         }
       ],
       "value_binding": null,
@@ -106,15 +89,23 @@
     {
       "step_index": 2,
       "action_type": "click",
-      "description": "open the matching member record",
+      "description": "To open the member record for member ID 12345.",
       "locator_spec": [
+        {
+          "kind": "role_name",
+          "params": {
+            "role": "link",
+            "_discovery_matched": "role=link name='Open record'"
+          },
+          "rank": 0,
+          "rationale": "ARIA role only — usable when the control is the sole one of its role on the screen; verify uniqueness at replay"
+        },
         {
           "kind": "text",
           "params": {
-            "text": "Open",
-            "_discovery_matched": "link='Open'"
+            "text": "Open record"
           },
-          "rank": 0,
+          "rank": 1,
           "rationale": "visible/link text — readable and fairly stable, but breaks on wording or localization changes"
         }
       ],
@@ -129,7 +120,7 @@
     {
       "step_index": 3,
       "action_type": "extract",
-      "description": "read the savings balance from the balances table",
+      "description": "To read the current savings balance for member 12345.",
       "locator_spec": [
         {
           "kind": "relative_to_landmark",
@@ -151,33 +142,14 @@
       "mutex_key": null,
       "risk_class": "safe_reversible",
       "wait_timeout_ms": 15000
-    },
-    {
-      "step_index": 4,
-      "action_type": "assert_state",
-      "description": "confirm we are on the member record showing the balance",
-      "locator_spec": [],
-      "value_binding": null,
-      "output_binding": null,
-      "step_checkpoint": {
-        "kind": "text_present",
-        "params": {
-          "text": "Savings"
-        },
-        "description": ""
-      },
-      "idempotent": true,
-      "mutex_key": null,
-      "risk_class": "safe_reversible",
-      "wait_timeout_ms": 15000
     }
   ],
   "checkpoint": {
-    "kind": "text_present",
+    "kind": "url_matches",
     "params": {
-      "text": "Savings"
+      "pattern": "http://\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+/member/\\d+"
     },
-    "description": ""
+    "description": "ended on http://127.0.0.1:8799/member/12345?ack=1"
   },
   "known_outcomes": [
     {
@@ -271,12 +243,12 @@
     }
   ],
   "risk_class": "safe_reversible",
-  "created_from_run_id": "92b8b4de35f14d8cbb9d7d618c5a0d0a",
-  "created_at": 1788965901.9072661,
+  "created_from_run_id": "27c12f85328b4d20b30409bbd5bf3efc",
+  "created_at": 1788966667.5293398,
   "reviewed_by": "demo-reviewer",
-  "reviewed_at": 1788965910.988998,
+  "reviewed_at": 1788966681.723267,
   "review_notes": null,
-  "flow_fingerprint": "25f076b3b3938925",
+  "flow_fingerprint": "4f11ca6ee6813220",
   "supersedes": null,
   "confirmations": 0,
   "last_confirmed_at": null,

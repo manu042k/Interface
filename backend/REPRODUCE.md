@@ -1,45 +1,14 @@
 # Reproducing the evidence
 
-All commands run from `backend/` with the venv active and MockBank up:
+The committed bundles in `../evidence/` are from a **real LLM-driven run**. All
+commands run from `backend/` with the venv active and MockBank up:
 
 ```bash
 cd backend && source .venv/bin/activate
 cua serve-mock &                       # http://127.0.0.1:8799
 ```
 
-## Offline (no key, deterministic) — bundles `evidence/01-06`
-
-```bash
-export CUA_LLM_PROVIDERS=scripted CUA_USE_SANDBOX=0 CUA_DB_PATH=.data/evidence-gen.db
-rm -f .data/evidence-gen.db
-
-# 1. discovery -> a draft artifact (7 observe/act steps -> 5 recorded steps)
-MOCKBANK_INTERSTITIAL=0 cua discover \
-  --goal "look up member 12345 and read their current savings balance" \
-  --target http://127.0.0.1:8799/search --params member_id=12345 \
-  --name read_savings_balance --out ../evidence/01-discovery
-
-AID=$(python -c "from cua.artifact.store import ArtifactStore; \
-  print(ArtifactStore('.data/evidence-gen.db').list(name='read_savings_balance')[0].artifact_id)")
-cua approve $AID 1 --reviewer demo-reviewer
-python -c "from cua.artifact.store import ArtifactStore; a=ArtifactStore('.data/evidence-gen.db').get('$AID',1); \
-  open('../evidence/01-discovery/artifact.json','w').write(a.model_dump_json(indent=2))"
-
-# 2-6. one deterministic replay per outcome class
-MOCKBANK_INTERSTITIAL=0 cua replay $AID --version 1 --target http://127.0.0.1:8799/search \
-  -p member_id=12345 --out ../evidence/02-replay-success              # recoverable_then_success
-MOCKBANK_INTERSTITIAL=0 cua replay $AID --version 1 --target http://127.0.0.1:8799/search \
-  -p member_id=00000 --out ../evidence/03-replay-business-outcome     # business_outcome: member_not_found
-MOCKBANK_INTERSTITIAL=0 cua replay $AID --version 1 --target http://127.0.0.1:8799/search \
-  -p member_id=99999 --out ../evidence/04-replay-permission-denied    # business_outcome: permission_denied
-MOCKBANK_INTERSTITIAL=1 cua replay $AID --version 1 --target http://127.0.0.1:8799/search \
-  -p member_id=12345 --out ../evidence/05-replay-recoverable          # recoverable_then_success (real interstitial)
-MOCKBANK_INTERSTITIAL=0 cua replay $AID --version 1 \
-  --target "http://127.0.0.1:8799/member/34567?ack=1" \
-  -p member_id=12345 --out ../evidence/06-replay-hard-failure         # hard_failure + DOM snapshot
-```
-
-## Genuine LLM-driven run — bundles `evidence/07-09`
+## `evidence/01-05` — genuine LLM discovery + deterministic replays
 
 `backend/.env` (gitignored) needs a working provider key. Config used for the
 committed bundles:
@@ -54,7 +23,7 @@ CUA_PROVIDER_RPM=20                            # client-side pacing so free tier
 
 Model notes (from the keys used for the committed bundles):
 - **OpenRouter `openai/gpt-4o-mini`** — completes the MockBank flow reliably and
-  returns valid `tool_calls`. This is the default and what `07-09` were recorded with.
+  returns valid `tool_calls`. This is the default and what `01-05` were recorded with.
 - **Groq `openai/gpt-oss-20b`** — valid `tool_calls`, but too weak to finish the
   flow on its own; useful only as a rotation fallback.
 - **NVIDIA NIM `deepseek-ai/deepseek-v4-flash-0731`** — works; several `nemotron`
@@ -65,27 +34,42 @@ Model notes (from the keys used for the committed bundles):
 export CUA_LLM_PROVIDERS=openrouter,groq CUA_USE_SANDBOX=0 CUA_DB_PATH=.data/evidence-real.db
 rm -f .data/evidence-real.db
 
+# 1. discovery — a real model drives the UI and records a draft artifact
 MOCKBANK_INTERSTITIAL=1 cua discover \
   --goal "look up member 12345 and read their current savings balance" \
   --target http://127.0.0.1:8799/search --params member_id=12345 \
-  --name read_savings_balance_real --out ../evidence/07-discovery-real-llm
+  --name read_savings_balance --out ../evidence/01-discovery-real-llm
 
 AID=$(python -c "from cua.artifact.store import ArtifactStore; \
-  print(ArtifactStore('.data/evidence-real.db').list(name='read_savings_balance_real')[0].artifact_id)")
+  print(ArtifactStore('.data/evidence-real.db').list(name='read_savings_balance')[0].artifact_id)")
 CUA_LLM_PROVIDERS=scripted cua approve $AID 1 --reviewer demo-reviewer
 python -c "from cua.artifact.store import ArtifactStore; a=ArtifactStore('.data/evidence-real.db').get('$AID',1); \
-  open('../evidence/07-discovery-real-llm/artifact.json','w').write(a.model_dump_json(indent=2))"
+  open('../evidence/01-discovery-real-llm/artifact.json','w').write(a.model_dump_json(indent=2))"
 
+# 2-5. deterministic replay of that artifact — no model — one per outcome class
 MOCKBANK_INTERSTITIAL=1 cua replay $AID --version 1 --target http://127.0.0.1:8799/search \
-  -p member_id=12345 --out ../evidence/08-replay-real                 # recoverable_then_success
+  -p member_id=12345 --out ../evidence/02-replay-success              # recoverable_then_success
 MOCKBANK_INTERSTITIAL=1 cua replay $AID --version 1 --target http://127.0.0.1:8799/search \
-  -p member_id=00000 --out ../evidence/09-replay-real-not-found       # business_outcome: member_not_found
+  -p member_id=00000 --out ../evidence/03-replay-member-not-found     # business_outcome: member_not_found
+MOCKBANK_INTERSTITIAL=1 cua replay $AID --version 1 --target http://127.0.0.1:8799/search \
+  -p member_id=99999 --out ../evidence/04-replay-permission-denied    # business_outcome: permission_denied
+MOCKBANK_INTERSTITIAL=0 cua replay $AID --version 1 \
+  --target "http://127.0.0.1:8799/member/34567?ack=1" \
+  -p member_id=12345 --out ../evidence/05-replay-hard-failure         # hard_failure + DOM snapshot
 ```
 
 Every discovery turn is logged in `events.jsonl` as
 `{"event":"llm_call","provider":"openrouter","model":"openai/gpt-4o-mini",...}`
 so a run correlates back to the provider/model that served each decision;
 `provider_throttle` events show the client-side RPM pacing.
+
+## No-key demo path (offline, not committed as evidence)
+
+The same pipeline runs fully offline with `CUA_LLM_PROVIDERS=scripted` — a
+deterministic pilot that recognises a handful of MockBank screens. This is what
+CI and the test suite exercise; it is **not** the evidence (the discovery run has
+to be a real model). Swap `CUA_LLM_PROVIDERS=scripted` into the sequence above to
+try it without a key.
 
 ## Live console + per-run Docker sandbox
 

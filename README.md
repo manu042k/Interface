@@ -11,7 +11,7 @@ when replay or discovery gets stuck.
 > replay is how the agent invokes it in production.
 
 - **Design write-up:** [`REPORT.md`](./REPORT.md) (7 required headings)
-- **End-to-end evidence:** [`evidence/`](./evidence/) — 9 bundles: an offline + a real-LLM discovery run (`gpt-4o-mini` via OpenRouter) each with its recorded `artifact.json`, plus deterministic replays covering every outcome class (`recoverable_then_success`, `business_outcome` ×2 codes, `hard_failure`)
+- **End-to-end evidence:** [`evidence/`](./evidence/) — a **real** `gpt-4o-mini` discovery run (via OpenRouter) with its recorded `artifact.json`, plus deterministic replays of that artifact covering every outcome class (`recoverable_then_success`, `business_outcome` ×2 codes, `hard_failure`). The offline `scripted` pilot is a CI/no-key demo path only, not evidence.
 - **User stories / build log:** [`USER_STORIES.md`](./USER_STORIES.md) — 45 stories, 10 phases, each committed with tests
 - **Original design doc:** [`TDD-ComputerUse-Automation-System.md`](./TDD-ComputerUse-Automation-System.md)
 
@@ -62,14 +62,14 @@ cd backend && source .venv/bin/activate
 cua serve-mock                                   # http://127.0.0.1:8799
 
 # 2. DISCOVERY — LLM drives the UI, completes the goal, records a draft artifact
-#    real run:  set CUA_LLM_PROVIDERS=openrouter (or nvidia_nim) + a key in .env
-#    offline:   CUA_LLM_PROVIDERS=scripted  (deterministic, no key)
+#    real run:  set CUA_LLM_PROVIDERS=openrouter (or groq / nvidia_nim) + a key in .env
+#    offline:   CUA_LLM_PROVIDERS=scripted  (deterministic, no key — CI / demo only)
 cua discover \
   --goal "look up member 12345 and read their current savings balance" \
   --target http://127.0.0.1:8799/search \
   --params member_id=12345 \
   --name read_savings_balance \
-  --out ../evidence/01-discovery
+  --out /tmp/demo/01-discovery
 
 # 3. REVIEW — a human promotes the draft (unattended replay is refused until approved)
 cua artifacts                                    # copy the artifact_id
@@ -78,12 +78,16 @@ cua approve <artifact_id> 1 --reviewer you
 # 4. REPLAY — deterministic, no LLM. Try the happy path and an exceptional state.
 cua replay <artifact_id> --version 1 \
   --target http://127.0.0.1:8799/search --params member_id=12345 \
-  --out ../evidence/02-replay-success
+  --out /tmp/demo/02-replay-success
 
 cua replay <artifact_id> --version 1 \
   --target http://127.0.0.1:8799/search --params member_id=00000 \
-  --out ../evidence/03-replay-business-outcome        # -> business_outcome: member_not_found
+  --out /tmp/demo/03-replay-business-outcome          # -> business_outcome: member_not_found
 ```
+
+The committed bundles under [`evidence/`](./evidence/) come from a real
+`gpt-4o-mini` discovery run — see [`backend/REPRODUCE.md`](./backend/REPRODUCE.md)
+to regenerate them.
 
 ### HTTP API (optional)
 

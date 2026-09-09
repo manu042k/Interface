@@ -1,6 +1,6 @@
 {
   "kind": "replay",
-  "artifact_id": "efc4fffb1a2649de9e23f7853f74a200",
+  "artifact_id": "2d0c8caf0198420f8797bfe6b2d2c33a",
   "version": 1,
   "target": "http://127.0.0.1:8799/search",
   "params": {
@@ -14,6 +14,6 @@
     "failure_detail": null,
     "evidence_refs": [],
     "steps_executed": 1,
-    "duration_seconds": 0.7146170139312744
+    "duration_seconds": 0.740297794342041
   }
 }
