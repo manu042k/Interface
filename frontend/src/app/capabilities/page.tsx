@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Loader2,
@@ -519,13 +520,21 @@ function Muted({ children }: { children: React.ReactNode }) {
 /* ---- invoke panel ------------------------------------------------- */
 
 function InvokePanel({ cap }: { cap: Capability }) {
+  const router = useRouter();
   const [params, setParams] = useState<Record<string, string>>({});
   const [target, setTarget] = useState("");
   const [result, setResult] = useState<ReplayResult | null>(null);
 
   const mut = useMutation({
-    mutationFn: () => api.invoke(cap.artifact_id, cap.version, target, params),
-    onSuccess: (r) => setResult(r),
+    // wait_seconds: 0 - the gateway returns the invocation id immediately; we
+    // jump to the run view so the replay is watched live (noVNC feed while it
+    // runs, then the report once it finishes), mirroring a discovery run.
+    mutationFn: () =>
+      api.invoke(cap.artifact_id, cap.version, target, params, "default", 0),
+    onSuccess: (r) => {
+      if (r.invocation_id) router.push(`/runs/${r.invocation_id}`);
+      else setResult(r);
+    },
     onError: (e) => toast.error(String((e as Error).message)),
   });
 

@@ -311,7 +311,7 @@ def create_app(config: Config | None = None) -> FastAPI:
                 run.detail = f"replay error: {exc}"
                 run.ended_at = time.time()
                 app.state.persist_runs()
-                raise
+                return
             app.state.replays[invocation_id] = result
             run.status = RunStatus.COMPLETED if result.outcome.value in {"success", "recoverable_then_success", "business_outcome"} else RunStatus.FAILED
             run.detail = result.outcome.value
@@ -324,7 +324,9 @@ def create_app(config: Config | None = None) -> FastAPI:
         except TimeoutError:
             return {"invocation_id": invocation_id, "status": "running", "poll": f"/replays/{invocation_id}"}
 
-        result = app.state.replays[invocation_id]
+        result = app.state.replays.get(invocation_id)
+        if result is None:  # _do returned early after a crash - the run carries the detail
+            return {"invocation_id": invocation_id, "status": run.status, "detail": run.detail}
         return {"invocation_id": invocation_id, **result.model_dump()}
 
     @app.get("/replays/{invocation_id}")

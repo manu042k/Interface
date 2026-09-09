@@ -203,10 +203,19 @@ export const api = {
     target: string,
     params: Record<string, unknown>,
     tenant = "default",
+    // 0 = return the invocation id straight away so the caller can navigate to
+    // the run view and watch the replay live; >0 = block for the result.
+    waitSeconds = 90,
   ) =>
     j<ReplayResult>(`/replays/${id}/invoke`, {
       method: "POST",
-      body: JSON.stringify({ version, target, params, tenant, wait_seconds: 90 }),
+      body: JSON.stringify({
+        version,
+        target,
+        params,
+        tenant,
+        wait_seconds: waitSeconds,
+      }),
     }),
 
   interventions: (status = "open") =>
