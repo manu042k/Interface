@@ -144,6 +144,10 @@ class Orchestrator:
         # no-progress loop guard: (tool, target) signature + a hash of the screen
         last_sig: str | None = None
         repeats = 0
+        # cyclic-thrash guard: how many times each (tool|target) ran this run,
+        # even when broken up by other actions (type A, type B, type A, ...).
+        sig_counts: dict[str, int] = {}
+        cycle_nudged = False
         try:
             step = 0
             while True:
@@ -408,6 +412,35 @@ class Orchestrator:
                 else:
                     repeats = 0
                 last_sig = sig if ok else last_sig
+
+                # --- cyclic-thrash guard ---------------------------------
+                # The model can loop on a set of actions (type email, type
+                # phone, type email, ...) so no single one repeats *consecutively*
+                # but the run still goes nowhere. Count total repeats of this
+                # (tool|target) and intervene once it's clearly stuck.
+                tsig = f"{call.tool}|{json.dumps(call.args.get('target') or '', sort_keys=True)}"
+                if ok and call.tool in ("type", "select", "click"):
+                    sig_counts[tsig] = sig_counts.get(tsig, 0) + 1
+                    n = sig_counts[tsig]
+                    if n >= 6:
+                        reason = f"cyclic thrash: {call.tool} on the same target {n}x across the run"
+                        resumed_note = await self._escalate_and_wait(
+                            run, transcript, session, step, reason, goal, history, log,
+                            handoff_wait_s, last_call,
+                        )
+                        if resumed_note is None:
+                            break
+                        note, last_sig, repeats, sig_counts, cycle_nudged = resumed_note, None, 0, {}, False
+                        deadline = time.time() + self.cfg.run_timeout_seconds
+                        continue
+                    if n >= 3 and call.tool in ("type", "select") and not cycle_nudged:
+                        cycle_nudged = True
+                        note = (
+                            f"You have typed into this same field {n} times. It already holds "
+                            "the value you set. STOP repeating it. Look at the goal's remaining "
+                            "sub-tasks and do the ONE you have not done yet (a different field, "
+                            "or the submit button), then done."
+                        )
 
                 # The model sometimes re-asserts the same passing success check
                 # instead of calling done. It has verified the goal twice —
