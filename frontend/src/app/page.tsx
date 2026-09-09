@@ -17,9 +17,9 @@ export default function NewRunPage() {
   const router = useRouter();
   const [goalName, setGoalName] = useState("");
   const [description, setDescription] = useState("");
-  const [target, setTarget] = useState("http://localhost:8799/search");
+  const [target, setTarget] = useState("");
   const [params, setParams] = useState<{ k: string; v: string }[]>([
-    { k: "member_id", v: "12345" },
+    { k: "", v: "" },
   ]);
   const [confirmRisky, setConfirmRisky] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -105,6 +105,7 @@ export default function NewRunPage() {
               id="target"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
+              placeholder="https://…"
             />
             <p className="text-muted-foreground text-xs">
               The URL the agent starts from.
