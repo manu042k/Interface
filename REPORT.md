@@ -229,8 +229,9 @@ Deliberately thin-but-real, or stubbed at a clean seam:
 - **Discovery model quality** — the offline `scripted` pilot recognises a
   handful of MockBank screens so CI and the no-key demo run the whole pipeline;
   a real run uses OpenRouter / Groq / NIM / OpenAI via the router (default
-  `gpt-4o-mini`) with identical downstream behaviour. `evidence/07-09` are a real
-  `gpt-4o-mini` discovery + its deterministic replays.
+  `gpt-4o-mini`) with identical downstream behaviour. `evidence/01-discovery-real-llm`
+  is a real `gpt-4o-mini` discovery run; `evidence/02-05` are its deterministic
+  replays, one per outcome class.
 - **Artifact governance** — a single `draft → approved` gate with a reviewer
   name; no multi-reviewer workflow, RBAC, or re-approval-on-drift policy.
 
