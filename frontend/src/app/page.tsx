@@ -15,9 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function NewRunPage() {
   const router = useRouter();
-  const [goal, setGoal] = useState(
-    "look up member 12345 and read their current savings balance",
-  );
+  const [goalName, setGoalName] = useState("");
+  const [description, setDescription] = useState("");
   const [target, setTarget] = useState("http://localhost:8799/search");
   const [params, setParams] = useState<{ k: string; v: string }[]>([
     { k: "member_id", v: "12345" },
@@ -37,7 +36,8 @@ export default function NewRunPage() {
       const p: Record<string, string> = {};
       for (const { k, v } of params) if (k.trim()) p[k.trim()] = v;
       const { run_id } = await api.startRun({
-        goal,
+        goal: description.trim(),
+        capability_name: goalName.trim() || undefined,
         target,
         params: p,
         confirm_risky: confirmRisky,
@@ -75,19 +75,28 @@ export default function NewRunPage() {
       <Card>
         <CardContent className="space-y-5 pt-6">
           <div className="space-y-2">
-            <Label htmlFor="goal">Goal</Label>
-            <Textarea
-              id="goal"
-              rows={2}
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              className="resize-none"
-              placeholder="e.g. look up member 12345 and read their current savings balance"
+            <Label htmlFor="goal-name">Goal name</Label>
+            <Input
+              id="goal-name"
+              value={goalName}
+              onChange={(e) => setGoalName(e.target.value)}
+              placeholder="e.g. Read member savings balance"
             />
             <p className="text-muted-foreground text-xs">
-              Plain language. The successful run is recorded as a replayable
-              capability.
+              A few words. Becomes the recorded capability&rsquo;s name.
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="resize-none"
+              placeholder="What should the agent do? Include member numbers, credentials, and the exact steps in plain language."
+            />
           </div>
 
           <div className="space-y-2">
@@ -98,23 +107,8 @@ export default function NewRunPage() {
               onChange={(e) => setTarget(e.target.value)}
             />
             <p className="text-muted-foreground text-xs">
-              The URL the agent starts from — must be permitted by the allowlist.
+              The URL the agent starts from.
             </p>
-            <div className="flex flex-wrap gap-1.5 pt-0.5">
-              {[
-                ["Search", "http://localhost:8799/search"],
-                ["Member 12345", "http://localhost:8799/member/12345"],
-              ].map(([label, url]) => (
-                <button
-                  key={url}
-                  type="button"
-                  onClick={() => setTarget(url)}
-                  className="text-muted-foreground hover:border-primary hover:text-foreground border-input rounded-full border px-2.5 py-0.5 text-xs transition-colors"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
           </div>
 
           <div className="space-y-2">
@@ -177,7 +171,11 @@ export default function NewRunPage() {
           </label>
 
           <div className="flex items-center gap-3 pt-1">
-            <Button onClick={submit} disabled={busy || !goal.trim()} size="lg">
+            <Button
+              onClick={submit}
+              disabled={busy || !description.trim() || !target.trim()}
+              size="lg"
+            >
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Run discovery
             </Button>

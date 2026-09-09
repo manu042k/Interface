@@ -26,6 +26,29 @@ def test_offlist_domain_and_route_denied():
     assert eng.check(ActionContext("default", ActionType.NAVIGATE, "http://127.0.0.1:8799/admin/wipe")).verdict == PolicyVerdict.BLOCK
 
 
+def test_allow_target_opens_the_typed_host_only():
+    eng = _engine()
+    tgt = "https://legacy-core.example.com/signon"
+    # not on the file allowlist -> blocked
+    assert eng.check(ActionContext("default", ActionType.NAVIGATE, tgt)).verdict == PolicyVerdict.BLOCK
+    eng.allow_target("default", tgt)
+    # now the typed host + its routes are permitted
+    assert eng.check(ActionContext("default", ActionType.NAVIGATE, tgt)).allowed
+    assert eng.check(
+        ActionContext("default", ActionType.CLICK, "https://legacy-core.example.com/members/100234")
+    ).allowed
+    # a different host is still blocked
+    assert eng.check(
+        ActionContext("default", ActionType.NAVIGATE, "https://evil.example/x")
+    ).verdict == PolicyVerdict.BLOCK
+
+
+def test_allow_target_creates_a_missing_tenant():
+    eng = _engine()
+    eng.allow_target("brand-new", "https://acme.test/app")
+    assert eng.check(ActionContext("brand-new", ActionType.CLICK, "https://acme.test/app/page")).allowed
+
+
 def test_broken_allowlist_fails_closed(tmp_path):
     bad = tmp_path / "bad.json"
     bad.write_text("{ not json", encoding="utf-8")

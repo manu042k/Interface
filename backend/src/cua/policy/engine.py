@@ -55,9 +55,30 @@ class ActionContext:
     extra: dict[str, Any] | None = None
 
 
+_DEFAULT_ACTIONS = ["click", "type", "select", "navigate", "wait_for", "extract", "assert_state"]
+
+
 class PolicyEngine:
     def __init__(self, allowlist: Allowlist) -> None:
         self._allowlist = allowlist
+
+    def allow_target(self, tenant_id: str, target_url: str) -> None:
+        """Register a run's entry-point host as permitted for `tenant_id`, so a
+        typed Target URL just works without an allowlist file. Egress to any
+        OTHER host stays blocked and the risky-route confirmation gate still
+        applies — this only opens the door to the site the operator chose.
+        """
+        host = (urlparse(target_url).hostname or "").lower()
+        if not host:
+            return
+        tenant = self._allowlist.for_tenant(tenant_id)
+        if tenant is None:
+            tenant = TenantPolicy(action_types=list(_DEFAULT_ACTIONS))
+            self._allowlist.tenants[tenant_id] = tenant
+        if not tenant.allows_domain(host):
+            tenant.domains.append(host)
+        if "^/" not in tenant.routes:
+            tenant.routes.append("^/")
 
     @classmethod
     def from_path(cls, path: str) -> PolicyEngine:

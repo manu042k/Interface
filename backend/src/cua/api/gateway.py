@@ -556,11 +556,15 @@ def _validate_target_or_400(sys: System, tenant: str, target: str) -> str:
     if not parsed.scheme or not parsed.hostname:
         raise HTTPException(422, f"target must be an absolute URL, got {target!r}")
     target = _normalize_target(sys, target)
+    # The site the operator typed is the site they want tested — register its
+    # host so navigation there is permitted. Egress to any other host is still
+    # blocked and risky routes still require confirmation.
+    sys.policy.allow_target(tenant, target)
     decision = sys.policy.check(
         ActionContext(tenant_id=tenant, action_type=ActionType.NAVIGATE, target_url=target)
     )
     if decision.verdict == PolicyVerdict.BLOCK:
-        raise HTTPException(422, f"target not permitted by allowlist for tenant {tenant!r}: {decision.reason}")
+        raise HTTPException(422, f"target not permitted for tenant {tenant!r}: {decision.reason}")
     return target
 
 

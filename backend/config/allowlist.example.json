@@ -3,7 +3,7 @@
   "description": "Per-tenant allowlist. Default is DENY: anything not listed is blocked.",
   "tenants": {
     "default": {
-      "domains": ["127.0.0.1", "localhost", "host.docker.internal", "example.com"],
+      "domains": ["127.0.0.1", "localhost", "host.docker.internal"],
       "routes": [
         "^/$",
         "^/search$",
@@ -11,15 +11,12 @@
         "^/member/[0-9]+$",
         "^/member/[0-9]+\\?ack=1$",
         "^/member/[0-9]+/sub-account/new(\\?.*)?$",
-        "^/member/[0-9]+/sub-account/create$",
-        "^/signon\\b", "^/menu\\b", "^/inquiry\\b", "^/member\\b", "^/members\\b",
-        "^/transfer\\b", "^/share\\b", "^/shares\\b", "^/hold\\b", "^/holds\\b",
-        "^/update\\b", "^/review\\b", "^/post\\b", "^/logout\\b", "^/signoff\\b"
+        "^/member/[0-9]+/sub-account/create$"
       ],
       "action_types": ["click", "type", "select", "navigate", "wait_for", "extract", "assert_state"],
       "risk_policy": {
         "risky_irreversible": "require_confirmation",
-        "risky_route_patterns": ["/sub-account/create$", "/post$", "/post\\b", "/transfer", "/hold", "/holds", "/confirm$"],
+        "risky_route_patterns": ["/sub-account/create$"],
         "risky_action_types": []
       }
     }

@@ -44,13 +44,30 @@ async def test_start_run_returns_run_id_immediately(client):
     assert g.json()["status"] == "completed", g.json()
 
 
-async def test_offlist_target_rejected_no_run_created(client):
-    r = await client.post("/runs", json={
-        "goal": "x",
-        "target": "http://evil.example/steal",
-    })
-    assert r.status_code == 422
-    assert "allowlist" in r.text.lower()
+async def test_typed_target_host_is_auto_allowed(offline_config, mockbank):
+    # The site the operator names is the site they want tested — validation
+    # registers its host and accepts it, without an allowlist file entry.
+    # Egress to any *other* host is still blocked mid-run (see
+    # test_phase2_policy::test_allow_target_opens_the_typed_host_only).
+    import pytest
+    from fastapi import HTTPException
+
+    from cua.api.gateway import _validate_target_or_400
+    from cua.assembly import build_system
+    from cua.policy.engine import ActionContext
+
+    sys = build_system(offline_config)
+    try:
+        out = _validate_target_or_400(sys, "default", "https://legacy-console.example/signon")
+        assert out.startswith("https://legacy-console.example/")
+        assert sys.policy.check(
+            ActionContext("default", "navigate", "https://legacy-console.example/menu")
+        ).allowed
+        with pytest.raises(HTTPException) as ei:
+            _validate_target_or_400(sys, "default", "not-a-url")
+        assert ei.value.status_code == 422
+    finally:
+        await sys.shutdown()
 
 
 async def test_unknown_run_404(client):
