@@ -110,7 +110,7 @@ function RunsTable({
         <TableBody>
           {rows.map((r) => (
             <TableRow key={r.run_id}>
-              <TableCell className="max-w-md">
+              <TableCell className="max-w-[20rem]">
                 <div className="truncate font-medium">
                   {r.name || r.goal || (
                     <span className="text-muted-foreground">—</span>
@@ -118,7 +118,7 @@ function RunsTable({
                 </div>
                 {r.name && r.goal && (
                   <div className="text-muted-foreground truncate text-xs">
-                    {r.goal}
+                    {r.goal.length > 90 ? `${r.goal.slice(0, 90)}…` : r.goal}
                   </div>
                 )}
               </TableCell>

@@ -35,6 +35,7 @@ from ..assembly import System, build_system
 from ..config import Config, load_config
 from ..models import ActionType, ArtifactStatus, RunMode, RunRecord, RunStatus
 from ..policy.engine import ActionContext, PolicyVerdict
+from .run_store import RunStore
 
 
 class StartRunRequest(BaseModel):
@@ -103,10 +104,24 @@ def create_app(config: Config | None = None) -> FastAPI:
     )
     app.state.config = config or load_config(strict=False)
     app.state.system = build_system(app.state.config)
-    app.state.runs: dict[str, RunRecord] = {}
+    app.state.run_store = RunStore(app.state.config.db_path.parent / "runs.json")
+    app.state.runs: dict[str, RunRecord] = app.state.run_store.load()
+    # a run that was mid-flight when the process last stopped can't resume
+    for _r in app.state.runs.values():
+        if _r.status in {RunStatus.PENDING, RunStatus.RUNNING}:
+            _r.status = RunStatus.FAILED
+            _r.detail = _r.detail or "interrupted — server restarted"
     app.state.transcripts: dict[str, Any] = {}
     app.state.tasks: dict[str, asyncio.Task] = {}
     app.state.replays: dict[str, Any] = {}
+
+    def _persist_runs() -> None:
+        try:
+            app.state.run_store.save_all(app.state.runs)
+        except Exception:  # noqa: BLE001 — persistence is best-effort
+            pass
+
+    app.state.persist_runs = _persist_runs
 
     @app.on_event("shutdown")
     async def _shutdown() -> None:
@@ -122,10 +137,11 @@ def create_app(config: Config | None = None) -> FastAPI:
 
         run = RunRecord(
             mode=RunMode.DISCOVERY, tenant_id=req.tenant, app_target=target, goal=req.goal,
-            name=req.capability_name or _slug(req.goal),
+            name=req.capability_name or _slug(req.goal), params=req.params or None,
             browser="chromium" if sys.sandbox_manager is not None else "chromium (headless)",
         )
         app.state.runs[run.run_id] = run
+        app.state.persist_runs()
 
         async def _execute() -> None:
             try:
@@ -147,6 +163,8 @@ def create_app(config: Config | None = None) -> FastAPI:
             except Exception as exc:  # noqa: BLE001
                 run.status = RunStatus.FAILED
                 run.detail = f"orchestrator crashed: {exc}"
+            finally:
+                app.state.persist_runs()
 
         app.state.tasks[run.run_id] = asyncio.create_task(_execute())
         return StartRunResponse(run_id=run.run_id, status=run.status)
@@ -181,6 +199,10 @@ def create_app(config: Config | None = None) -> FastAPI:
         run = app.state.runs.get(run_id)
         if run is None:
             raise HTTPException(404, f"no such run: {run_id}")
+        # the frontend polls this while a run is live — cheap way to keep the
+        # on-disk copy fresh so progress survives a crash mid-run
+        if run.status in {RunStatus.PENDING, RunStatus.RUNNING, RunStatus.STUCK}:
+            app.state.persist_runs()
         return RunView(**_run_dict(run))
 
     # -- ST-025: artifact review -------------------------------------
@@ -234,6 +256,7 @@ def create_app(config: Config | None = None) -> FastAPI:
             artifact_id=artifact_id, artifact_version=req.version, params=req.params,
         )
         app.state.runs[invocation_id] = run
+        app.state.persist_runs()
 
         async def _do() -> None:
             run.status = RunStatus.RUNNING
@@ -245,6 +268,7 @@ def create_app(config: Config | None = None) -> FastAPI:
             run.status = RunStatus.COMPLETED if result.outcome.value in {"success", "recoverable_then_success", "business_outcome"} else RunStatus.FAILED
             run.detail = result.outcome.value
             run.ended_at = run.ended_at or None
+            app.state.persist_runs()
 
         task = asyncio.create_task(_do())
         try:
