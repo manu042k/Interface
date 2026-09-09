@@ -339,9 +339,10 @@ class PlaywrightAdapter(SurfaceAdapter):
         (that is the engine's job, by rank). Returns {matched, count, visible,
         describe, reason}."""
         sess = self._sess(session_handle)
+        page = sess.page
         target = _strategy_to_desc(kind, params)
         try:
-            loc, describe = _strict_locate(sess.page, kind, params, target)
+            loc, describe = _strict_locate(page, kind, params, target)
         except Exception as exc:  # noqa: BLE001
             return {"matched": False, "count": 0, "visible": False, "describe": None, "reason": str(exc).splitlines()[0]}
         if loc is None:
@@ -350,6 +351,23 @@ class PlaywrightAdapter(SurfaceAdapter):
             count = await loc.count()
         except Exception as exc:  # noqa: BLE001
             return {"matched": False, "count": 0, "visible": False, "describe": describe, "reason": str(exc).splitlines()[0]}
+        # `text` matched as a substring also hits the <td>/<tr> wrapping the
+        # link. Narrow to an actionable element with that exact text first —
+        # the same order discovery's resolver uses — before giving up.
+        if kind == "text" and count != 1 and isinstance(params.get("text"), str):
+            txt = params["text"]
+            for cand, desc in (
+                (page.get_by_role("link", name=txt, exact=True), f"link={txt!r} (exact)"),
+                (page.get_by_role("button", name=txt, exact=True), f"button={txt!r} (exact)"),
+                (page.get_by_text(txt, exact=True), f"text={txt!r} (exact)"),
+            ):
+                try:
+                    c = await cand.count()
+                except Exception:  # noqa: BLE001
+                    continue
+                if c >= 1:
+                    loc, describe, count = cand, desc, c
+                    break
         if count == 0:
             return {"matched": False, "count": 0, "visible": False, "describe": describe, "reason": "no element matched"}
         idx = 0
