@@ -96,6 +96,7 @@ class Config:
 
 
 _PROVIDER_ENV = {
+    "openai": ("OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL"),
     "openrouter": ("OPENROUTER_BASE_URL", "OPENROUTER_API_KEY", "OPENROUTER_MODEL"),
     "nvidia_nim": ("NVIDIA_NIM_BASE_URL", "NVIDIA_NIM_API_KEY", "NVIDIA_NIM_MODEL"),
     "groq": ("GROQ_BASE_URL", "GROQ_API_KEY", "GROQ_MODEL"),
@@ -105,6 +106,7 @@ _PROVIDER_ENV = {
 # otherwise `CUA_PROVIDER_RPM` (default 0 = unthrottled) applies. Defaults below
 # are conservative free-tier limits.
 _PROVIDER_RPM_DEFAULT = {
+    "openai": 0,  # paid tier — no client-side pacing by default
     "openrouter": 20,
     "nvidia_nim": 15,
     "groq": 25,
@@ -140,6 +142,15 @@ def load_config(
     llm_providers = [p.strip() for p in providers_raw.split(",") if p.strip()]
     if not llm_providers:
         raise ConfigError("CUA_LLM_PROVIDERS must name at least one provider")
+
+    # Auto-enable OpenAI as the first (preferred) provider when a key is present
+    # and it wasn't already listed — "use it if a key is provided".
+    if (
+        os.environ.get("OPENAI_API_KEY", "").strip()
+        and "openai" not in llm_providers
+        and llm_providers != ["scripted"]
+    ):
+        llm_providers.insert(0, "openai")
 
     providers: dict[str, ProviderConfig] = {}
     for name in llm_providers:
@@ -185,6 +196,7 @@ def load_config(
 
 def _default_base_url(name: str) -> str:
     return {
+        "openai": "https://api.openai.com/v1",
         "openrouter": "https://openrouter.ai/api/v1",
         "nvidia_nim": "https://integrate.api.nvidia.com/v1",
         "groq": "https://api.groq.com/openai/v1",
@@ -193,6 +205,7 @@ def _default_base_url(name: str) -> str:
 
 def _default_model(name: str) -> str:
     return {
+        "openai": "gpt-4o",
         "openrouter": "anthropic/claude-sonnet-4",
         "nvidia_nim": "deepseek-ai/deepseek-v4-flash-0731",
         "groq": "llama-3.3-70b-versatile",
