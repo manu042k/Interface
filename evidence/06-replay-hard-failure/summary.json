@@ -1,0 +1,30 @@
+{
+  "kind": "replay",
+  "artifact_id": "efc4fffb1a2649de9e23f7853f74a200",
+  "version": 1,
+  "target": "http://127.0.0.1:8799/member/34567?ack=1",
+  "params": {
+    "member_id": "12345"
+  },
+  "result": {
+    "outcome": "hard_failure",
+    "outputs": null,
+    "business_outcome_code": null,
+    "recovered_conditions": [],
+    "failure_detail": {
+      "step_index": 0,
+      "expected": "resolve a control for: enter the member id in the search box",
+      "observed": "unresolvable target: [rank 0 role_name] no element matched",
+      "evidence_refs": [
+        "step0-screenshot-1788965917273.png",
+        "step0-dom-1788965917274.html"
+      ]
+    },
+    "evidence_refs": [
+      "step0-screenshot-1788965917273.png",
+      "step0-dom-1788965917274.html"
+    ],
+    "steps_executed": 0,
+    "duration_seconds": 0.5406081676483154
+  }
+}

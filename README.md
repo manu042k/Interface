@@ -11,7 +11,7 @@ when replay or discovery gets stuck.
 > replay is how the agent invokes it in production.
 
 - **Design write-up:** [`REPORT.md`](./REPORT.md) (7 required headings)
-- **End-to-end evidence:** [`evidence/`](./evidence/) (discovery run, 4 replays incl. business-outcome + hard-failure)
+- **End-to-end evidence:** [`evidence/`](./evidence/) — 9 bundles: an offline + a real-LLM discovery run (`gpt-4o-mini` via OpenRouter) each with its recorded `artifact.json`, plus deterministic replays covering every outcome class (`recoverable_then_success`, `business_outcome` ×2 codes, `hard_failure`)
 - **User stories / build log:** [`USER_STORIES.md`](./USER_STORIES.md) — 45 stories, 10 phases, each committed with tests
 - **Original design doc:** [`TDD-ComputerUse-Automation-System.md`](./TDD-ComputerUse-Automation-System.md)
 
@@ -42,8 +42,10 @@ cp .env.example .env          # optional — only needed for a REAL LLM discover
 
 | Key | Purpose |
 |---|---|
-| `CUA_LLM_PROVIDERS` | `openrouter,nvidia_nim` for a real run; `scripted` (default) runs fully offline |
-| `OPENROUTER_API_KEY` / `NVIDIA_NIM_API_KEY` | provider keys — a missing key fails fast at startup, never silently |
+| `CUA_LLM_PROVIDERS` | ordered list for a real run, e.g. `openrouter,groq,nvidia_nim` (the router rotates on 429, disables a provider on 402/out-of-balance); `scripted` (default) runs fully offline |
+| `OPENROUTER_API_KEY` / `GROQ_API_KEY` / `NVIDIA_NIM_API_KEY` / `OPENAI_API_KEY` | provider keys — a missing key for a listed provider fails fast at startup; `OPENAI_API_KEY`, if set, auto-prepends `openai` |
+| `<PROVIDER>_MODEL` | model per provider — defaults are cost-right for the agent loop (`openai/gpt-4o-mini`, `gpt-4.1-mini`, `openai/gpt-oss-20b`, `deepseek-ai/deepseek-v4-flash-0731`) |
+| `CUA_PROVIDER_RPM` / `<PROVIDER>_RPM` | client-side request pacing so free tiers don't 429 |
 | `CUA_TARGET_BASE_URL` | MockBank base URL (default `http://127.0.0.1:8799`) |
 | `CUA_ALLOWLIST_PATH` | per-tenant allowlist (`config/allowlist.example.json`) |
 | `CUA_DB_PATH` / `CUA_EVIDENCE_ROOT` | SQLite + local evidence roots |
@@ -109,7 +111,7 @@ runs and the console still works minus the live view.
 ## Tests
 
 ```bash
-cd backend && pytest        # 72 tests (~45s); 3 sandbox tests skip cleanly without Docker/image
+cd backend && pytest        # 81 tests (~55s); sandbox tests skip cleanly without Docker/image
 ruff check src tests
 cd ../frontend && npm run build
 ```
@@ -118,13 +120,18 @@ cd ../frontend && npm run build
 
 **Real:** the discovery loop, the artifact schema + SQLite store + versioning +
 review gate, the full replay executor with the business-outcome / recoverable /
-hard-failure taxonomy, the multi-strategy locator engine with drift signal,
-the fail-closed policy engine, the control-lock + session-handoff mechanism
-(same live session, actions recorded, resume), cross-host egress blocking,
-the LLM provider router with rotation.
+hard-failure taxonomy **and the stuck-replay → human-handoff → resume path**,
+the multi-strategy locator engine with drift signal, the fail-closed policy
+engine, the control-lock + session-handoff mechanism (same live session, actions
+recorded, resume), cross-host egress blocking, the LLM provider router with
+rotation + client-side RPM pacing, and — with `CUA_USE_SANDBOX=1` — a real
+per-run **Docker** container (`Xvfb → xfce → headed Chromium/CDP → x11vnc →
+websockify`) that the worker drives over CDP and an operator watches/​takes over
+via noVNC, held on `STUCK` for handoff.
 
 **Mocked / design-only (documented in `REPORT.md` §Cuts):** the operator console
-UI (mechanism is real, UI is a thin API + React panel), real container/microVM
-sandboxing (per-context isolation + egress block + wall-clock kill are real),
-Postgres (SQLite behind the same interface), desktop/legacy-web surface adapters
-(one `SurfaceAdapter` seam, Playwright impl).
+is a thin Next.js app over the real handoff API; a microVM (Firecracker/gVisor)
+boundary, kernel CPU/memory ceilings, a warm pool, and orchestration beyond a
+single Docker host are design-only; Postgres (SQLite behind the same interface);
+desktop/legacy-web surface adapters (one `SurfaceAdapter` seam, Playwright impl);
+the offline `scripted` discovery pilot for CI / the no-key demo.

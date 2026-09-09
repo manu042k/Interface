@@ -1,0 +1,284 @@
+{
+  "artifact_id": "efc4fffb1a2649de9e23f7853f74a200",
+  "version": 1,
+  "status": "approved",
+  "name": "read_savings_balance",
+  "goal_description": "look up member 12345 and read their current savings balance",
+  "agent_summary": null,
+  "vendor_app_id": "mockbank",
+  "app_version": "7.2",
+  "tenant_scope": {
+    "kind": "base",
+    "tenant_id": null,
+    "overrides_base_version": null
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "member_id": {
+        "type": "string",
+        "example": "12345"
+      }
+    },
+    "required": [
+      "member_id"
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "savings_balance": {
+        "type": "object",
+        "x-shape": "currency"
+      }
+    },
+    "required": [
+      "savings_balance"
+    ]
+  },
+  "steps": [
+    {
+      "step_index": 0,
+      "action_type": "type",
+      "description": "enter the member id in the search box",
+      "locator_spec": [
+        {
+          "kind": "role_name",
+          "params": {
+            "role": "textbox",
+            "_discovery_matched": "role=textbox (sole)"
+          },
+          "rank": 0,
+          "rationale": "ARIA role only — usable when the control is the sole one of its role on the screen; verify uniqueness at replay"
+        }
+      ],
+      "value_binding": {
+        "literal": null,
+        "param": "member_id"
+      },
+      "output_binding": null,
+      "step_checkpoint": null,
+      "idempotent": true,
+      "mutex_key": null,
+      "risk_class": "safe_reversible",
+      "wait_timeout_ms": 15000
+    },
+    {
+      "step_index": 1,
+      "action_type": "click",
+      "description": "submit the member search",
+      "locator_spec": [
+        {
+          "kind": "role_name",
+          "params": {
+            "role": "button",
+            "name": "Search",
+            "_discovery_matched": "role=button name='Search'"
+          },
+          "rank": 0,
+          "rationale": "ARIA role + accessible name: the most portable identifier, survives markup/id churn and works on desktop AX trees too"
+        },
+        {
+          "kind": "text",
+          "params": {
+            "text": "Search"
+          },
+          "rank": 1,
+          "rationale": "the same label as visible text — a fallback if the accessibility name is computed differently at replay"
+        },
+        {
+          "kind": "role_name",
+          "params": {
+            "role": "button"
+          },
+          "rank": 2,
+          "rationale": "ARIA role only — usable when the control is the sole one of its role on the screen; verify uniqueness at replay"
+        }
+      ],
+      "value_binding": null,
+      "output_binding": null,
+      "step_checkpoint": null,
+      "idempotent": true,
+      "mutex_key": null,
+      "risk_class": "safe_reversible",
+      "wait_timeout_ms": 15000
+    },
+    {
+      "step_index": 2,
+      "action_type": "click",
+      "description": "open the matching member record",
+      "locator_spec": [
+        {
+          "kind": "text",
+          "params": {
+            "text": "Open",
+            "_discovery_matched": "link='Open'"
+          },
+          "rank": 0,
+          "rationale": "visible/link text — readable and fairly stable, but breaks on wording or localization changes"
+        }
+      ],
+      "value_binding": null,
+      "output_binding": null,
+      "step_checkpoint": null,
+      "idempotent": true,
+      "mutex_key": null,
+      "risk_class": "safe_reversible",
+      "wait_timeout_ms": 15000
+    },
+    {
+      "step_index": 3,
+      "action_type": "extract",
+      "description": "read the savings balance from the balances table",
+      "locator_spec": [
+        {
+          "kind": "relative_to_landmark",
+          "params": {
+            "near": "Savings",
+            "_discovery_matched": "near='Savings':value-cell"
+          },
+          "rank": 0,
+          "rationale": "anchored to a visible row label ('the value cell in the Savings row') — robust against table nesting with no ids"
+        }
+      ],
+      "value_binding": null,
+      "output_binding": {
+        "field": "savings_balance",
+        "shape": "currency"
+      },
+      "step_checkpoint": null,
+      "idempotent": true,
+      "mutex_key": null,
+      "risk_class": "safe_reversible",
+      "wait_timeout_ms": 15000
+    },
+    {
+      "step_index": 4,
+      "action_type": "assert_state",
+      "description": "confirm we are on the member record showing the balance",
+      "locator_spec": [],
+      "value_binding": null,
+      "output_binding": null,
+      "step_checkpoint": {
+        "kind": "text_present",
+        "params": {
+          "text": "Savings"
+        },
+        "description": ""
+      },
+      "idempotent": true,
+      "mutex_key": null,
+      "risk_class": "safe_reversible",
+      "wait_timeout_ms": 15000
+    }
+  ],
+  "checkpoint": {
+    "kind": "text_present",
+    "params": {
+      "text": "Savings"
+    },
+    "description": ""
+  },
+  "known_outcomes": [
+    {
+      "code": "member_not_found",
+      "when": {
+        "kind": "text_present",
+        "params": {
+          "any": [
+            "No members matched",
+            "was not found"
+          ]
+        },
+        "description": ""
+      },
+      "message": "The requested member does not exist.",
+      "from_step": 1
+    },
+    {
+      "code": "permission_denied",
+      "when": {
+        "kind": "text_present",
+        "params": {
+          "any": [
+            "do not have permission",
+            "member record is restricted"
+          ]
+        },
+        "description": ""
+      },
+      "message": "Caller is not permitted to view this record.",
+      "from_step": 1
+    }
+  ],
+  "recoverable_rules": [
+    {
+      "name": "session_notice_interstitial",
+      "when": {
+        "kind": "text_present",
+        "params": {
+          "text": "Session Notice"
+        },
+        "description": ""
+      },
+      "action": "dismiss",
+      "target": [
+        {
+          "kind": "text",
+          "params": {
+            "text": "Acknowledge and continue"
+          },
+          "rank": 0,
+          "rationale": "the interstitial's only continue affordance; stable literal label"
+        }
+      ],
+      "settle": {
+        "kind": "text_absent",
+        "params": {
+          "text": "Session Notice"
+        },
+        "description": ""
+      },
+      "timeout_ms": 5000,
+      "max_attempts": 2
+    },
+    {
+      "name": "transient_slow_load",
+      "when": {
+        "kind": "text_present",
+        "params": {
+          "any": [
+            "Loading",
+            "please wait"
+          ]
+        },
+        "description": ""
+      },
+      "action": "wait",
+      "target": [],
+      "settle": {
+        "kind": "text_absent",
+        "params": {
+          "any": [
+            "Loading",
+            "please wait"
+          ]
+        },
+        "description": ""
+      },
+      "timeout_ms": 8000,
+      "max_attempts": 2
+    }
+  ],
+  "risk_class": "safe_reversible",
+  "created_from_run_id": "92b8b4de35f14d8cbb9d7d618c5a0d0a",
+  "created_at": 1788965901.9072661,
+  "reviewed_by": "demo-reviewer",
+  "reviewed_at": 1788965910.988998,
+  "review_notes": null,
+  "flow_fingerprint": "25f076b3b3938925",
+  "supersedes": null,
+  "confirmations": 0,
+  "last_confirmed_at": null,
+  "record_outcome": null
+}

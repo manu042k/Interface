@@ -27,12 +27,16 @@ happens there, not in callers. The `cua` CLI and the FastAPI gateway are two
 façades over the same `System`.
 
 **LLM provider router.** `discovery.decide()` goes through `LLMRouter`, an ordered
-list of OpenAI-compatible providers (OpenRouter, NVIDIA NIM) with per-provider
-health state. A 429 / quota / sustained-5xx is a *rotate, don't retry-in-place*
-signal: the provider is marked `cooling_down` (TTL from `Retry-After`) and the
-same request is retried against the next provider. All providers exhausted →
-a distinct `AllProvidersExhausted` the orchestrator pauses on. Replay never
-touches this.
+list of OpenAI-compatible providers (OpenRouter, Groq, NVIDIA NIM, OpenAI — any
+subset that has a key; an `OPENAI_API_KEY` auto-prepends `openai`) with
+per-provider health state and a client-side RPM pace (`min_interval` from a
+configured `rpm`) so a free tier isn't driven into a 429 in the first place. A
+429 / quota / sustained-5xx is a *rotate, don't retry-in-place* signal: the
+provider is marked `cooling_down` (TTL from `Retry-After`) and the same request
+goes to the next provider. A 402 / out-of-balance is different — that provider is
+`DISABLED` for the run, not cooled. All providers cooled → `AllProvidersExhausted`
+(the orchestrator pauses); all `DISABLED` → `AllProvidersOutOfBalance` (the run
+stops FAILED — no point spinning). Replay never touches this.
 
 ## 2. Artifact schema
 
@@ -70,9 +74,11 @@ checkpoint** before moving on — a click that didn't produce the expected state
 halts rather than continuing blind. No LLM anywhere in the loop. Resolution
 results are cached per `(artifact_version, surface_fingerprint, step_index)` with
 singleflight coalescing. The `matched_rank` of the strategy that resolved is the
-**drift signal**: a non-zero rank means the primary identifier degraded, logged
-as `drift_signal: true` and queryable as a trend before it becomes a failure.
-Every wait is bounded — no unbounded sleep anywhere.
+**drift signal**: a non-zero rank means the primary identifier degraded, emitted
+per resolution as `drift_signal: true` in the run's event log so a degrading
+locator is visible *before* it becomes a failure. Aggregating those events into a
+per-`(artifact, step)` trend (and auto-triggering re-review off it) is the
+obvious next step — see §7. Every wait is bounded — no unbounded sleep anywhere.
 
 **Exceptional states** (`replay/executor.py`). Before every step, and again
 whenever a checkpoint fails, the screen is matched against the artifact's
@@ -114,17 +120,24 @@ instance (`vendor_app_id` + `app_version`). Per-tenant variance (branding, an
 extra confirmation step, a renamed field) is a thin **override** keyed
 `(vendor_app_id, tenant_id, overrides_base_version)` that only declares the steps
 that differ — `store.resolve_for_tenant()` returns an approved override merged
-onto the approved base, else the base. No per-tenant re-recording. Drift is
-managed by the fingerprint + `drift_signal` trend per `(artifact, step)`: a
-tenant whose resolutions start falling to lower-ranked strategies is flagged for
-re-review before it breaks, without disturbing the other 199.
+onto the approved base, else the base (`_merge_override`, unit-tested). No
+per-tenant re-recording. Drift is managed by the fingerprint + the per-resolution
+`drift_signal`: a tenant whose resolutions start falling to lower-ranked
+strategies would be flagged for re-review before it breaks, without disturbing
+the other 199 — the aggregation/alerting on top of the signal is the design's
+next step, not yet built.
 
 ## 5. Escalation & handoff
 
 **Detect.** Discovery emits `stuck(reason)` when it can't safely proceed
-(missing control, unexpected screen, guardrail block it can't route around, or
-`all_providers_exhausted`); replay raises on an unrecoverable hard failure. The
-run transitions to `stuck` and its session is **held, not torn down**.
+(missing control, unexpected screen, a no-progress loop, guardrail block it can't
+route around, or `all_providers_exhausted`). Replay does the same on an
+**unrecoverable step** (`ReplayExecutor._escalate_replay`): a step that isn't a
+declared business outcome and can't be recovered opens an intervention instead of
+returning `hard_failure` outright — but only when an `EscalationService` is wired
+*and* a `handoff_wait_s` is given (the gateway passes 900s; the CLI and tests
+pass 0, so an offline replay stays a clean terminal `hard_failure`). Either way
+the run transitions to `stuck` and its session is **held, not torn down**.
 
 **Route.** `EscalationService.open_intervention()` acquires the automation lock
 via the `SessionBroker`, captures a context bundle (screenshot, DOM, transcript
@@ -139,14 +152,26 @@ lease simply lapses and is reaped). The operator claims the intervention, then
 operator action is executed through the adapter against that session and recorded
 to `human_actions_log`.
 
-**Hand back.** `release_control` → `resume`: releases the human lease,
-re-acquires automation's, and evaluates the goal checkpoint — if it already
-holds, the run is resolved as *goal satisfied*; otherwise automation continues
-its loop from the human-modified state. With `CUA_USE_SANDBOX=1` the operator
-takes over by clicking directly in the live **noVNC** canvas of the same
-container; without it, the console's scripted action buttons drive the shared
-session. Either way the **mechanism** (pause / cede / resume on one session,
-lock ownership model, action recording) is real and covered by tests.
+**Hand back.** `release_control` → `resume` releases the human lease and
+re-acquires automation's on the same `session_id`. `resume` can take a
+`goal_checkpoint` and, if it already holds, resolve the run as *goal satisfied*;
+in the current wiring the caller passes none, so instead:
+
+- **Discovery** resumes as `RUNNING` with an explicit instruction to `observe`
+  the current screen first and *not* assume the goal is done — it must re-verify
+  with `assert_state` / `extract` before it may call `done`. (The earlier
+  hard-coded MockBank checkpoint was removed — it could never hold on another
+  site and wedged the run.)
+- **Replay** re-observes and re-checks the failed step's own checkpoint; if the
+  human's actions satisfied it the run continues from the next step, otherwise it
+  retries the recorded step once, and if that still fails returns the
+  `hard_failure` (now tagged with a `human_intervention` recovered-condition).
+
+With `CUA_USE_SANDBOX=1` the operator takes over by clicking directly in the live
+**noVNC** canvas of the same container; without it, the console's scripted action
+buttons drive the shared session. Either way the **mechanism** (pause / cede /
+resume on one session, lock ownership model, action recording) is real and
+covered by tests for both discovery and replay.
 
 ## 6. Safety
 
@@ -203,8 +228,9 @@ Deliberately thin-but-real, or stubbed at a clean seam:
   for no-accessibility-info markup.
 - **Discovery model quality** — the offline `scripted` pilot recognises a
   handful of MockBank screens so CI and the no-key demo run the whole pipeline;
-  a real run uses OpenRouter/NIM via the router with identical downstream
-  behaviour.
+  a real run uses OpenRouter / Groq / NIM / OpenAI via the router (default
+  `gpt-4o-mini`) with identical downstream behaviour. `evidence/07-09` are a real
+  `gpt-4o-mini` discovery + its deterministic replays.
 - **Artifact governance** — a single `draft → approved` gate with a reviewer
   name; no multi-reviewer workflow, RBAC, or re-approval-on-drift policy.
 

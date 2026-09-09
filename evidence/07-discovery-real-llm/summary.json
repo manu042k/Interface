@@ -1,0 +1,418 @@
+{
+  "kind": "discovery",
+  "run_id": "1f1beaecc82b4381ba7a07bfdac03be9",
+  "goal": "look up member 12345 and read their current savings balance",
+  "target": "http://127.0.0.1:8799/search",
+  "status": "completed",
+  "detail": "goal achieved",
+  "step_count": 9,
+  "intervention_id": null,
+  "artifact": {
+    "artifact_id": "ae7ead79610542409c797c6541bd6da0",
+    "version": 1,
+    "status": "draft",
+    "name": "read_savings_balance_real",
+    "goal_description": "look up member 12345 and read their current savings balance",
+    "agent_summary": "This capability retrieves the current savings balance for a specified member by their ID in the mockbank application. An agent should invoke it when needing to verify a member's savings status, returning the balance or indicating if the member is not found or if access is denied. It is classified as safe and reversible, but outcomes may require handling for member_not_found or permission_denied scenarios.",
+    "vendor_app_id": "mockbank",
+    "app_version": "7.2",
+    "tenant_scope": {
+      "kind": "base",
+      "tenant_id": null,
+      "overrides_base_version": null
+    },
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "member_id": {
+          "type": "string",
+          "example": "12345"
+        }
+      },
+      "required": [
+        "member_id"
+      ]
+    },
+    "output_schema": {
+      "type": "object",
+      "properties": {
+        "savings_balance": {
+          "type": "object",
+          "x-shape": "currency"
+        }
+      },
+      "required": [
+        "savings_balance"
+      ]
+    },
+    "steps": [
+      {
+        "step_index": 0,
+        "action_type": "type",
+        "description": "To search for the member by their ID.",
+        "locator_spec": [
+          {
+            "kind": "dom_anchor",
+            "params": {
+              "css": "[name=\"q\"]",
+              "_discovery_matched": "name=\"q\""
+            },
+            "rank": 0,
+            "rationale": "form-control name attribute \u2014 legacy server-rendered forms expose these and they are stable across releases"
+          }
+        ],
+        "value_binding": {
+          "literal": null,
+          "param": "member_id"
+        },
+        "output_binding": null,
+        "step_checkpoint": null,
+        "idempotent": true,
+        "mutex_key": null,
+        "risk_class": "safe_reversible",
+        "wait_timeout_ms": 15000
+      },
+      {
+        "step_index": 1,
+        "action_type": "click",
+        "description": "To initiate the search for the member by clicking the search button.",
+        "locator_spec": [
+          {
+            "kind": "dom_anchor",
+            "params": {
+              "css": "[name=\"go\"]",
+              "_discovery_matched": "name=\"go\""
+            },
+            "rank": 0,
+            "rationale": "form-control name attribute \u2014 legacy server-rendered forms expose these and they are stable across releases"
+          }
+        ],
+        "value_binding": null,
+        "output_binding": null,
+        "step_checkpoint": null,
+        "idempotent": true,
+        "mutex_key": null,
+        "risk_class": "safe_reversible",
+        "wait_timeout_ms": 15000
+      },
+      {
+        "step_index": 2,
+        "action_type": "click",
+        "description": "To open the member record for member ID 12345.",
+        "locator_spec": [
+          {
+            "kind": "role_name",
+            "params": {
+              "role": "link",
+              "_discovery_matched": "role=link name='Open record'"
+            },
+            "rank": 0,
+            "rationale": "ARIA role only \u2014 usable when the control is the sole one of its role on the screen; verify uniqueness at replay"
+          },
+          {
+            "kind": "text",
+            "params": {
+              "text": "Open record"
+            },
+            "rank": 1,
+            "rationale": "visible/link text \u2014 readable and fairly stable, but breaks on wording or localization changes"
+          }
+        ],
+        "value_binding": null,
+        "output_binding": null,
+        "step_checkpoint": null,
+        "idempotent": true,
+        "mutex_key": null,
+        "risk_class": "safe_reversible",
+        "wait_timeout_ms": 15000
+      },
+      {
+        "step_index": 3,
+        "action_type": "extract",
+        "description": "To read the current savings balance for member 12345.",
+        "locator_spec": [
+          {
+            "kind": "relative_to_landmark",
+            "params": {
+              "near": "Savings",
+              "_discovery_matched": "near='Savings':value-cell"
+            },
+            "rank": 0,
+            "rationale": "anchored to a visible row label ('the value cell in the Savings row') \u2014 robust against table nesting with no ids"
+          }
+        ],
+        "value_binding": null,
+        "output_binding": {
+          "field": "savings_balance",
+          "shape": "currency"
+        },
+        "step_checkpoint": null,
+        "idempotent": true,
+        "mutex_key": null,
+        "risk_class": "safe_reversible",
+        "wait_timeout_ms": 15000
+      }
+    ],
+    "checkpoint": {
+      "kind": "url_matches",
+      "params": {
+        "pattern": "http://\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+/member/\\d+"
+      },
+      "description": "ended on http://127.0.0.1:8799/member/12345?ack=1"
+    },
+    "known_outcomes": [
+      {
+        "code": "member_not_found",
+        "when": {
+          "kind": "text_present",
+          "params": {
+            "any": [
+              "No members matched",
+              "was not found"
+            ]
+          },
+          "description": ""
+        },
+        "message": "The requested member does not exist.",
+        "from_step": 1
+      },
+      {
+        "code": "permission_denied",
+        "when": {
+          "kind": "text_present",
+          "params": {
+            "any": [
+              "do not have permission",
+              "member record is restricted"
+            ]
+          },
+          "description": ""
+        },
+        "message": "Caller is not permitted to view this record.",
+        "from_step": 1
+      }
+    ],
+    "recoverable_rules": [
+      {
+        "name": "session_notice_interstitial",
+        "when": {
+          "kind": "text_present",
+          "params": {
+            "text": "Session Notice"
+          },
+          "description": ""
+        },
+        "action": "dismiss",
+        "target": [
+          {
+            "kind": "text",
+            "params": {
+              "text": "Acknowledge and continue"
+            },
+            "rank": 0,
+            "rationale": "the interstitial's only continue affordance; stable literal label"
+          }
+        ],
+        "settle": {
+          "kind": "text_absent",
+          "params": {
+            "text": "Session Notice"
+          },
+          "description": ""
+        },
+        "timeout_ms": 5000,
+        "max_attempts": 2
+      },
+      {
+        "name": "transient_slow_load",
+        "when": {
+          "kind": "text_present",
+          "params": {
+            "any": [
+              "Loading",
+              "please wait"
+            ]
+          },
+          "description": ""
+        },
+        "action": "wait",
+        "target": [],
+        "settle": {
+          "kind": "text_absent",
+          "params": {
+            "any": [
+              "Loading",
+              "please wait"
+            ]
+          },
+          "description": ""
+        },
+        "timeout_ms": 8000,
+        "max_attempts": 2
+      }
+    ],
+    "risk_class": "safe_reversible",
+    "created_from_run_id": "1f1beaecc82b4381ba7a07bfdac03be9",
+    "created_at": 1788966179.4118779,
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "review_notes": null,
+    "flow_fingerprint": "4f11ca6ee6813220",
+    "supersedes": null,
+    "confirmations": 0,
+    "last_confirmed_at": null,
+    "record_outcome": "new"
+  },
+  "transcript": [
+    {
+      "step": 0,
+      "tool": "type",
+      "reasoning": "To search for the member by their ID.",
+      "guardrail": "allow",
+      "ok": true,
+      "result": {
+        "ok": true,
+        "error": null,
+        "timed_out": false,
+        "matched_strategy": "name=\"q\"",
+        "url_after": "http://127.0.0.1:8799/search",
+        "extracted": null,
+        "risk_class": "safe_reversible"
+      }
+    },
+    {
+      "step": 1,
+      "tool": "click",
+      "reasoning": "To initiate the search for the member by clicking the search button.",
+      "guardrail": "allow",
+      "ok": true,
+      "result": {
+        "ok": true,
+        "error": null,
+        "timed_out": false,
+        "matched_strategy": "name=\"go\"",
+        "url_after": "http://127.0.0.1:8799/members?q=12345&go=Search",
+        "extracted": null,
+        "risk_class": "safe_reversible"
+      }
+    },
+    {
+      "step": 2,
+      "tool": "click",
+      "reasoning": "To open the member record for member ID 12345.",
+      "guardrail": "allow",
+      "ok": true,
+      "result": {
+        "ok": true,
+        "error": null,
+        "timed_out": false,
+        "matched_strategy": "role=link name='Open record'",
+        "url_after": "http://127.0.0.1:8799/member/12345",
+        "extracted": null,
+        "risk_class": "safe_reversible"
+      }
+    },
+    {
+      "step": 3,
+      "tool": "click",
+      "reasoning": "To acknowledge the session notice and continue to the member's record.",
+      "guardrail": "allow",
+      "ok": true,
+      "result": {
+        "ok": true,
+        "error": null,
+        "timed_out": false,
+        "matched_strategy": "role=link name='[ Acknowledge and continue ]'",
+        "url_after": "http://127.0.0.1:8799/member/12345?ack=1",
+        "extracted": null,
+        "risk_class": "safe_reversible"
+      }
+    },
+    {
+      "step": 4,
+      "tool": "extract",
+      "reasoning": "To read the current savings balance for member 12345.",
+      "guardrail": "allow",
+      "ok": true,
+      "result": {
+        "ok": true,
+        "error": null,
+        "timed_out": false,
+        "matched_strategy": "near='Savings':value-cell",
+        "url_after": "http://127.0.0.1:8799/member/12345?ack=1",
+        "extracted": {
+          "raw": "$4,182.55",
+          "amount": 4182.55
+        },
+        "risk_class": "safe_reversible"
+      }
+    },
+    {
+      "step": 5,
+      "tool": "assert_state",
+      "reasoning": "To confirm that the savings balance has been successfully extracted.",
+      "guardrail": "allow",
+      "ok": false,
+      "result": {
+        "ok": false,
+        "error": "assertion failed: {'savings_balance': '$4,182.55'}",
+        "timed_out": false,
+        "matched_strategy": null,
+        "url_after": "http://127.0.0.1:8799/member/12345?ack=1",
+        "extracted": null,
+        "risk_class": "safe_reversible"
+      }
+    },
+    {
+      "step": 6,
+      "tool": "assert_state",
+      "reasoning": "To verify the current savings balance for member 12345 after extraction.",
+      "guardrail": "allow",
+      "ok": false,
+      "result": {
+        "ok": false,
+        "error": "assertion failed: {'savings_balance': '$4,182.55'}",
+        "timed_out": false,
+        "matched_strategy": null,
+        "url_after": "http://127.0.0.1:8799/member/12345?ack=1",
+        "extracted": null,
+        "risk_class": "safe_reversible"
+      }
+    },
+    {
+      "step": 7,
+      "tool": "assert_state",
+      "reasoning": "Check if the savings balance is correctly extracted and displayed on the screen.",
+      "guardrail": "allow",
+      "ok": false,
+      "result": {
+        "ok": false,
+        "error": "assertion failed: {'savings_balance': '$4,182.55'}",
+        "timed_out": false,
+        "matched_strategy": null,
+        "url_after": "http://127.0.0.1:8799/member/12345?ack=1",
+        "extracted": null,
+        "risk_class": "safe_reversible"
+      }
+    },
+    {
+      "step": 8,
+      "tool": "extract",
+      "reasoning": "To read the current savings balance for member 12345.",
+      "guardrail": "allow",
+      "ok": true,
+      "result": {
+        "ok": true,
+        "error": null,
+        "timed_out": false,
+        "matched_strategy": "near='Savings':value-cell",
+        "url_after": "http://127.0.0.1:8799/member/12345?ack=1",
+        "extracted": {
+          "raw": "$4,182.55",
+          "amount": 4182.55
+        },
+        "risk_class": "safe_reversible"
+      }
+    }
+  ]
+}
