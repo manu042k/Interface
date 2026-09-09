@@ -131,6 +131,8 @@ class Orchestrator:
         done_nudged = 0  # rejected `done` calls (no successful verify before them)
         stuck_nudged = 0  # `stuck` calls pushed back because progress was just made
         policy_blocks = 0  # consecutive guardrail rejections the model can't fix by retrying
+        used_params: set[str] = set()  # params whose value was actually typed/selected
+        unused_param_nudged = 0
 
         from ..sandbox.session import close_run_surface, open_run_surface
 
@@ -228,6 +230,24 @@ class Orchestrator:
                             "the CURRENT screen) and it must return ok. If that assert_state "
                             "FAILS, the goal is not achieved - do not call done, re-observe or "
                             "call stuck. Never report a value you cannot see on screen."
+                        )
+                        step += 1
+                        continue
+                    # A supplied input param that was NEVER typed/selected means
+                    # the agent skipped part of the task (e.g. saved an update
+                    # form without touching a single field). Push back once.
+                    _skip = {"branch", "tenant", "operator", "password"}
+                    unused = [
+                        k for k, v in params.items()
+                        if k not in used_params and k not in _skip and len(str(v)) >= 4
+                    ]
+                    if unused and unused_param_nudged < 2:
+                        unused_param_nudged += 1
+                        history.append(f"done -> REJECTED: params never entered: {unused}")
+                        note = (
+                            f"You have not entered these supplied parameters into any field: "
+                            f"{', '.join(unused)}. The goal provided them because the flow needs "
+                            "them on a form. Go back to the form, fill each one, submit, then done."
                         )
                         step += 1
                         continue
@@ -343,6 +363,11 @@ class Orchestrator:
                     last_ok_tool = call.tool
                     last_ok_step = step
                     policy_blocks = 0  # progress - forget earlier guardrail rejections
+                    if call.tool in ("type", "select"):
+                        entered = str(call.args.get("value") or call.args.get("option") or "")
+                        for pk, pv in params.items():
+                            if pv and str(pv) in entered:
+                                used_params.add(pk)
                 if not ok:
                     history.append(f"{desc} -> FAILED: {result.error}")
                     note = f"The last action failed: {result.error}. Re-observe and adapt, or call stuck."
