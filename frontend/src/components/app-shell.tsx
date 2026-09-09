@@ -10,6 +10,7 @@ import {
   LifeBuoy,
   Activity,
   Radio,
+  Waypoints,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -34,12 +35,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden">
       <aside className="no-print bg-sidebar border-sidebar-border hidden w-60 shrink-0 flex-col border-r px-4 py-6 md:flex">
         <Link href="/" className="mb-7 flex items-center gap-2 px-2">
-          <span className="bg-primary text-primary-foreground grid h-7 w-7 place-items-center rounded-md text-sm font-bold">
-            C
+          <span className="bg-primary text-primary-foreground grid h-7 w-7 place-items-center rounded-md">
+            <Waypoints className="h-4 w-4" strokeWidth={2.5} />
           </span>
-          <span className="text-[15px] font-semibold tracking-tight">
-            Computer-Use Automation
-          </span>
+          <span className="text-[15px] font-semibold tracking-tight">Trace</span>
         </Link>
 
         <nav className="flex flex-col gap-1">
