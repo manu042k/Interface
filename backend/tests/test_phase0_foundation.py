@@ -139,9 +139,17 @@ def test_mockbank_not_found_and_restricted(mockbank):
 def test_mockbank_sub_account_confirmation(mockbank):
     with httpx.Client() as c:
         c.get(f"{mockbank}/member/12345", params={"ack": "1"})
-        r = c.post(
+        # the first POST hits an unexpected confirmation step - no account yet
+        r0 = c.post(
             f"{mockbank}/member/12345/sub-account/create",
             data={"acct_type": "Holiday Club", "amt": "25.00"},
+        )
+        assert r0.status_code == 200 and "Confirm sub-account creation" in r0.text
+        assert "Sub-account created" not in r0.text
+        # re-submit with confirmed=yes -> created
+        r = c.post(
+            f"{mockbank}/member/12345/sub-account/create",
+            data={"acct_type": "Holiday Club", "amt": "25.00", "confirmed": "yes"},
         )
         assert r.status_code == 200
         assert "Sub-account created" in r.text and "Confirmation number" in r.text

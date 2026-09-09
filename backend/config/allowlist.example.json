@@ -7,11 +7,11 @@
       "routes": [
         "^/$",
         "^/search$",
+        "^/expired$",
         "^/members(\\?.*)?$",
-        "^/member/[0-9]+$",
-        "^/member/[0-9]+\\?ack=1$",
+        "^/member/[0-9]+(\\?.*)?$",
         "^/member/[0-9]+/sub-account/new(\\?.*)?$",
-        "^/member/[0-9]+/sub-account/create$"
+        "^/member/[0-9]+/sub-account/create(\\?.*)?$"
       ],
       "action_types": ["click", "type", "select", "navigate", "wait_for", "extract", "assert_state", "scroll", "press_key"],
       "risk_policy": {

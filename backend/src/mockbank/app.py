@@ -48,6 +48,36 @@ SUB_ACCOUNT_TYPES = ["Regular Savings", "Holiday Club", "Money Market", "Youth S
 
 _PAGE_HITS: dict[str, int] = {}
 
+# --- adversarial edge-case state (per process) ----------------------------
+# All opt-in via query params, so the default MockBank + existing tests are
+# untouched. These reproduce the runtime conditions the brief calls out:
+# validation errors, transient app errors, session expiry, unexpected
+# confirmation steps, duplicate submission, and content/label drift.
+_BOOMED: set[str] = set()          # {mid} that have already 500'd once
+_CREATED: dict[tuple, str] = {}    # (mid, acct_type, amt) -> confirmation no.
+
+
+def _sleep_from(req) -> None:
+    """Honour ?slow=<seconds> (was a hardcoded 3s). Capped so a test can still
+    kill it, but high enough that ?slow=20 blows a 15s action timeout."""
+    try:
+        s = float(req.args.get("slow") or 0)
+    except ValueError:
+        s = 0.0
+    if s > 0:
+        time.sleep(min(s, 30.0))
+
+
+def _session_dead(req) -> bool:
+    return req.cookies.get("coreserv_dead") == "1"
+
+
+def _expired_page() -> str:
+    return _p("Session Ended", _notice(
+        "Your CoreServ session has ended (idle timeout). "
+        "Return to Member Search and start again."
+    ))
+
 
 def _p(title: str, body: str) -> str:
     # Frameset-era doctype, table layout, no CSS classes, no test ids.
@@ -93,11 +123,21 @@ def search() -> str:
     return _p("Member Search", body)
 
 
+@app.get("/expired")
+def expired() -> str:
+    return _expired_page()
+
+
 @app.route("/members")
-def members() -> str:
+def members():
+    if _session_dead(request):
+        return _expired_page(), 440
     q = (request.args.get("q") or "").strip()
-    if request.args.get("slow") == "1":
-        time.sleep(3.0)
+    _sleep_from(request)
+
+    # EDGE: a decoy "Open record" link (points at Home) rendered BEFORE the real
+    # one, to try to make the agent/locator click the wrong link.
+    decoy = request.args.get("decoylink") == "1"
 
     if not q:
         return _p("Search Results", _notice("Please enter a member ID or name."))
@@ -127,11 +167,16 @@ def members() -> str:
         return _p("Search Results", body)
 
     m = MEMBERS[hit_id]
+    decoy_row = (
+        "<tr><td>&nbsp;</td><td>&nbsp;</td>"
+        "<td><a href=\"/\">Open&nbsp;record</a></td></tr>\n" if decoy else ""
+    )
     body = (
         "<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" width=\"600\">\n"
         "<tr bgcolor=\"#eeeeee\"><td colspan=\"3\"><font face=\"Verdana\" size=\"2\"><b>1 match</b></font></td></tr>\n"
         "<tr><td><font face=\"Verdana\" size=\"2\">ID</font></td>"
         "<td><font face=\"Verdana\" size=\"2\">Name</font></td><td>&nbsp;</td></tr>\n"
+        f"{decoy_row}"
         f"<tr><td><font face=\"Verdana\" size=\"2\">{hit_id}</font></td>"
         f"<td><font face=\"Verdana\" size=\"2\">{escape(m['name'])}</font></td>"
         f"<td><a href=\"/member/{hit_id}\">Open&nbsp;record</a></td></tr>\n</table>"
@@ -148,8 +193,26 @@ def _notice(msg: str) -> str:
 
 @app.route("/member/<mid>")
 def member_detail(mid: str):
-    if request.args.get("slow") == "1":
-        time.sleep(3.0)
+    if _session_dead(request):
+        return _expired_page(), 440
+    _sleep_from(request)
+
+    # EDGE: ?expire=1 - this request "logs you out". Everything member-related
+    # returns the session-ended page from here on (until cookie cleared).
+    if request.args.get("expire") == "1":
+        resp = make_response("", 302)
+        resp.headers["Location"] = "/expired"
+        resp.set_cookie("coreserv_dead", "1")
+        return resp
+
+    # EDGE: ?boom=1 (or MOCKBANK_BOOM=1) - a transient 500 the FIRST time this
+    # member is opened; a retry succeeds. ("App just errored", retry fixes it.)
+    if (request.args.get("boom") == "1" or os.environ.get("MOCKBANK_BOOM") == "1") and mid not in _BOOMED:
+        _BOOMED.add(mid)
+        return _p("Error", _notice(
+            "CoreServ encountered an unexpected error (ref 500-CORE-7742). "
+            "Please retry."
+        )), 500
 
     if mid == "99999":
         return _p("Restricted", _notice(
@@ -180,6 +243,20 @@ def member_detail(mid: str):
         return resp
 
     m = MEMBERS[mid]
+    # EDGE: ?decoy=1 (or MOCKBANK_DECOY=1) - a fake "Savings" cell with a junk
+    # value, ABOVE the real balances table, to trip landmark extraction.
+    decoy_on = request.args.get("decoy") == "1" or os.environ.get("MOCKBANK_DECOY") == "1"
+    decoy_row = (
+        "  <tr><td><font face=\"Verdana\" size=\"2\">Savings</font></td>"
+        "<td><font face=\"Verdana\" size=\"2\">$0.01</font></td></tr>\n"
+        if decoy_on else ""
+    )
+    # EDGE: ?relabel=1 (or MOCKBANK_RELABEL=1) - the labels are swapped: the
+    # landmark text is present but on the wrong row.
+    if request.args.get("relabel") == "1" or os.environ.get("MOCKBANK_RELABEL") == "1":
+        chk_label, sav_label = "Savings", "Checking"
+    else:
+        chk_label, sav_label = "Checking", "Savings"
     # Balance is buried in a nested table with no id/class — hostile on purpose.
     body = (
         "<table border=\"1\" cellpadding=\"0\" cellspacing=\"0\" width=\"620\"><tr><td>\n"
@@ -187,11 +264,12 @@ def member_detail(mid: str):
         f"  <tr bgcolor=\"#eeeeee\"><td colspan=\"2\"><font face=\"Verdana\" size=\"2\"><b>Member {mid} &mdash; {escape(m['name'])}</b></font></td></tr>\n"
         f"  <tr><td width=\"180\"><font face=\"Verdana\" size=\"2\">Status</font></td><td><font face=\"Verdana\" size=\"2\">{escape(m['status'])}</font></td></tr>\n"
         f"  <tr><td><font face=\"Verdana\" size=\"2\">Home Branch</font></td><td><font face=\"Verdana\" size=\"2\">{escape(m['branch'])}</font></td></tr>\n"
+        f"{decoy_row}"
         "  <tr><td valign=\"top\"><font face=\"Verdana\" size=\"2\">Balances</font></td><td>\n"
         "     <table border=\"1\" cellpadding=\"4\" cellspacing=\"0\">\n"
-        "       <tr><td><font face=\"Verdana\" size=\"1\">Checking</font></td>"
+        f"       <tr><td><font face=\"Verdana\" size=\"1\">{chk_label}</font></td>"
         f"<td align=\"right\"><font face=\"Verdana\" size=\"2\">{escape(m['checking_balance'])}</font></td></tr>\n"
-        "       <tr><td><font face=\"Verdana\" size=\"1\">Savings</font></td>"
+        f"       <tr><td><font face=\"Verdana\" size=\"1\">{sav_label}</font></td>"
         f"<td align=\"right\"><font face=\"Verdana\" size=\"2\">{escape(m['savings_balance'])}</font></td></tr>\n"
         "     </table>\n"
         "  </td></tr>\n"
@@ -207,7 +285,11 @@ def sub_account_new(mid: str):
     if mid not in MEMBERS:
         return _p("Not Found", _notice(f"Member {escape(mid)} not found.")), 404
     err = request.args.get("err")
-    warn = _notice("Please choose an account type.") if err == "type" else ""
+    warn = ""
+    if err == "type":
+        warn = _notice("Please choose an account type.")
+    elif err == "amt":
+        warn = _notice("Initial deposit must be a positive number under 1,000,000.")
     opts = "".join(f"<option value=\"{escape(t)}\">{escape(t)}</option>" for t in SUB_ACCOUNT_TYPES)
     body = (
         f"{warn}"
@@ -224,20 +306,71 @@ def sub_account_new(mid: str):
     return _p(f"New Sub-Account {mid}", body)
 
 
+def _valid_amount(raw: str) -> float | None:
+    try:
+        v = float(raw.replace("$", "").replace(",", "").strip() or "0")
+    except ValueError:
+        return None
+    if v < 0 or v > 1_000_000:
+        return None
+    return v
+
+
 @app.route("/member/<mid>/sub-account/create", methods=["POST"])
 def sub_account_create(mid: str):
+    if _session_dead(request):
+        return _expired_page(), 440
     if mid not in MEMBERS:
         return _p("Not Found", _notice(f"Member {escape(mid)} not found.")), 404
     acct_type = (request.form.get("acct_type") or "").strip()
     amt = (request.form.get("amt") or "0.00").strip()
+
     if not acct_type:
         # Re-render the form with a validation error (recoverable-ish / business).
         return _p("New Sub-Account", _notice("Please choose an account type.") + (
             f"<br><font face=\"Verdana\" size=\"2\"><a href=\"/member/{mid}/sub-account/new?err=type\">Back to form</a></font>"
         )), 400
 
-    # Deterministic confirmation number from inputs.
-    conf = "SA-" + str(abs(hash((mid, acct_type, amt))) % 900000 + 100000)
+    # EDGE: deposit validation only fires here, on submit.
+    if _valid_amount(amt) is None:
+        return _p("New Sub-Account", _notice(
+            "Initial deposit must be a positive number under 1,000,000."
+        ) + (
+            f"<br><font face=\"Verdana\" size=\"2\"><a href=\"/member/{mid}/sub-account/new?err=amt\">Back to form</a></font>"
+        )), 400
+
+    key = (mid, acct_type, amt)
+
+    # EDGE: an unexpected confirmation step. The first POST does NOT create -
+    # it returns an "are you sure" page that must be re-submitted with
+    # confirmed=yes. (?skipconfirm=1 disables it for the happy path.)
+    if request.form.get("confirmed") != "yes" and request.args.get("skipconfirm") != "1":
+        body = (
+            "<table border=\"1\" cellpadding=\"10\" cellspacing=\"0\" width=\"560\" bgcolor=\"#ffe0e0\">\n"
+            "<tr><td><font face=\"Verdana\" size=\"2\"><b>Confirm sub-account creation</b><br><br>"
+            f"You are about to open a <b>{escape(acct_type)}</b> sub-account for member "
+            f"{mid} with an initial deposit of {escape(amt)}.<br>"
+            "This action cannot be undone.</font></td></tr></table>\n"
+            f"<form method=\"POST\" action=\"/member/{mid}/sub-account/create\">\n"
+            f"<input type=\"hidden\" name=\"acct_type\" value=\"{escape(acct_type)}\">\n"
+            f"<input type=\"hidden\" name=\"amt\" value=\"{escape(amt)}\">\n"
+            "<input type=\"hidden\" name=\"confirmed\" value=\"yes\">\n"
+            "<input type=\"submit\" name=\"go\" value=\"Confirm creation\">\n"
+            "</form>"
+        )
+        return _p("Confirm", body)
+
+    # EDGE: duplicate submission. An identical create that already succeeded
+    # returns a WARNING (a legitimate business outcome), not a second account.
+    if key in _CREATED:
+        prev = _CREATED[key]
+        return _p("Duplicate", _notice(
+            f"A {acct_type} sub-account for member {mid} already exists "
+            f"(ref {prev}). No new account was created."
+        )), 409
+
+    conf = "SA-" + str(abs(hash(key)) % 900000 + 100000)
+    _CREATED[key] = conf
     body = (
         "<table border=\"1\" cellpadding=\"8\" cellspacing=\"0\" width=\"560\" bgcolor=\"#e3f4e3\">\n"
         "<tr><td><font face=\"Verdana\" size=\"2\"><b>Sub-account created</b></font></td></tr>\n"
@@ -251,6 +384,15 @@ def sub_account_create(mid: str):
 @app.get("/healthz")
 def healthz() -> str:
     return "ok"
+
+
+@app.post("/_reset")
+def _reset() -> str:
+    """Clear per-process edge-case state (transient-500 and duplicate-submit
+    memory). For tests / repeatable demo runs."""
+    _BOOMED.clear()
+    _CREATED.clear()
+    return "reset"
 
 
 def main() -> None:
