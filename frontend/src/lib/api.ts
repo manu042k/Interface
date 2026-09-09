@@ -26,6 +26,7 @@ export type RunView = {
   tenant_id: string;
   app_target: string;
   goal: string | null;
+  name: string | null;
   detail: string | null;
   step_count: number;
   artifact_id: string | null;
@@ -33,6 +34,12 @@ export type RunView = {
   record_outcome: "new" | "new_version" | "reused" | "updated_draft" | null;
   novnc_url: string | null;
   sandbox_container: string | null;
+  browser: string;
+  started_at: number;
+  ended_at: number | null;
+  llm_calls: number;
+  tokens_in: number;
+  tokens_out: number;
 };
 
 export type RunRow = {

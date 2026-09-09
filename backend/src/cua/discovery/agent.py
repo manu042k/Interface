@@ -20,6 +20,16 @@ VOCAB = {
 }
 
 
+def _merge_usage(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
+    """Sum the token counters from two OpenAI-style usage dicts."""
+    out = dict(a)
+    for k in ("prompt_tokens", "completion_tokens", "total_tokens"):
+        v = (b or {}).get(k)
+        if isinstance(v, int):
+            out[k] = out.get(k, 0) + v
+    return out
+
+
 def _tool(name: str, description: str, props: dict[str, Any], required: list[str]) -> dict[str, Any]:
     return {
         "type": "function",
@@ -105,6 +115,7 @@ class DiscoveryAgent:
         resp = await self._router.call(SYSTEM_PROMPT, user, TOOL_SCHEMA, logger=logger)
         call = self._coerce(resp.tool, resp.args, resp.reasoning)
         if call is not None:
+            call.usage = _merge_usage({}, resp.usage)
             return call
 
         # one corrective retry
@@ -114,12 +125,15 @@ class DiscoveryAgent:
         )
         resp2 = await self._router.call(SYSTEM_PROMPT, retry_user, TOOL_SCHEMA, logger=logger)
         call = self._coerce(resp2.tool, resp2.args, resp2.reasoning)
+        combined = _merge_usage(resp.usage, resp2.usage)
         if call is not None:
+            call.usage = combined
             return call
         return ToolCall(
             tool="stuck",
             args={"reason": f"model produced an out-of-vocabulary response twice ({resp.tool!r}, {resp2.tool!r})", "context": {}},
             reasoning="invalid model output",
+            usage=combined,
         )
 
     # -- internals ---------------------------------------------------

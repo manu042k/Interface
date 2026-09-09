@@ -165,6 +165,15 @@ class Orchestrator:
 
                 log.decision(step, call.tool, call.args, call.reasoning)
 
+                if call.usage:
+                    run.llm_calls += 1
+                    run.tokens_in += int(call.usage.get("prompt_tokens", 0) or 0)
+                    run.tokens_out += int(call.usage.get("completion_tokens", 0) or 0)
+                    log.event(
+                        step, "tokens", calls=run.llm_calls,
+                        tokens_in=run.tokens_in, tokens_out=run.tokens_out,
+                    )
+
                 if call.tool == "observe":
                     history.append("observe -> re-read screen")
                     continue

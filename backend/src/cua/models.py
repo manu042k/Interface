@@ -314,6 +314,8 @@ class RunRecord(BaseModel):
     tenant_id: str = "default"
     app_target: str
     goal: str | None = None
+    # Short human label for the goal (== the capability name it records under).
+    name: str | None = None
 
     status: RunStatus = RunStatus.PENDING
     artifact_id: str | None = None
@@ -329,6 +331,12 @@ class RunRecord(BaseModel):
     novnc_url: str | None = None
     sandbox_container: str | None = None
     cdp_url: str | None = None
+    browser: str = "chromium"
+
+    # LLM usage accumulated across the run's decide() calls.
+    llm_calls: int = 0
+    tokens_in: int = 0
+    tokens_out: int = 0
 
     # How the resulting capability was persisted: new | new_version | reused | updated_draft
     record_outcome: str | None = None
@@ -418,3 +426,5 @@ class ToolCall(BaseModel):
     ]
     args: dict[str, Any] = Field(default_factory=dict)
     reasoning: str = Field(default="", description="model's stated rationale — logged with the step")
+    # token usage for the call(s) that produced this decision, if the provider reported it
+    usage: dict[str, Any] = Field(default_factory=dict)

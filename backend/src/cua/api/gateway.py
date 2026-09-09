@@ -62,6 +62,7 @@ class RunView(BaseModel):
     tenant_id: str
     app_target: str
     goal: str | None
+    name: str | None = None
     detail: str | None
     step_count: int
     artifact_id: str | None = None
@@ -69,6 +70,12 @@ class RunView(BaseModel):
     record_outcome: str | None = None
     novnc_url: str | None = None
     sandbox_container: str | None = None
+    browser: str = "chromium"
+    started_at: float = 0.0
+    ended_at: float | None = None
+    llm_calls: int = 0
+    tokens_in: int = 0
+    tokens_out: int = 0
 
 
 class PromoteRequest(BaseModel):
@@ -113,7 +120,11 @@ def create_app(config: Config | None = None) -> FastAPI:
         sys: System = app.state.system
         target = _validate_target_or_400(sys, req.tenant, req.target)
 
-        run = RunRecord(mode=RunMode.DISCOVERY, tenant_id=req.tenant, app_target=target, goal=req.goal)
+        run = RunRecord(
+            mode=RunMode.DISCOVERY, tenant_id=req.tenant, app_target=target, goal=req.goal,
+            name=req.capability_name or _slug(req.goal),
+            browser="chromium" if sys.sandbox_manager is not None else "chromium (headless)",
+        )
         app.state.runs[run.run_id] = run
 
         async def _execute() -> None:
@@ -572,9 +583,12 @@ def _run_dict(run: RunRecord) -> dict[str, Any]:
     return {
         "run_id": run.run_id, "mode": run.mode, "status": run.status, "tenant_id": run.tenant_id,
         "app_target": run.app_target, "goal": run.goal, "detail": run.detail, "step_count": run.step_count,
+        "name": run.name,
         "artifact_id": run.artifact_id, "artifact_version": run.artifact_version,
         "record_outcome": run.record_outcome,
         "novnc_url": run.novnc_url, "sandbox_container": run.sandbox_container,
+        "browser": run.browser, "started_at": run.started_at, "ended_at": run.ended_at,
+        "llm_calls": run.llm_calls, "tokens_in": run.tokens_in, "tokens_out": run.tokens_out,
     }
 
 

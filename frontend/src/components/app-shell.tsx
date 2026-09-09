@@ -9,7 +9,6 @@ import {
   ClipboardCheck,
   LifeBuoy,
   Activity,
-  Radio,
   Waypoints,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -45,10 +44,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <nav className="flex flex-col gap-1">
           {NAV.map(({ href, label, icon: Icon, exact }) => {
             const activeNav = exact ? path === href : path.startsWith(href);
+            const showLive = href === "/runs" && !!active;
             return (
               <Link
                 key={href}
-                href={href}
+                href={showLive && active ? `/runs/${active.run_id}` : href}
                 className={cn(
                   "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
                   activeNav
@@ -58,27 +58,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon className="h-4 w-4" />
                 {label}
+                {showLive && (
+                  <span className="relative ml-auto flex h-2 w-2">
+                    <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+                    <span className="bg-primary relative inline-flex h-2 w-2 rounded-full" />
+                  </span>
+                )}
               </Link>
             );
           })}
         </nav>
-
-        {active && (
-          <Link
-            href={`/runs/${active.run_id}`}
-            className="border-primary/40 bg-primary/8 hover:bg-primary/12 mt-4 flex items-start gap-2 rounded-lg border px-3 py-2.5 text-xs transition-colors"
-          >
-            <Radio className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0 animate-pulse" />
-            <span className="min-w-0">
-              <span className="text-primary block font-semibold">
-                Live run · {active.status}
-              </span>
-              <span className="text-muted-foreground line-clamp-2">
-                {active.goal}
-              </span>
-            </span>
-          </Link>
-        )}
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">

@@ -46,6 +46,8 @@ class ModelResponse:
     args: dict[str, Any]
     reasoning: str = ""
     provider: str = ""
+    # {"prompt_tokens": int, "completion_tokens": int, ...} from the API, if given
+    usage: dict[str, Any] = field(default_factory=dict)
     raw: Any = field(default=None, repr=False)
 
 
@@ -163,7 +165,10 @@ def _parse_openai_tool_call(data: dict[str, Any], provider: str) -> ModelRespons
         args = fn.get("arguments") or "{}"
         parsed = json.loads(args) if isinstance(args, str) else args
         reasoning = parsed.pop("reasoning", "") or choice.get("content") or ""
-        return ModelResponse(tool=fn["name"], args=parsed, reasoning=reasoning, provider=provider, raw=data)
+        return ModelResponse(
+            tool=fn["name"], args=parsed, reasoning=reasoning, provider=provider,
+            usage=data.get("usage") or {}, raw=data,
+        )
     except (KeyError, IndexError, json.JSONDecodeError) as exc:
         raise ProviderError(f"{provider}: unparseable response: {exc}") from exc
 
