@@ -25,10 +25,12 @@ from playwright.async_api import (
     async_playwright,
 )
 
+from ..conditions import SHAPE_PATTERNS, shape_pattern
 from ..models import ActionResult, ActionType
 from .base import Action, RawSnapshot, SurfaceAdapter, SurfaceError
 
 _WS_RE = re.compile(r"\s+")
+_SHAPED = set(SHAPE_PATTERNS)  # shapes with a recognisable text pattern
 
 
 def _match_option(want: str, opts: list[dict[str, str]]) -> dict[str, str] | None:
@@ -417,6 +419,25 @@ class PlaywrightAdapter(SurfaceAdapter):
             "reason": None, "target": target,
         }
 
+    async def _shaped_cell_in_row(self, loc: Locator, shape: str) -> tuple[str] | None:
+        """`loc` is a cell whose text didn't match `shape`. If it sits in a
+        table row, return the (text,) of the first sibling <td> that does — the
+        Balance column in a Share ID | Type | Balance | Status grid."""
+        pat = re.compile(shape_pattern(shape))
+        try:
+            row = loc.locator("xpath=ancestor-or-self::tr[1]")
+            if not await row.count():
+                return None
+            texts = await row.locator("td, th").evaluate_all(
+                "els => els.map(e => (e.textContent || '').trim())"
+            )
+            for txt in texts:
+                if txt and pat.search(txt):
+                    return (txt,)
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+
     async def _equivalent_link_index(self, loc: Locator, count: int) -> int | None:
         """If every match is an <a> with the same href, return the index of the
         first visible one; else None (truly ambiguous)."""
@@ -488,8 +509,18 @@ class PlaywrightAdapter(SurfaceAdapter):
 
             elif t == ActionType.EXTRACT:
                 loc, strat = await self._locator(sess, action)
+                shape = action.expected_shape or "string"
                 raw = (await loc.inner_text(timeout=timeout)).strip()
-                value, err = _coerce_shape(raw, action.expected_shape or "string")
+                value, err = _coerce_shape(raw, shape)
+                if err and shape in _SHAPED:
+                    # The row-relative resolver returns the LAST <td>, which is
+                    # right for a 2-col label/value table but grabs "Status" in a
+                    # Share ID | Type | Balance | Status grid. If the target cell
+                    # is in a table row, pick the cell that matches the wanted
+                    # shape instead of failing.
+                    alt = await self._shaped_cell_in_row(loc, shape)
+                    if alt is not None:
+                        raw, (value, err), strat = alt[0], _coerce_shape(alt[0], shape), f"{strat} -> shape-matched cell"
                 if err:
                     res.ok = False
                     res.error = err
