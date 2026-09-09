@@ -28,6 +28,8 @@ from playwright.async_api import (
 from ..models import ActionResult, ActionType
 from .base import Action, RawSnapshot, SurfaceAdapter, SurfaceError
 
+_WS_RE = re.compile(r"\s+")
+
 
 @dataclass
 class _Session:
@@ -479,8 +481,12 @@ class PlaywrightAdapter(SurfaceAdapter):
                         return True
                 elif kind in {"text_present", "text_absent"}:
                     body = await page.evaluate("() => document.body ? document.body.innerText : ''")
+                    # collapse whitespace runs: legacy tables render
+                    # <td>Label:</td><td>Value</td> as "Label:\tValue", so an
+                    # assertion of "Label: Value" would never match otherwise.
+                    body = _WS_RE.sub(" ", body).lower()
                     needles = params.get("any") or [params.get("text", "")]
-                    present = any(n and n.lower() in body.lower() for n in needles)
+                    present = any(n and _WS_RE.sub(" ", n).strip().lower() in body for n in needles)
                     if (kind == "text_present" and present) or (kind == "text_absent" and not present):
                         return True
                 elif kind in {"element_present", "element_absent"}:
