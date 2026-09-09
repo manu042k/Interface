@@ -88,6 +88,20 @@ def main() -> int:
                 raise
         # Reuse the page launch_persistent_context already opens; never create a second tab.
         page = context.pages[0] if context.pages else context.new_page()
+
+        # Fill the whole Xvfb display so the noVNC view is the page, not an
+        # empty desktop. --start-maximized is unreliable under xfwm4; drive it
+        # over CDP instead.
+        try:
+            cdp = context.new_cdp_session(page)
+            win = cdp.send("Browser.getWindowForTarget")
+            cdp.send(
+                "Browser.setWindowBounds",
+                {"windowId": win["windowId"], "bounds": {"windowState": "fullscreen"}},
+            )
+        except Exception:  # noqa: BLE001 — best effort
+            pass
+
         page.goto(url, wait_until="domcontentloaded")
 
         while True:
