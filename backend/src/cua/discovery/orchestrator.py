@@ -416,6 +416,18 @@ class Orchestrator:
                     repeats = 0
                 last_sig = sig if ok else last_sig
 
+                # The model sometimes re-asserts the same passing success check
+                # instead of calling done. It has verified the goal twice —
+                # that IS done. Record the assert's condition as the checkpoint.
+                if ok and call.tool == "assert_state" and repeats >= 1:
+                    transcript.done_outputs = {}
+                    transcript.final_state = state
+                    run.status = RunStatus.COMPLETED
+                    run.detail = "goal achieved (success check verified)"
+                    log.checkpoint(step, True, "assert_state verified twice — completing")
+                    log.run_finished("completed", outputs=[])
+                    break
+
                 if repeats >= 1:
                     if call.tool == "scroll":
                         note = (
