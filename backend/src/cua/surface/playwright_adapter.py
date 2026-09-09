@@ -320,20 +320,23 @@ class PlaywrightAdapter(SurfaceAdapter):
                 return loc.first, f"placeholder={placeholder!r}"
 
         # 3b. legacy table form: the label sits in a plain <td>/<th> with no
-        # <label for=...>, so get_by_label above found nothing. Find the text
-        # node and take the first form control that follows it in DOM order
-        # (same row, or the next cell). This is THE legacy-form pattern.
-        landmark = near or label or (text if text and " " in str(text) else None)
-        if landmark and not near:
-            lm = str(landmark).rstrip(":").strip()
+        # <label for=...>, so get_by_label above found nothing. Take the first
+        # *fillable* control (never a submit/button) in the label's row, else the
+        # next one in DOM order. Only for an explicit label/near hint — a plain
+        # `text` target is a click and must fall through to the button below.
+        if label and not near and role not in ("button", "link", "menuitem", "tab"):
+            lm = str(label).rstrip(":").strip()
             anchor = page.get_by_text(lm, exact=False)
             if await anchor.count():
                 a0 = anchor.first
+                fillable = (
+                    "self::select or self::textarea or "
+                    "(self::input and not(@type='submit') and not(@type='button') "
+                    "and not(@type='reset') and not(@type='hidden'))"
+                )
                 for xp, why in (
-                    ("xpath=ancestor::tr[1]//*[self::select or self::input or self::textarea]",
-                     f"label-cell={lm!r}:row-control"),
-                    ("xpath=(following::select | following::input | following::textarea)[1]",
-                     f"label-cell={lm!r}:next-control"),
+                    (f"xpath=ancestor::tr[1]//*[{fillable}]", f"label-cell={lm!r}:row-control"),
+                    (f"xpath=(following::*[{fillable}])[1]", f"label-cell={lm!r}:next-control"),
                 ):
                     try:
                         cand = a0.locator(xp)
@@ -748,10 +751,15 @@ def _strict_locate(page: Page, kind: str, params: dict[str, Any], target: dict[s
         near = p.get("near")
         if not near:
             return None, "relative_to_landmark: no anchor"
-        anchor = page.get_by_text(near, exact=True)
-        row = anchor.first.locator("xpath=ancestor::tr[1]")
-        ctrl = row.locator("input, select, textarea, button, a")
-        return ctrl.first if _sync_hint(ctrl) else row.locator("td").last, f"near={near!r}"
+        anchor = page.get_by_text(near, exact=False).first
+        row = anchor.locator("xpath=ancestor::tr[1]")
+        # a fillable control in the row wins (a legacy form field labelled by a
+        # plain cell); otherwise the row's last cell (a label/value pair).
+        fillable = row.locator(
+            "select, textarea, "
+            "input:not([type=submit]):not([type=button]):not([type=reset]):not([type=hidden])"
+        )
+        return fillable.or_(row.locator("td").last).first, f"near={near!r}"
     if kind in {"dom_anchor", "test_id"}:
         if p.get("css"):
             return page.locator(p["css"]), f"css={p['css']}"
@@ -761,13 +769,6 @@ def _strict_locate(page: Page, kind: str, params: dict[str, Any], target: dict[s
             return page.locator(f"xpath={p['xpath']}"), f"xpath={p['xpath']}"
         return None, "dom_anchor: no css/xpath"
     return None, f"unknown kind {kind}"
-
-
-def _sync_hint(_loc: Locator) -> bool:
-    # We can't await here; prefer the value-cell fallback deterministically by
-    # returning False. The row's last <td> is the robust choice for read steps,
-    # and control steps carry a role_name/label strategy ahead of this one.
-    return False
 
 
 def _strategy_to_desc(kind: str, params: dict[str, Any]) -> dict[str, Any]:
