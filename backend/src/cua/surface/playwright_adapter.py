@@ -211,15 +211,18 @@ class PlaywrightAdapter(SurfaceAdapter):
         label = desc.get("label")
         placeholder = desc.get("placeholder")
 
-        # 2. role + accessible name (most portable)
-        if role and name:
-            loc = page.get_by_role(role, name=name, exact=False)
+        # 2. role + accessible name (most portable). The model often puts the
+        # name in `text` instead of `name`; treat either as the a11y name so we
+        # don't fall through to "the first element of this role" on the page.
+        acc_name = name or text
+        if role and acc_name:
+            loc = page.get_by_role(role, name=acc_name, exact=False)
             if await loc.count():
-                return loc.first, f"role={role} name={name!r}"
-        if role:
-            loc = page.get_by_role(role)
+                return loc.first, f"role={role} name={acc_name!r}"
+            # exact, in case a shorter name (e.g. a nav link) also matched loosely
+            loc = page.get_by_role(role, name=acc_name, exact=True)
             if await loc.count():
-                return loc.first, f"role={role}"
+                return loc.first, f"role={role} name={acc_name!r} (exact)"
 
         # 3. form label / placeholder
         if label:
@@ -249,13 +252,22 @@ class PlaywrightAdapter(SurfaceAdapter):
 
         # 5. visible text — prefer an actionable element with that name
         if text:
-            for role in ("button", "link"):
-                loc = page.get_by_role(role, name=text, exact=False)
+            loc = page.get_by_text(text, exact=True)
+            if await loc.count() == 1:
+                return loc.first, f"text={text!r} (exact)"
+            for r in ("button", "link"):
+                loc = page.get_by_role(r, name=text, exact=False)
                 if await loc.count():
-                    return loc.first, f"{role}={text!r}"
+                    return loc.first, f"{r}={text!r}"
             loc = page.get_by_text(text, exact=False)
             if await loc.count():
                 return loc.first, f"text={text!r}"
+
+        # 6. last resort: the only element of this role on the page
+        if role:
+            loc = page.get_by_role(role)
+            if await loc.count() == 1:
+                return loc.first, f"role={role} (sole)"
 
         raise SurfaceError(f"could not resolve target: {desc!r}")
 
