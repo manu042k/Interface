@@ -189,7 +189,11 @@ class ArtifactRecorder:
             raw = str(args.get("value", ""))
             value_binding = _bind_value(raw, params, forced_params, field_hint=_target_hint(args.get("target")))
         elif tool == "select":
-            value_binding = ValueBinding(literal=str(args.get("option", "")))
+            opt = str(args.get("option", ""))
+            # bind to a param when the chosen option is a supplied value (a
+            # share id, a branch) so the caller's input actually drives it
+            bound = next((pk for pk, pv in params.items() if str(pv) == opt), None)
+            value_binding = ValueBinding(param=bound) if bound else ValueBinding(literal=opt)
         elif tool == "navigate":
             url = str(args.get("url", ""))
             value_binding = _bind_url(url, params)
@@ -211,6 +215,16 @@ class ArtifactRecorder:
 
         idempotent = _is_idempotent(tool, entry)
         risk_class = RiskClass(entry.action_result.get("risk_class", RiskClass.SAFE_REVERSIBLE))
+        # a non-idempotent click that landed on a create/submit/confirm/post/
+        # transfer/approve route is an irreversible mutation, whatever the
+        # surface adapter guessed — the artifact must carry that so the gateway
+        # gates unattended replay on human approval.
+        if (
+            tool == "click"
+            and not idempotent
+            and _RISKY_URL_RE.search(str(entry.action_result.get("url_after", "")))
+        ):
+            risk_class = RiskClass.RISKY_IRREVERSIBLE
         mutex_key = _mutex_key(params) if not idempotent else None
 
         return Step(
@@ -381,17 +395,28 @@ def _rank_locators(target: Any, matched: str | None) -> list[LocatorStrategy]:
     # use that Y.
     if not name and isinstance(target.get("text"), str):
         name = target["text"]
+    landmark_from_match: str | None = None
     if isinstance(matched, str):
         m = re.match(r"role=\S+\s+name=['\"](.+?)['\"]", matched)
         if m:
             name = m.group(1)
+        # the adapter resolved this control by its label-cell / row-landmark
+        # text — that is what actually worked, so record it as rank 0.
+        lm = re.match(r"(?:label-cell|near)=['\"](.+?)['\"]", matched)
+        if lm:
+            landmark_from_match = lm.group(1)
     # A model often passes a form-control `name`/`id` token as `name` — not an
     # accessible label. Detect that and emit a name-attr strategy + a role-only
     # fallback, rather than a role_name that won't resolve.
     name_is_token = bool(name) and bool(_TOKEN_RE.fullmatch(str(name)))
+    if landmark_from_match:
+        cands.append(LocatorStrategy(
+            kind="relative_to_landmark", params={"near": landmark_from_match}, rank=0,
+            rationale="the control in the row whose label cell holds this text — how a legacy table form with no <label for> is targeted; survives id/name churn",
+        ))
     if role and name and not name_is_token:
         cands.append(LocatorStrategy(
-            kind="role_name", params={"role": role, "name": name}, rank=0,
+            kind="role_name", params={"role": role, "name": name}, rank=len(cands),
             rationale="ARIA role + accessible name: the most portable identifier, survives markup/id churn and works on desktop AX trees too",
         ))
         cands.append(LocatorStrategy(
