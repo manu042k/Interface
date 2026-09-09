@@ -20,6 +20,109 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
+function pathOf(url: unknown): string {
+  if (typeof url !== "string" || !url) return "";
+  try {
+    const u = new URL(url);
+    return u.pathname + u.search;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * One timeline event, rendered so a fast (headless) replay can still be audited
+ * after the fact: which locator strategy actually matched, whether it was a
+ * fallback / drift, where each action left the page, and every checkpoint result.
+ */
+function TimelineRow({ e }: { e: Record<string, unknown> }) {
+  const ev = String(e.event);
+  const ok = e.ok as boolean | undefined;
+  const bad =
+    ok === false ||
+    ev === "hard_failure" ||
+    ev === "stuck" ||
+    e.verdict === "block";
+
+  const bits: React.ReactNode[] = [];
+  if (typeof e.tool === "string") bits.push(e.tool);
+  if (typeof e.action_type === "string") bits.push(e.action_type);
+  if (typeof e.verdict === "string") bits.push(e.verdict);
+  if (typeof e.matched_strategy === "string") {
+    bits.push(
+      <code key="loc" className="bg-muted rounded px-1 text-[11px]">
+        {e.matched_strategy}
+      </code>,
+    );
+  }
+  if (e.drift_signal === true || (typeof e.matched_rank === "number" && e.matched_rank > 0)) {
+    bits.push(
+      <span key="drift" className="text-warning text-[11px] font-medium">
+        fallback #{String(e.matched_rank ?? "?")} (drift)
+      </span>,
+    );
+  }
+  if (e.timed_out === true)
+    bits.push(
+      <span key="to" className="text-destructive text-[11px]">
+        timed out
+      </span>,
+    );
+  const after = pathOf(e.url_after);
+  if (after)
+    bits.push(
+      <span key="url" className="text-muted-foreground text-[11px]">
+        → {after}
+      </span>,
+    );
+  if (typeof e.code === "string") bits.push(<code key="code">{e.code}</code>);
+  if (typeof e.status === "string") bits.push(e.status);
+  if (typeof e.rule === "string") bits.push(e.rule);
+  if (typeof e.recovery === "string")
+    bits.push(
+      <span key="rec" className="text-muted-foreground text-[11px]">
+        ({e.recovery})
+      </span>,
+    );
+
+  const detail =
+    (typeof e.description === "string" && e.description) ||
+    (typeof e.reason === "string" && e.reason) ||
+    (typeof e.error === "string" && e.error) ||
+    (typeof e.reasoning === "string" && e.reasoning) ||
+    "";
+
+  return (
+    <li className="border-border/40 flex flex-wrap items-baseline gap-x-2 border-b py-1 last:border-0">
+      <span className="text-muted-foreground w-12 shrink-0 text-xs tabular-nums">
+        {e.step != null ? `s${String(e.step)}` : "·"}
+      </span>
+      <span
+        className={
+          bad
+            ? "text-destructive text-xs font-semibold"
+            : ok === true
+              ? "text-success text-xs font-semibold"
+              : "text-xs font-semibold"
+        }
+      >
+        {ev.replaceAll("_", " ")}
+        {ok === true ? " ✓" : ok === false ? " ✗" : ""}
+      </span>
+      {bits.map((b, j) => (
+        <span key={j} className="text-xs">
+          {b}
+        </span>
+      ))}
+      {detail && (
+        <span className="text-muted-foreground w-full pl-14 text-xs">
+          ↳ {detail}
+        </span>
+      )}
+    </li>
+  );
+}
+
 /**
  * The full run report - the summary, the event timeline, replay outcomes, the
  * recorded capability, and the evidence gallery. Rendered on its own page
@@ -85,31 +188,9 @@ export function RunReport({
           <CardTitle className="text-base">Timeline</CardTitle>
         </CardHeader>
         <CardContent>
-          <ol className="space-y-1.5 text-sm">
+          <ol className="space-y-1 text-sm">
             {rep.timeline.map((e, i) => (
-              <li key={i} className="flex flex-wrap items-baseline gap-x-2">
-                {e.step != null && (
-                  <span className="text-muted-foreground text-xs">
-                    step {String(e.step)}
-                  </span>
-                )}
-                <span className="font-medium">
-                  {String(e.event).replaceAll("_", " ")}
-                </span>
-                {["tool", "verdict", "action_type", "code", "status", "rule"].map(
-                  (k) =>
-                    e[k] ? (
-                      <code key={k} className="text-xs">
-                        {String(e[k])}
-                      </code>
-                    ) : null,
-                )}
-                {typeof e.reasoning === "string" && (
-                  <span className="text-muted-foreground w-full text-xs italic">
-                    {e.reasoning}
-                  </span>
-                )}
-              </li>
+              <TimelineRow key={i} e={e} />
             ))}
           </ol>
         </CardContent>

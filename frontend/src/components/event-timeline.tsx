@@ -140,12 +140,27 @@ export function EventTimeline({ runId }: { runId: string }) {
               (typeof e.description === "string" && e.description) ||
               (typeof e.detail === "string" && e.detail) ||
               "";
+            const urlAfter =
+              typeof e.url_after === "string" && e.url_after
+                ? (() => {
+                    try {
+                      const u = new URL(e.url_after as string);
+                      return `→ ${u.pathname}${u.search}`;
+                    } catch {
+                      return `→ ${e.url_after}`;
+                    }
+                  })()
+                : null;
             const meta = [
               typeof e.tool === "string" ? e.tool : null,
               typeof e.verdict === "string" ? e.verdict : null,
               typeof e.provider === "string" ? e.provider : null,
               typeof e.code === "string" ? e.code : null,
               typeof e.matched_strategy === "string" ? e.matched_strategy : null,
+              e.drift_signal === true ? "drift" : null,
+              e.timed_out === true ? "timed out" : null,
+              e.ok === false ? "✗" : null,
+              urlAfter,
               e.event === "tokens"
                 ? `${e.tokens_in ?? 0}in/${e.tokens_out ?? 0}out`
                 : null,

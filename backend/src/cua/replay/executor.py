@@ -251,7 +251,8 @@ class ReplayExecutor:
             result = await self.adapter.execute(session, action)
             log.action(step.step_index, step.action_type, result.target_description, result.ok,
                        matched_strategy=matched_strategy or result.matched_strategy,
-                       error=result.error, timed_out=result.timed_out, attempt=attempts)
+                       url_after=result.url_after, error=result.error,
+                       timed_out=result.timed_out, attempt=attempts)
 
             if step.action_type == ActionType.EXTRACT and result.ok and step.output_binding:
                 outputs[step.output_binding.field] = result.extracted

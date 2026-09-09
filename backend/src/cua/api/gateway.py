@@ -497,7 +497,9 @@ def _build_report(app: FastAPI, run_id: str) -> dict[str, Any]:
     timeline = [
         {k: e.get(k) for k in ("ts", "step", "event", "tool", "reasoning", "verdict",
                                "reason", "action_type", "ok", "matched_strategy",
-                               "description", "code", "rule", "recovery", "status")
+                               "matched_kind", "matched_rank", "drift_signal", "url_after",
+                               "timed_out", "error", "description", "code", "rule",
+                               "recovery", "status")
          if k in e}
         for e in events
         if e.get("event") in {
