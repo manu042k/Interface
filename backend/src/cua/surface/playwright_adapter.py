@@ -195,11 +195,7 @@ class PlaywrightAdapter(SurfaceAdapter):
         if desc.get("xpath"):
             return page.locator(f"xpath={desc['xpath']}").first, f"xpath={desc['xpath']}"
 
-        # 1b. bare form-control name / id (legacy markup exposes these in the outline)
-        if desc.get("name") and not desc.get("role"):
-            loc = page.locator(f'[name="{desc["name"]}"]')
-            if await loc.count():
-                return loc.first, f'name="{desc["name"]}"'
+        # 1b. explicit id
         if desc.get("id"):
             loc = page.locator(f'#{desc["id"]}')
             if await loc.count():
@@ -223,6 +219,36 @@ class PlaywrightAdapter(SurfaceAdapter):
             loc = page.get_by_role(role, name=acc_name, exact=True)
             if await loc.count():
                 return loc.first, f"role={role} name={acc_name!r} (exact)"
+
+        # 2b. form-control name / id attribute. Legacy table forms put the label
+        # in a separate <td> with no <label for=...> / aria-label, so the input
+        # has NO accessible name and step 2 can't see it - but it does have a
+        # stable `name=` attribute, which is exactly what the model tends to pass
+        # ({"role":"textbox","name":"address"} for <input name="address">). Try
+        # that attribute (and id / placeholder) directly - exact first, then a
+        # case-insensitive substring so a partial guess ("address" for
+        # "mailing_address") still lands.
+        for key in (name, text, label, placeholder):
+            if not key or not isinstance(key, str):
+                continue
+            k = key.replace('"', "").replace("\\", "").strip()
+            if not k:
+                continue
+            for sel, why in (
+                (f'[name="{k}"], [id="{k}"]', f'name/id="{k}"'),
+                (
+                    f'input[name*="{k}" i], textarea[name*="{k}" i], select[name*="{k}" i], '
+                    f'input[id*="{k}" i], [placeholder*="{k}" i]',
+                    f'name~="{k}"',
+                ),
+            ):
+                try:
+                    loc = page.locator(sel)
+                    n = await loc.count()
+                except Exception:  # noqa: BLE001 - malformed selector from a weird key
+                    continue
+                if n:
+                    return loc.first, why
 
         # 3. form label / placeholder
         if label:

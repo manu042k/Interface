@@ -104,3 +104,37 @@ async def test_cross_host_egress_blocked(adapter, mockbank):
     # navigation to a non-allowlisted host is aborted at the route boundary
     assert r.ok is False or "example.com" not in r.url_after
     assert any("example.com" in u for u in sess.blocked_egress)
+
+
+async def test_resolve_legacy_form_field_by_name_attr(adapter, mockbank):
+    """A legacy table form: the label sits in a separate <td> with no
+    <label for=...>, so the input has NO accessible name - only a stable
+    `name=` attribute. `_resolve` must still find it from {role, name}
+    (regression: it used to fall through and raise 'could not resolve target',
+    which sent discovery into a scroll loop on the legacy console's Update Member form)."""
+    h = await adapter.open_session(f"{mockbank}/search")
+    page = adapter._sess(h).page
+    await page.set_content(
+        """
+        <table><tr>
+          <td>* Mailing Address:</td>
+          <td><input class="fld" type="text" name="address" size="48" value="Lane 1"></td>
+        </tr></table>
+        """
+    )
+    loc, why = await adapter._resolve(page, {"role": "textbox", "name": "address"})
+    assert await loc.count() == 1
+    assert "address" in why
+
+    # a partial guess ("mailing" for name="mailing_address") still lands
+    await page.set_content('<input type="text" name="mailing_address" value="x">')
+    loc, why = await adapter._resolve(page, {"role": "textbox", "name": "mailing"})
+    assert await loc.count() == 1
+
+    # typing into it via the normal execute() path works end to end
+    await page.set_content('<form><input type="text" name="address" value="old"></form>')
+    r = await adapter.execute(
+        h, Action(type=ActionType.TYPE, target_description={"role": "textbox", "name": "address"}, value="742 Evergreen Terrace")
+    )
+    assert r.ok, r.error
+    assert await page.locator('input[name="address"]').input_value() == "742 Evergreen Terrace"

@@ -270,6 +270,14 @@ class Orchestrator:
                 if not ok:
                     history.append(f"{desc} -> FAILED: {result.error}")
                     note = f"The last action failed: {result.error}. Re-observe and adapt, or call stuck."
+                    if "could not resolve target" in (result.error or ""):
+                        note = (
+                            f"The last action failed: {result.error}. The control could NOT be "
+                            "located - it is almost certainly on screen already. Do NOT scroll. "
+                            "Try a DIFFERENT identifier for the same control: its form field "
+                            "name (e.g. name='address'), its placeholder text, or the visible "
+                            "label text next to it. If two more tries fail, call stuck."
+                        )
                 elif call.tool == "extract" and result.extracted is not None:
                     val = str(result.extracted)
                     history.append(f"{desc} -> got {val[:80]!r}")
