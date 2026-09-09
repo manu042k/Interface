@@ -25,6 +25,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from ..conditions import shape_pattern as _shape_pattern
 from ..discovery.orchestrator import DiscoveryTranscript, TranscriptEntry
 from ..models import (
     ActionType,
@@ -215,19 +216,63 @@ class ArtifactRecorder:
 
     # -- checkpoint / outcomes ------------------------------------
     def _derive_checkpoint(self, transcript: DiscoveryTranscript, actionable: list[TranscriptEntry]) -> Condition:
+        """Synthesize the checkpoint that replay will treat as "goal achieved".
+
+        A bare `url_matches` on the final URL only proves "we landed on a
+        /member/N page" — it says nothing about whether the read returned a
+        value or the update actually took. So we combine every signal the flow
+        gives us:
+          * the last successful `assert_state` condition (stabilized), if any —
+            the model's own success check;
+          * for a flow that ends by reading a value, an `extract_matches` on that
+            field so replay re-reads it and confirms it is present and
+            shaped-right (not empty, not an error string);
+          * the final URL as a weak anchor.
+        Two or more signals are AND-ed into an `all_of`. A checkpoint that comes
+        out as URL-only is tagged `_weak` so review surfaces it.
+        """
+        parts: list[Condition] = []
+
         for entry in reversed(actionable):
             if entry.tool_call.tool == "assert_state":
-                return _stabilize_checkpoint(
-                    _condition_from_arg(entry.tool_call.args.get("condition"))
+                parts.append(
+                    _stabilize_checkpoint(_condition_from_arg(entry.tool_call.args.get("condition")))
                 )
+                break
+
+        extract_field = _last_extract_field(actionable)
+        if extract_field is not None:
+            field, shape = extract_field
+            parts.append(Condition(
+                kind="extract_matches",
+                params={"field": field, "pattern": _shape_pattern(shape)},
+                description=f"replay re-read '{field}' and it is present and {shape}-shaped",
+            ))
+
         st = transcript.final_state
+        url_cond: Condition | None = None
         if st is not None:
             base = re.sub(r"\d+", r"\\d+", re.escape(st.url.split("?")[0]))
+            url_cond = Condition(kind="url_matches", params={"pattern": base}, description=f"ended on {st.url}")
+
+        if len(parts) >= 2:
             return Condition(
-                kind="url_matches",
-                params={"pattern": base},
-                description=f"ended on {st.url}",
+                kind="all_of",
+                params={"conditions": [p.model_dump() for p in parts]},
+                description=" AND ".join(p.description or p.kind for p in parts),
             )
+        if len(parts) == 1:
+            if url_cond is not None and parts[0].kind != "url_matches":
+                return Condition(
+                    kind="all_of",
+                    params={"conditions": [parts[0].model_dump(), url_cond.model_dump()]},
+                    description=f"{parts[0].description or parts[0].kind} AND {url_cond.description}",
+                )
+            return parts[0]
+        if url_cond is not None:
+            url_cond.params["_weak"] = True
+            url_cond.description += " — URL-only checkpoint, does not verify the goal; strengthen before approval"
+            return url_cond
         return Condition(kind="text_present", params={"text": ""}, description="no checkpoint derived — review needed")
 
     def _seed_business_outcomes(self, transcript: DiscoveryTranscript) -> list[BusinessOutcomeRule]:
@@ -480,6 +525,16 @@ def _mutex_key(params: dict[str, Any]) -> str | None:
     for k in ("member_id", "account_id", "record_id", "id"):
         if k in params:
             return k
+    return None
+
+
+def _last_extract_field(actionable: list[TranscriptEntry]) -> tuple[str, str] | None:
+    """The (field, shape) of the flow's final successful `extract`, if any —
+    the value the goal is asking to be read."""
+    for entry in reversed(actionable):
+        if entry.tool_call.tool == "extract":
+            args = entry.tool_call.args
+            return (args.get("as") or "value", args.get("expected_shape", "string"))
     return None
 
 

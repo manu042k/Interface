@@ -17,6 +17,24 @@ from .models import Condition, SurfaceState
 
 Probe = Callable[[dict[str, Any]], Awaitable[bool]]
 
+# A non-empty value of roughly the right shape — enough to catch "" / "N/A" /
+# "An error occurred" landing where a real read should be. Deliberately
+# permissive: this checks the *shape*, never a per-run value. Shared by the
+# recorder (to build `extract_matches` checkpoints) and the replay executor
+# (to enforce `x-shape`, which JSON-Schema draft 2020-12 ignores).
+SHAPE_PATTERNS: dict[str, str] = {
+    "currency": r"[\$£€]?\s?-?[\d,]+\.\d{2}",
+    "number": r"-?[\d,]+(\.\d+)?",
+    "integer": r"-?\d[\d,]*",
+    "date": r"(\d{1,4}[-/]\d{1,2}[-/]\d{1,4}|[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4})",
+    "boolean": r"(?i:true|false|yes|no|enabled|disabled)",
+}
+
+
+def shape_pattern(shape: str) -> str:
+    """Regex that a value of `shape` must contain, or `\\S` (just non-empty)."""
+    return SHAPE_PATTERNS.get(shape, r"\S")
+
 
 async def evaluate(
     cond: Condition,
@@ -29,6 +47,17 @@ async def evaluate(
     kind = cond.kind
     haystack = f"{state.title}\n{state.ax_summary}\n{state.dom_excerpt}"
 
+    if kind in {"all_of", "any_of"}:
+        subs = [
+            c if isinstance(c, Condition) else Condition(**c)
+            for c in p.get("conditions", [])
+        ]
+        if not subs:
+            return False
+        results = [
+            await evaluate(c, state, probe=probe, extracted=extracted) for c in subs
+        ]
+        return all(results) if kind == "all_of" else any(results)
     if kind == "url_matches":
         return re.search(p.get("pattern", ".*"), state.url) is not None
     if kind == "text_present":

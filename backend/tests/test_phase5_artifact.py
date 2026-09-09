@@ -59,6 +59,35 @@ async def test_recorder_builds_faithful_artifact(system, mockbank):
     assert any(r.name == "session_notice_interstitial" for r in art.recoverable_rules)
 
 
+async def test_read_flow_checkpoint_verifies_the_value_not_just_the_url(system, mockbank):
+    # A "read a balance" flow must not be signed off with a checkpoint that only
+    # proves "we're on a /member/N page" — it has to re-read the value and
+    # confirm it's present and currency-shaped.
+    transcript = await _discover_balance(system, mockbank)
+    art = system.recorder.build_artifact(transcript, name="read_savings_balance")
+
+    cp = art.checkpoint
+    kinds: list[str] = []
+
+    def _walk(c):
+        kinds.append(c.kind)
+        if c.kind in {"all_of", "any_of"}:
+            for sub in c.params["conditions"]:
+                from cua.models import Condition
+
+                _walk(sub if isinstance(sub, Condition) else Condition(**sub))
+
+    _walk(cp)
+    assert "extract_matches" in kinds, f"checkpoint too weak: {cp.kind} {cp.params}"
+    assert "_weak" not in cp.params
+
+    # and it actually evaluates against the final screen of the recording
+    from cua.conditions import evaluate
+
+    assert await evaluate(cp, transcript.final_state, extracted={"savings_balance": "$4,182.55"})
+    assert not await evaluate(cp, transcript.final_state, extracted={"savings_balance": ""})
+
+
 async def test_recorder_redacts_and_parameterizes(system, mockbank):
     # a goal whose "param" is a secret-looking string typed into a field
     run, transcript = await system.orchestrator.run_discovery(

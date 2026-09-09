@@ -26,6 +26,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
+from ..conditions import SHAPE_PATTERNS as _SHAPE_PATTERNS
 from ..conditions import evaluate as eval_condition
 from ..events import RunLogger
 from ..models import (
@@ -373,11 +374,26 @@ class ReplayExecutor:
 
     def _validate_outputs(self, artifact: CapabilityArtifact, outputs: dict[str, Any]) -> list[str]:
         schema = artifact.output_schema
+        errs: list[str] = []
         try:
             validator = Draft202012Validator(schema)
+            errs = [
+                f"{'/'.join(map(str, e.path)) or '<root>'}: {e.message}"
+                for e in validator.iter_errors(outputs)
+            ]
         except Exception:  # noqa: BLE001
-            return []
-        return [f"{'/'.join(map(str, e.path)) or '<root>'}: {e.message}" for e in validator.iter_errors(outputs)]
+            pass
+        # Draft-2020-12 ignores our `x-shape` extension, so a "$4,182.55" read
+        # into a currency field passes JSON-Schema untouched. Enforce the shape
+        # here so a mangled/empty read is caught as a hard failure, not shipped.
+        for field, spec in (schema.get("properties") or {}).items():
+            shape = spec.get("x-shape") if isinstance(spec, dict) else None
+            if not shape or field not in outputs or outputs[field] is None:
+                continue
+            pat = _SHAPE_PATTERNS.get(shape)
+            if pat and not re.search(pat, str(outputs[field])):
+                errs.append(f"{field}: {outputs[field]!r} is not a valid {shape}")
+        return errs
 
     def _step_url(self, step: Step, params: dict[str, Any]) -> str | None:
         if step.action_type != ActionType.NAVIGATE or step.value_binding is None:

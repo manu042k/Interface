@@ -63,9 +63,15 @@ function phraseCondition(c?: Condition | null): string {
     case "element_absent":
       return `${s("selector")} is absent`;
     case "extract_equals":
-      return `${s("as")} equals “${s("value")}”`;
+      return `${s("field") !== "…" ? s("field") : s("as")} equals “${s("value")}”`;
     case "extract_matches":
-      return `${s("as")} matches /${s("pattern")}/`;
+      return `${s("field") !== "…" ? s("field") : s("as")} was re-read and matches /${s("pattern")}/`;
+    case "all_of":
+    case "any_of": {
+      const subs = Array.isArray(p.conditions) ? (p.conditions as Condition[]) : [];
+      const joiner = c.kind === "all_of" ? " and " : " or ";
+      return subs.map((x) => phraseCondition(x)).join(joiner) || c.kind;
+    }
     default:
       return `${c.kind} ${JSON.stringify(p)}`;
   }
@@ -142,6 +148,13 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
         <ContractRow label="Done when">
           <span className="text-foreground">
             {phraseCondition(artifact.checkpoint)}
+            {artifact.checkpoint?.params?.["_weak"] === true && (
+              <span className="text-warning">
+                {" "}
+                · weak checkpoint — only checks the URL, add a value/state
+                assertion before approving
+              </span>
+            )}
           </span>
         </ContractRow>
       </section>

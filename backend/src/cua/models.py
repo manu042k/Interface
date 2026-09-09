@@ -121,6 +121,8 @@ class Condition(BaseModel):
         "element_absent",
         "extract_equals",
         "extract_matches",
+        "all_of",
+        "any_of",
     ]
     params: dict[str, Any] = Field(default_factory=dict)
     description: str = ""
