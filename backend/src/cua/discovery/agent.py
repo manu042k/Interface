@@ -85,7 +85,11 @@ TOOL_SCHEMA: list[dict[str, Any]] = [
           ["direction"]),
     _tool("press_key", "Press a keyboard key - Enter/Tab/Escape, or a function key like F7 that legacy consoles use for navigation.",
           {"key": {"type": "string"}}, ["key"]),
-    _tool("done", "Goal achieved. Return the typed outputs.", {"outputs": {"type": "object"}}, ["outputs"]),
+    _tool("done",
+          "Goal achieved - return the typed outputs. ONLY valid immediately after an "
+          "assert_state that succeeded: that assertion is what gets recorded as the "
+          "replay checkpoint. Never call done straight after a click/type.",
+          {"outputs": {"type": "object"}}, ["outputs"]),
     _tool("stuck", "Cannot safely proceed. Escalate to a human.",
           {"reason": {"type": "string"}, "context": {"type": "object"}}, ["reason"]),
 ]
@@ -100,13 +104,17 @@ Rules:
 - Never enter real credentials or invent data. Use only values from the goal/params.
 - Bounded waits only. If a control is missing or the screen is unexpected and you cannot safely proceed, call stuck with a clear reason.
 - If the control or value you need is below the fold, scroll first. Do not repeat the same extract - once you have read a value it is captured; move on.
-- When the goal's success condition is visibly true, call assert_state to check it, then done with the extracted outputs.
 - assert_state checks a condition on the SCREEN (a heading/text is present, the URL matches). It does NOT save a form and it cannot read an <input> field's value - never use it to "confirm" an edit you have not submitted yet.
 
+Finishing (mandatory):
+- You may NEVER call done as your first reaction to a click/type succeeding. Finishing is two calls: (1) assert_state with the goal's success condition, phrased as a concrete screen check - prefer text_present of the exact confirmation wording you can see (e.g. {"kind":"text_present","params":{"text":"CHANGES SAVED"}}), else url_matches; then (2), only if that assert_state returned ok, done with the outputs.
+- That assert_state is recorded verbatim as the replay checkpoint, so make it specific: a phrase that is on the success screen and NOT on the form/other screens. A bare url_matches of the page you are already on is a weak checkpoint - avoid it when there is confirmation text.
+- If the assert_state fails, you are not done: re-observe and figure out what is still missing.
+
 Editing / updating a record (important):
-- The flow is: type into each field -> click the form's Save / Submit / Update / Confirm button -> WAIT for the result screen.
+- The flow is: type into each field -> click the form's Save / Submit / Update / Confirm button -> WAIT for the result screen -> assert_state the confirmation -> done.
 - Typing a value into a field changes nothing until you click that button. Do not assert_state or navigate away before clicking it.
-- Success is the app's own confirmation after the save: a "Changes saved" / "... UPDATED" / "... has been updated" screen, or the record page now showing the new value. When you see that, call done. If you typed the fields but never saw a save button, scroll the form to find it before giving up.
+- Success is the app's own confirmation after the save: a "Changes saved" / "... UPDATED" / "... has been updated" screen, or the record page now showing the new value. assert_state that exact text, then done. If you typed the fields but never saw a save button, scroll the form to find it before giving up.
 
 Progress discipline (important):
 - Check "CURRENT FORM FIELD VALUES" and the ACTION HISTORY before each step. If a field already holds the value you need, DO NOT type it again — move to the next control (e.g. click the submit/search/save button).

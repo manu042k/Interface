@@ -126,6 +126,8 @@ class Orchestrator:
         history: list[str] = []
         note: str | None = None
         last_call: ToolCall | None = None  # for "what the agent was attempting" on escalation
+        last_ok_tool: str | None = None  # last action that actually ran, for the done gate
+        done_nudged = False
 
         from ..sandbox.session import close_run_surface, open_run_surface
 
@@ -193,6 +195,20 @@ class Orchestrator:
                     continue
 
                 if call.tool == "done":
+                    # A `done` must be earned by a preceding verification - the
+                    # assert_state/extract that ran just before is what the
+                    # recorder keeps as the replay checkpoint. Nudge once if the
+                    # model tries to finish straight off a click/type.
+                    if last_ok_tool not in ("assert_state", "extract") and not done_nudged:
+                        done_nudged = True
+                        note = (
+                            "Not yet. Before done you must call assert_state with the goal's "
+                            "success condition - prefer text_present of the exact confirmation "
+                            "wording on the current screen (that assertion becomes the replay "
+                            "checkpoint). If it passes, then call done."
+                        )
+                        history.append("done -> REJECTED: verify with assert_state first")
+                        continue
                     transcript.done_outputs = dict(call.args.get("outputs", {}))
                     transcript.final_state = state
                     run.status = RunStatus.COMPLETED
@@ -271,6 +287,8 @@ class Orchestrator:
                 transcript.entries.append(entry)
 
                 desc = _describe_call(call)
+                if ok:
+                    last_ok_tool = call.tool
                 if not ok:
                     history.append(f"{desc} -> FAILED: {result.error}")
                     note = f"The last action failed: {result.error}. Re-observe and adapt, or call stuck."
