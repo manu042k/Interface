@@ -183,18 +183,68 @@ export function RunReport({
         </Card>
       )}
 
-      <Card className="print-card">
-        <CardHeader>
-          <CardTitle className="text-base">Timeline</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ol className="space-y-1 text-sm">
-            {rep.timeline.map((e, i) => (
-              <TimelineRow key={i} e={e} />
-            ))}
-          </ol>
-        </CardContent>
-      </Card>
+      {/* steps and evidence side by side */}
+      <div
+        className={
+          rep.evidence.length > 0
+            ? "grid gap-4 lg:grid-cols-[1.7fr_1fr]"
+            : ""
+        }
+      >
+        <Card className="print-card min-w-0">
+          <CardHeader>
+            <CardTitle className="text-base">Timeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-1 text-sm">
+              {rep.timeline.map((e, i) => (
+                <TimelineRow key={i} e={e} />
+              ))}
+            </ol>
+          </CardContent>
+        </Card>
+
+        {rep.evidence.length > 0 && (
+          <Card className="print-card min-w-0 self-start">
+            <CardHeader>
+              <CardTitle className="text-base">Evidence</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2">
+                {rep.evidence
+                  .filter((e) => e.endsWith(".png"))
+                  .map((e) => (
+                    <a
+                      key={e}
+                      href={API_BASE + e}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={API_BASE + e}
+                        alt={e}
+                        className="w-full rounded border transition-opacity hover:opacity-80"
+                      />
+                    </a>
+                  ))}
+              </div>
+              {rep.evidence.some((e) => !e.endsWith(".png")) && (
+                <ul className="text-muted-foreground mt-2 space-y-0.5 text-xs">
+                  {rep.evidence
+                    .filter((e) => !e.endsWith(".png"))
+                    .map((e) => (
+                      <li key={e} className="truncate">
+                        {e.split("/").pop()}
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {rep.replays.length > 0 && (
         <Card className="print-card">
@@ -259,38 +309,6 @@ export function RunReport({
           </CardHeader>
           <CardContent>
             <ArtifactView artifact={rep.artifact as never} />
-          </CardContent>
-        </Card>
-      )}
-
-      {rep.evidence.length > 0 && (
-        <Card className="print-card">
-          <CardHeader>
-            <CardTitle className="text-base">Evidence</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {rep.evidence
-                .filter((e) => e.endsWith(".png"))
-                .map((e) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={e}
-                    src={API_BASE + e}
-                    alt={e}
-                    className="rounded border"
-                  />
-                ))}
-            </div>
-            {rep.evidence.some((e) => !e.endsWith(".png")) && (
-              <ul className="text-muted-foreground mt-2 text-xs">
-                {rep.evidence
-                  .filter((e) => !e.endsWith(".png"))
-                  .map((e) => (
-                    <li key={e}>{e}</li>
-                  ))}
-              </ul>
-            )}
           </CardContent>
         </Card>
       )}
