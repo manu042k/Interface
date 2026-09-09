@@ -259,6 +259,12 @@ class CapabilityArtifact(BaseModel):
     # Falls back to goal_description when unset.
     agent_summary: str | None = None
 
+    # The URL the recording started from. Replay defaults to it - the recorded
+    # steps/locators/checkpoint are tied to this app, so a caller normally does
+    # not supply a target at all. It stays overridable for the multi-tenant case
+    # (same vendor product at a different host).
+    entry_url: str = ""
+
     # Vendor-product identity — the axis multi-tenant reuse keys on.
     vendor_app_id: str = "generic"
     app_version: str = "unknown"

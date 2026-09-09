@@ -91,7 +91,9 @@ class PromoteRequest(BaseModel):
 class InvokeRequest(BaseModel):
     version: int
     params: dict[str, Any] = Field(default_factory=dict)
-    target: str
+    # Optional: defaults to the artifact's recorded entry_url. Only pass one to
+    # point the same capability at a different host (multi-tenant).
+    target: str | None = None
     tenant: str = "default"
     idempotency_key: str | None = None
     wait_seconds: float = Field(default=30.0, ge=0, le=120)
@@ -276,7 +278,11 @@ def create_app(config: Config | None = None) -> FastAPI:
         if artifact.status != ArtifactStatus.APPROVED:
             raise HTTPException(409, f"artifact {artifact_id} v{req.version} is {artifact.status}, not approved — not replay-eligible")
 
-        target = _validate_target_or_400(sys, req.tenant, req.target)
+        # default to the URL this capability was recorded against
+        want_target = (req.target or "").strip() or getattr(artifact, "entry_url", "") or ""
+        if not want_target:
+            raise HTTPException(422, "no target: artifact has no recorded entry_url, pass one explicitly")
+        target = _validate_target_or_400(sys, req.tenant, want_target)
 
         errs = sys.replay.validate_params(artifact, req.params)
         if errs:
@@ -351,7 +357,15 @@ def create_app(config: Config | None = None) -> FastAPI:
             counts[key] = counts.get(key, 0) + 1
             if key not in latest or a.version > latest[key].version:
                 latest[key] = a
-        return [_capability_card(a, counts[(a.name, a.vendor_app_id)] - 1) for a in latest.values()]
+        cards = []
+        for a in latest.values():
+            card = _capability_card(a, counts[(a.name, a.vendor_app_id)] - 1)
+            if not card["entry_url"] and a.created_from_run_id:  # backfill pre-entry_url artifacts
+                src = app.state.runs.get(a.created_from_run_id)
+                if src is not None:
+                    card["entry_url"] = src.app_target
+            cards.append(card)
+        return cards
 
     # -- ST-037..ST-040: escalation & operator console ---------------
     @app.get("/interventions")
@@ -659,6 +673,7 @@ def _capability_card(a: Any, older_versions: int) -> dict[str, Any]:
         "artifact_id": a.artifact_id,
         "version": a.version,
         "older_versions": older_versions,
+        "entry_url": getattr(a, "entry_url", "") or "",
         "confirmations": getattr(a, "confirmations", 0),
         "supersedes": getattr(a, "supersedes", None),
         "vendor_app_id": a.vendor_app_id,

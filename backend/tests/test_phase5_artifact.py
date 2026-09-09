@@ -41,6 +41,10 @@ async def test_recorder_builds_faithful_artifact(system, mockbank):
     # 1:1 with executed, successful, non-interstitial actionable steps
     assert [s.action_type.value for s in art.steps] == tools
 
+    # the URL the recording started from is captured, so replay/invoke can
+    # default to it instead of the caller re-typing it every time
+    assert art.entry_url == transcript.target and art.entry_url.startswith("http")
+
     # extract step -> output schema
     assert "savings_balance" in art.output_schema["properties"]
     # every actionable-with-target step has a ranked locator chain w/ rationale

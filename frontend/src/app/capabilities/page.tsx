@@ -522,15 +522,27 @@ function Muted({ children }: { children: React.ReactNode }) {
 function InvokePanel({ cap }: { cap: Capability }) {
   const router = useRouter();
   const [params, setParams] = useState<Record<string, string>>({});
+  const [override, setOverride] = useState(false);
   const [target, setTarget] = useState("");
   const [result, setResult] = useState<ReplayResult | null>(null);
+
+  // the capability replays against the URL it was recorded on; a caller only
+  // overrides it to point the same flow at a different host (multi-tenant).
+  const canRun = override ? !!target.trim() : !!cap.entry_url;
 
   const mut = useMutation({
     // wait_seconds: 0 - the gateway returns the invocation id immediately; we
     // jump to the run view so the replay is watched live (noVNC feed while it
     // runs, then the report once it finishes), mirroring a discovery run.
     mutationFn: () =>
-      api.invoke(cap.artifact_id, cap.version, target, params, "default", 0),
+      api.invoke(
+        cap.artifact_id,
+        cap.version,
+        override ? target.trim() : null,
+        params,
+        "default",
+        0,
+      ),
     onSuccess: (r) => {
       if (r.invocation_id) router.push(`/runs/${r.invocation_id}`);
       else setResult(r);
@@ -543,12 +555,35 @@ function InvokePanel({ cap }: { cap: Capability }) {
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-3 px-5 py-4">
           <div className="space-y-1.5">
-            <Label>Target</Label>
-            <Input
-              value={target}
-              placeholder="https://…"
-              onChange={(e) => setTarget(e.target.value)}
-            />
+            <div className="flex items-center justify-between">
+              <Label>Target</Label>
+              {cap.entry_url && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOverride((v) => !v);
+                    if (!override) setTarget(cap.entry_url);
+                  }}
+                  className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
+                >
+                  {override ? "use recorded" : "override host"}
+                </button>
+              )}
+            </div>
+            {override || !cap.entry_url ? (
+              <Input
+                value={target}
+                placeholder="https://…"
+                onChange={(e) => setTarget(e.target.value)}
+              />
+            ) : (
+              <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-md border px-3 py-2 text-xs">
+                <span className="truncate font-mono">{cap.entry_url}</span>
+                <span className="ml-auto shrink-0 rounded bg-black/5 px-1.5 py-0.5 text-[10px]">
+                  recorded
+                </span>
+              </div>
+            )}
           </div>
           {cap.inputs.map((p) => (
             <div key={p.name} className="space-y-1.5">
@@ -602,7 +637,7 @@ function InvokePanel({ cap }: { cap: Capability }) {
       <div className="bg-muted/30 border-t px-5 py-3">
         <Button
           onClick={() => mut.mutate()}
-          disabled={mut.isPending || !target.trim()}
+          disabled={mut.isPending || !canRun}
           className="w-full"
         >
           {mut.isPending ? (

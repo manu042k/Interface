@@ -138,6 +138,7 @@ class ArtifactRecorder:
         artifact = CapabilityArtifact(
             name=name,
             goal_description=transcript.goal,
+            entry_url=transcript.target,
             vendor_app_id=vendor_app_id,
             app_version=app_version,
             input_schema={"type": "object", "properties": param_props, "required": list(transcript.params)},

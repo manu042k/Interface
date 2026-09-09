@@ -63,6 +63,7 @@ export type Capability = {
   older_versions: number;
   confirmations: number;
   supersedes: number | null;
+  entry_url: string;
   vendor_app_id: string;
   app_version: string;
   risk_class: string;
@@ -201,7 +202,8 @@ export const api = {
   invoke: (
     id: string,
     version: number,
-    target: string,
+    // null/"" -> the gateway uses the artifact's recorded entry_url
+    target: string | null,
     params: Record<string, unknown>,
     tenant = "default",
     // 0 = return the invocation id straight away so the caller can navigate to
@@ -212,7 +214,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({
         version,
-        target,
+        target: target || undefined,
         params,
         tenant,
         wait_seconds: waitSeconds,
