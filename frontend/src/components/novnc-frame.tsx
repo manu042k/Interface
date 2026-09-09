@@ -8,23 +8,32 @@ import {
   Lock,
   Hand,
   Loader2,
+  Maximize2,
 } from "lucide-react";
 
 // Native framebuffer size of the sandbox display (see backend/sandbox_image).
 const FB_W = 1280;
 const FB_H = 720;
 
-export function NoVncFrame({
+function feedSrc(novncUrl: string): string {
+  const base = novncUrl.replace(/\/$/, "");
+  // Constant URL for the whole run - it must not change when the operator claims
+  // the handoff, or the iframe reloads and the noVNC session drops.
+  return `${base}/vnc_lite.html?path=websockify&autoconnect=1&reconnect=1&resize=scale`;
+}
+
+/**
+ * The scaled noVNC iframe. Its height is derived purely from its own measured
+ * WIDTH (fixed 16:9) - so whatever appears above it (the handoff panel, a
+ * banner) only pushes it down, it never resizes or reconnects. The iframe is
+ * pinned at the framebuffer size and CSS-scaled from its top-left corner.
+ */
+export function LiveFeed({
   novncUrl,
   interactive,
-  ended,
-  starting,
 }: {
-  novncUrl: string | null;
+  novncUrl: string;
   interactive: boolean;
-  ended?: boolean;
-  /** run is live and a sandbox is still spinning up - not "headless, no feed" */
-  starting?: boolean;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
@@ -33,14 +42,59 @@ export function NoVncFrame({
     const el = wrapRef.current;
     if (!el) return;
     const obs = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      // contain: uniform scale, whole framebuffer visible, centred by the parent
-      setScale(Math.max(0, Math.min(width / FB_W, height / FB_H)));
+      setScale(Math.max(0, entry.contentRect.width / FB_W));
     });
     obs.observe(el);
     return () => obs.disconnect();
-  }, [novncUrl]);
+  }, []);
 
+  return (
+    <div
+      ref={wrapRef}
+      className="bg-muted/40 relative w-full overflow-hidden"
+      style={{ aspectRatio: `${FB_W} / ${FB_H}` }}
+    >
+      <iframe
+        title="live session"
+        src={feedSrc(novncUrl)}
+        style={{
+          width: FB_W,
+          height: FB_H,
+          border: "none",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          pointerEvents: interactive ? "auto" : "none",
+        }}
+      />
+      {!interactive && (
+        <div
+          className="absolute inset-0"
+          aria-hidden
+          title="View only - the model is driving this run"
+        />
+      )}
+    </div>
+  );
+}
+
+export function NoVncFrame({
+  novncUrl,
+  interactive,
+  ended,
+  starting,
+  onExpand,
+}: {
+  novncUrl: string | null;
+  interactive: boolean;
+  ended?: boolean;
+  /** run is live and a sandbox is still spinning up - not "headless, no feed" */
+  starting?: boolean;
+  /** show a maximize button that opens the feed in a modal */
+  onExpand?: () => void;
+}) {
   if (ended) {
     return (
       <div className="bg-card text-muted-foreground flex h-full min-h-0 flex-col items-center justify-center rounded-lg border p-6 text-center">
@@ -82,20 +136,9 @@ export function NoVncFrame({
     );
   }
 
-  const base = novncUrl.replace(/\/$/, "");
-  // The iframe is fixed at the framebuffer size (1280x720); a CSS transform
-  // scales the whole thing to fit the panel, so the browser fills the view with
-  // no letterbox and correct aspect.
-  //
-  // The URL is deliberately CONSTANT for the whole run - it must not change when
-  // the operator claims the handoff, or the iframe reloads and the noVNC session
-  // drops. Input is locked purely at the parent: pointer-events:none on the
-  // iframe + a transparent overlay while `interactive` is false.
-  const src = `${base}/vnc_lite.html?path=websockify&autoconnect=1&reconnect=1&resize=scale`;
-
   return (
-    <div className="bg-card flex h-full min-h-0 flex-col overflow-hidden rounded-lg border">
-      <div className="border-border/60 flex items-center justify-between border-b px-3 py-1.5 text-xs">
+    <div className="bg-card flex flex-col overflow-hidden rounded-lg border">
+      <div className="border-border/60 flex items-center justify-between gap-2 border-b px-3 py-1.5 text-xs">
         <span className="text-muted-foreground flex items-center gap-1.5">
           <span
             className={`h-1.5 w-1.5 rounded-full ${interactive ? "bg-success" : "bg-primary animate-pulse"}`}
@@ -111,49 +154,28 @@ export function NoVncFrame({
             </span>
           )}
         </span>
-        <a
-          href={src}
-          target="_blank"
-          rel="noreferrer"
-          className="text-muted-foreground hover:text-foreground flex items-center gap-1"
-        >
-          open <ExternalLink className="h-3 w-3" />
-        </a>
-      </div>
-      <div
-        ref={wrapRef}
-        className="bg-muted/40 grid min-h-0 flex-1 place-items-center overflow-hidden"
-      >
-        {/* outer box is the *scaled* size so place-items-center works; the
-            iframe is native FB size scaled from its top-left to fill it */}
-        <div
-          className="relative shrink-0"
-          style={{ width: FB_W * scale, height: FB_H * scale }}
-        >
-          <iframe
-            title="live session"
-            src={src}
-            style={{
-              width: FB_W,
-              height: FB_H,
-              border: "none",
-              position: "absolute",
-              top: 0,
-              left: 0,
-              transform: `scale(${scale})`,
-              transformOrigin: "top left",
-              pointerEvents: interactive ? "auto" : "none",
-            }}
-          />
-          {!interactive && (
-            <div
-              className="absolute inset-0"
-              aria-hidden
-              title="View only - the model is driving this run"
-            />
+        <span className="flex items-center gap-3">
+          {onExpand && (
+            <button
+              type="button"
+              onClick={onExpand}
+              className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+              title="Expand"
+            >
+              <Maximize2 className="h-3 w-3" /> expand
+            </button>
           )}
-        </div>
+          <a
+            href={feedSrc(novncUrl)}
+            target="_blank"
+            rel="noreferrer"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+          >
+            open <ExternalLink className="h-3 w-3" />
+          </a>
+        </span>
       </div>
+      <LiveFeed novncUrl={novncUrl} interactive={interactive} />
     </div>
   );
 }

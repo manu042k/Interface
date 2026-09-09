@@ -21,10 +21,11 @@ import {
 import { api, type RunView } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/badges";
-import { NoVncFrame } from "@/components/novnc-frame";
+import { NoVncFrame, LiveFeed } from "@/components/novnc-frame";
 import { EventTimeline } from "@/components/event-timeline";
 import { HandoffPanel } from "@/components/handoff-panel";
 import { RunReport } from "@/components/run-report";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 const TERMINAL = new Set(["completed", "failed", "dead_end"]);
 
@@ -84,6 +85,7 @@ function DetailRow({
 export default function RunPage() {
   const { id } = useParams<{ id: string }>();
   const [showDetails, setShowDetails] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const { data: run, refetch } = useQuery({
     queryKey: ["run", id],
@@ -340,20 +342,49 @@ export default function RunPage() {
           <RunReport id={id} showSummary={false} />
         </div>
       ) : (
-        <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1.4fr_1fr]">
-          <NoVncFrame
-            novncUrl={run?.novnc_url ?? null}
-            interactive={!!inControl}
-            ended={false}
-            starting={
-              !run?.novnc_url &&
-              (run?.status === "pending" || run?.status === "running") &&
-              !!run?.started_at &&
-              Date.now() / 1000 - run.started_at < 15
-            }
-          />
-          <EventTimeline runId={id} />
+        <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+          {/* self-start + the feed's own 16:9 aspect ratio keep this panel a
+              FIXED size - the handoff panel appearing above only shifts it down,
+              it never rescales or reconnects. min-w-0 stops the log column from
+              stealing width. */}
+          <div className="min-w-0 self-start">
+            <NoVncFrame
+              novncUrl={run?.novnc_url ?? null}
+              interactive={!!inControl}
+              ended={false}
+              onExpand={run?.novnc_url ? () => setExpanded(true) : undefined}
+              starting={
+                !run?.novnc_url &&
+                (run?.status === "pending" || run?.status === "running")
+              }
+            />
+          </div>
+          <div className="h-[440px] min-w-0 self-start lg:h-[600px]">
+            <EventTimeline runId={id} />
+          </div>
         </div>
+      )}
+
+      {run?.novnc_url && (
+        <Dialog open={expanded} onOpenChange={setExpanded}>
+          <DialogContent className="w-auto max-w-[96vw] gap-0 overflow-hidden p-0 sm:max-w-[96vw]">
+            <DialogTitle className="border-b px-4 py-2.5 text-sm">
+              Live sandbox
+              <span className="text-muted-foreground ml-2 text-xs font-normal">
+                {inControl
+                  ? "you are in control"
+                  : "view only · automation driving"}
+              </span>
+            </DialogTitle>
+            {/* cap by BOTH viewport width and height so the 16:9 feed always fits */}
+            <div
+              className="w-full"
+              style={{ width: "min(92vw, calc(82vh * 1280 / 720))" }}
+            >
+              <LiveFeed novncUrl={run.novnc_url} interactive={!!inControl} />
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
