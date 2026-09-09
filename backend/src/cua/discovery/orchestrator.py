@@ -127,7 +127,9 @@ class Orchestrator:
         note: str | None = None
         last_call: ToolCall | None = None  # for "what the agent was attempting" on escalation
         last_ok_tool: str | None = None  # last action that actually ran, for the done gate
+        last_ok_step = -99  # step index of that last successful action
         done_nudged = 0  # rejected `done` calls (no successful verify before them)
+        stuck_nudged = 0  # `stuck` calls pushed back because progress was just made
         policy_blocks = 0  # consecutive guardrail rejections the model can't fix by retrying
 
         from ..sandbox.session import close_run_surface, open_run_surface
@@ -239,6 +241,22 @@ class Orchestrator:
 
                 if call.tool == "stuck":
                     reason = call.args.get("reason", "unspecified")
+                    # Don't escalate a run that is actually making progress: the
+                    # model sometimes calls stuck right after a string of
+                    # SUCCESSFUL actions (confused by an earlier failure it has
+                    # since worked around). Push back once, telling it to
+                    # re-verify — but only twice, then honour the stuck call.
+                    if step - last_ok_step <= 2 and stuck_nudged < 2:
+                        stuck_nudged += 1
+                        note = (
+                            f"You called stuck, but your last action ({last_ok_tool}) SUCCEEDED "
+                            f"and you are on {state.url}. Re-observe the current screen. If the "
+                            "goal is already achieved, call assert_state on its success condition "
+                            "and then done. Only call stuck again if you genuinely cannot proceed."
+                        )
+                        log.event(step, "stuck_nudged", reason=reason, on_url=state.url)
+                        step += 1
+                        continue
                     resumed_note = await self._escalate_and_wait(
                         run, transcript, session, step, reason, goal, history, log,
                         handoff_wait_s, last_call,
@@ -323,6 +341,7 @@ class Orchestrator:
                 desc = _describe_call(call)
                 if ok:
                     last_ok_tool = call.tool
+                    last_ok_step = step
                     policy_blocks = 0  # progress - forget earlier guardrail rejections
                 if not ok:
                     history.append(f"{desc} -> FAILED: {result.error}")

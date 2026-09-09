@@ -31,6 +31,32 @@ from .base import Action, RawSnapshot, SurfaceAdapter, SurfaceError
 _WS_RE = re.compile(r"\s+")
 
 
+def _match_option(want: str, opts: list[dict[str, str]]) -> dict[str, str] | None:
+    """Best <option> for the model's requested value. Legacy selects have
+    values like 'MAIN-001' and labels like 'MAIN-001 - Main Office'; the model
+    may pass either, a substring, or a bare index. Never hang on a non-match."""
+    if not opts:
+        return None
+    w = want.strip().lower()
+    if not w:
+        return None
+    for o in opts:  # exact value or label
+        if want == o["value"] or w == o["label"].lower():
+            return {"value": o["value"]} if o["value"] else {"label": o["label"]}
+    if len(w) >= 2:
+        for o in opts:  # substring either way
+            lab = o["label"].lower()
+            if w in lab or lab in w or (o["value"] and w in o["value"].lower()):
+                return {"value": o["value"]} if o["value"] else {"label": o["label"]}
+    if w.isdigit():  # a bare index, skipping a leading blank/prompt option
+        i = int(w)
+        for cand in (i, i - 1):
+            if 0 <= cand < len(opts):
+                o = opts[cand]
+                return {"value": o["value"]} if o["value"] else {"label": o["label"]}
+    return None
+
+
 @dataclass
 class _Session:
     handle: str
@@ -443,8 +469,22 @@ class PlaywrightAdapter(SurfaceAdapter):
 
             elif t == ActionType.SELECT:
                 loc, strat = await self._locator(sess, action)
-                await loc.select_option(label=action.value, timeout=timeout)
-                res.ok, res.matched_strategy = True, strat
+                res.matched_strategy = strat
+                want = (action.value or "").strip()
+                opts = await loc.locator("option").evaluate_all(
+                    "els => els.map(e => ({value: e.value, label: (e.label||e.textContent||'').trim()}))"
+                )
+                pick = _match_option(want, opts)
+                if pick is None:
+                    res.ok = False
+                    res.error = (
+                        f"no <option> matches {want!r}. available: "
+                        + ", ".join(f"{o['label']!r}" for o in opts[:20])
+                    )
+                else:
+                    # short timeout — the option definitely exists now
+                    await loc.select_option(pick, timeout=min(timeout, 4000))
+                    res.ok = True
 
             elif t == ActionType.EXTRACT:
                 loc, strat = await self._locator(sess, action)
