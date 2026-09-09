@@ -90,11 +90,11 @@ export function HandoffPanel({
   // underneath stays usable.
   if (inControl) {
     return (
-      <div className="border-warning/50 bg-card/95 flex items-center gap-3 rounded-lg border px-3 py-2 shadow-lg backdrop-blur">
+      <div className="border-warning/40 bg-warning/8 flex items-center gap-3 rounded-lg border px-3 py-2.5">
         <HandMetal className="text-warning h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate text-sm">
           <span className="text-muted-foreground">{iv.claimed_by} in control</span>{" "}
-          - drive the page below
+          - drive the live page above
         </span>
         <Button size="sm" onClick={handBack} disabled={busy}>
           {busy && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
@@ -105,7 +105,7 @@ export function HandoffPanel({
   }
 
   return (
-    <div className="border-warning/50 bg-card/95 mx-auto max-w-2xl rounded-lg border p-4 shadow-xl backdrop-blur">
+    <div className="border-warning/40 bg-warning/8 rounded-lg border p-4">
       <div className="flex items-start gap-3">
         <HandMetal className="text-warning mt-0.5 h-5 w-5 shrink-0" />
         <div className="min-w-0 flex-1">

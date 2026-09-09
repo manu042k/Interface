@@ -339,10 +339,11 @@ export default function RunPage() {
         </div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
-          {/* the live view stays put: self-start + the feed's own 16:9 aspect
-              ratio fix its size, and the handoff prompt is OVERLAID on it (not
-              inserted above) so nothing on the page ever shifts. */}
-          <div className="relative min-w-0 self-start">
+          {/* the feed's own 16:9 aspect ratio fixes its size; the handoff
+              prompt goes in the space BELOW it (the left column is taller than
+              the feed because the log sets the row height) so the feed never
+              moves when a run goes stuck. */}
+          <div className="flex min-w-0 flex-col gap-3 self-stretch">
             <NoVncFrame
               novncUrl={run?.novnc_url ?? null}
               interactive={!!inControl}
@@ -354,9 +355,7 @@ export default function RunPage() {
               }
             />
             {isStuck && (
-              <div className="absolute inset-x-0 top-9 z-10 p-2">
-                <HandoffPanel runId={id} onResolved={() => refetch()} />
-              </div>
+              <HandoffPanel runId={id} onResolved={() => refetch()} />
             )}
           </div>
           <div className="h-[440px] min-w-0 self-start lg:h-[600px]">
