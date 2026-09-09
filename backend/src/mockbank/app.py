@@ -257,6 +257,15 @@ def member_detail(mid: str):
         chk_label, sav_label = "Savings", "Checking"
     else:
         chk_label, sav_label = "Checking", "Savings"
+    # EDGE: ?drift=1 (or MOCKBANK_DRIFT=1) - the savings balance ticks up a cent
+    # on every load. Live data that is never the same twice: a value recorded in
+    # discovery will not match on replay.
+    savings = m["savings_balance"]
+    if request.args.get("drift") == "1" or os.environ.get("MOCKBANK_DRIFT") == "1":
+        _PAGE_HITS[mid] = _PAGE_HITS.get(mid, 0) + 1
+        cents = int(round(float(savings.replace("$", "").replace(",", "")) * 100)) + _PAGE_HITS[mid]
+        savings = f"${cents // 100:,}.{cents % 100:02d}"
+
     # Balance is buried in a nested table with no id/class — hostile on purpose.
     body = (
         "<table border=\"1\" cellpadding=\"0\" cellspacing=\"0\" width=\"620\"><tr><td>\n"
@@ -270,7 +279,7 @@ def member_detail(mid: str):
         f"       <tr><td><font face=\"Verdana\" size=\"1\">{chk_label}</font></td>"
         f"<td align=\"right\"><font face=\"Verdana\" size=\"2\">{escape(m['checking_balance'])}</font></td></tr>\n"
         f"       <tr><td><font face=\"Verdana\" size=\"1\">{sav_label}</font></td>"
-        f"<td align=\"right\"><font face=\"Verdana\" size=\"2\">{escape(m['savings_balance'])}</font></td></tr>\n"
+        f"<td align=\"right\"><font face=\"Verdana\" size=\"2\">{escape(savings)}</font></td></tr>\n"
         "     </table>\n"
         "  </td></tr>\n"
         f"  <tr><td colspan=\"2\"><font face=\"Verdana\" size=\"2\">"
@@ -371,11 +380,19 @@ def sub_account_create(mid: str):
 
     conf = "SA-" + str(abs(hash(key)) % 900000 + 100000)
     _CREATED[key] = conf
+    # EDGE: ?noisyok=1 (or MOCKBANK_NOISY_OK=1) - the SUCCESS screen also carries
+    # the words "error" and "not found" (in a reassuring sentence). A naive
+    # substring check for error/business-outcome phrases would false-positive.
+    noisy = request.args.get("noisyok") == "1" or os.environ.get("MOCKBANK_NOISY_OK") == "1"
+    extra = (
+        "<br>Validation: 0 errors. No conflicting records were found."
+        if noisy else ""
+    )
     body = (
         "<table border=\"1\" cellpadding=\"8\" cellspacing=\"0\" width=\"560\" bgcolor=\"#e3f4e3\">\n"
         "<tr><td><font face=\"Verdana\" size=\"2\"><b>Sub-account created</b></font></td></tr>\n"
         f"<tr><td><font face=\"Verdana\" size=\"2\">Member: {mid}<br>Type: {escape(acct_type)}<br>"
-        f"Initial deposit: {escape(amt)}<br>Confirmation number: <b>{conf}</b></font></td></tr>\n"
+        f"Initial deposit: {escape(amt)}<br>Confirmation number: <b>{conf}</b>{extra}</font></td></tr>\n"
         "</table>"
     )
     return _p("Confirmation", body)
