@@ -16,7 +16,7 @@ from typing import Any
 
 from ..config import Config
 from ..events import RunLogger
-from ..llm.router import AllProvidersExhausted, LLMRouter
+from ..llm.router import AllProvidersExhausted, AllProvidersOutOfBalance, LLMRouter
 from ..models import (
     ActionType,
     RiskClass,
@@ -104,7 +104,7 @@ class Orchestrator:
         params: dict[str, Any] | None = None,
         run: RunRecord | None = None,
         confirm_risky: bool = False,
-        exhausted_ceiling: int = 6,
+        exhausted_ceiling: int = 20,
         max_steps: int | None = None,
     ) -> tuple[RunRecord, DiscoveryTranscript]:
         params = params or {}
@@ -144,9 +144,17 @@ class Orchestrator:
                     self.adapter, session, sink=log.sink, run_id=run.run_id, step=step
                 )
 
-                call = await self._decide_with_backoff(
-                    goal, state, history, step, step_budget, params, note, exhausted_ceiling, log
-                )
+                try:
+                    call = await self._decide_with_backoff(
+                        goal, state, history, step, step_budget, params, note, exhausted_ceiling, log
+                    )
+                except AllProvidersOutOfBalance as exc:
+                    run.status = RunStatus.FAILED
+                    run.detail = "llm providers out of credits — run stopped"
+                    transcript.stuck_reason = run.detail
+                    log.event(step, "run_stopped", reason="providers_out_of_balance", detail=str(exc))
+                    log.run_finished("failed", detail=run.detail)
+                    break
                 note = None
                 if call is None:
                     run.status = RunStatus.STUCK
@@ -277,6 +285,9 @@ class Orchestrator:
     async def _decide_with_backoff(
         self, goal, state, history, step, step_budget, params, note, ceiling, log
     ) -> ToolCall | None:
+        """Rate limits are transient — keep rotating and retrying with a capped
+        backoff (up to `ceiling` rounds). Out-of-credits is not: it propagates
+        so the run stops rather than spinning."""
         backoff = 3.0
         for attempt in range(ceiling):
             try:
@@ -284,14 +295,16 @@ class Orchestrator:
                     goal, state, history, steps_left=step_budget - step, params=params,
                     note=note, logger=log,
                 )
+            except AllProvidersOutOfBalance:
+                raise
             except AllProvidersExhausted as exc:
                 log.event(step, "all_providers_exhausted", attempt=attempt + 1, backoff_s=backoff, detail=str(exc))
                 if attempt == ceiling - 1:
                     return None
                 await asyncio.sleep(backoff)
-                backoff *= 2
-                # a run-level pause: re-arm every provider for a fresh attempt
-                # (a lone provider's transient blip should not strand the run).
+                backoff = min(backoff * 2, 60.0)
+                # re-arm the cooled-down providers for a fresh attempt (a
+                # rate-limited provider recovers; a disabled one stays out).
                 self.router.reset()
         return None
 

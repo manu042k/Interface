@@ -24,6 +24,7 @@ from typing import Any
 
 from .providers import (
     ModelResponse,
+    OutOfBalance,
     Provider,
     ProviderError,
     ProviderUnavailable,
@@ -35,6 +36,9 @@ class ProviderStatus(StrEnum):
     HEALTHY = "healthy"
     COOLING_DOWN = "cooling_down"
     DEGRADED = "degraded"
+    # out of credits / key rejected (402/403) — permanent for this process,
+    # never rotated back to, not cleared by reset().
+    DISABLED = "disabled"
 
 
 @dataclass
@@ -64,7 +68,13 @@ class ProviderHealth:
 
 
 class AllProvidersExhausted(RuntimeError):
-    """Every configured provider is cooling_down or degraded simultaneously."""
+    """Every provider is cooling_down / degraded right now — transient. The
+    caller should back off and retry; providers recover."""
+
+
+class AllProvidersOutOfBalance(AllProvidersExhausted):
+    """Every provider is DISABLED (402/403). No amount of retrying helps — the
+    caller should stop the run."""
 
 
 class LLMRouter:
@@ -136,6 +146,12 @@ class LLMRouter:
                     h.served += 1
                     self._emit("llm_call", provider=provider.name, tool=resp.tool, rotated=len(tried) > 1)
                     return resp
+                except OutOfBalance as exc:
+                    last_exc = exc
+                    h.status = ProviderStatus.DISABLED
+                    h.note_error(time.time())
+                    self._emit("provider_disabled", provider=provider.name, reason="out_of_balance")
+                    break
                 except RateLimited as exc:
                     last_exc = exc
                     ttl = exc.retry_after or self._default_cooldown
@@ -171,6 +187,12 @@ class LLMRouter:
                     self._emit("provider_rotate", provider=provider.name, reason="error")
                     break
 
+        if self._providers and all(
+            self._health[p.name].status == ProviderStatus.DISABLED for p in self._providers
+        ):
+            raise AllProvidersOutOfBalance(
+                f"every provider is out of credits / rejected the key (last error: {last_exc})"
+            )
         raise AllProvidersExhausted(
             f"no healthy provider (tried={tried or 'none'}; last error: {last_exc})"
         )
@@ -189,13 +211,22 @@ class LLMRouter:
                 out = await provider.complete_text(system, user)
                 h.served += 1
                 return out
+            except OutOfBalance:
+                h.status = ProviderStatus.DISABLED
+                h.note_error(time.time())
+                continue
             except (ProviderUnavailable, ProviderError):
                 h.note_error(time.time())
                 continue
         return ""
 
     def reset(self) -> None:
+        """Re-arm cooled-down / degraded providers for a fresh attempt. A
+        DISABLED provider (out of credits) stays disabled — retrying it is
+        pointless."""
         for h in self._health.values():
+            if h.status == ProviderStatus.DISABLED:
+                continue
             h.status = ProviderStatus.HEALTHY
             h.cooldown_until = 0.0
             h.recent_errors.clear()

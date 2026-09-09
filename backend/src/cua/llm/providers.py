@@ -26,7 +26,14 @@ class ProviderError(RuntimeError):
 
 
 class RateLimited(ProviderError):
-    """429 / quota-exceeded — a *rotate*, not retry-in-place, signal."""
+    """429 / quota-exceeded — transient. Rotate to the next provider and cool
+    this one down; it will be tried again."""
+
+
+class OutOfBalance(ProviderError):
+    """402/403 payment-required — credits exhausted or key rejected. NOT
+    transient: the router disables the provider for the rest of the process
+    rather than cooling it, and a run with no funded provider left stops."""
 
 
 class ProviderUnavailable(ProviderError):
@@ -93,9 +100,8 @@ class OpenAICompatProvider:
             ra = resp.headers.get("retry-after")
             raise RateLimited(f"{self.name}: 429", status=429, retry_after=_parse_retry_after(ra))
         if resp.status_code in {402, 403}:
-            # payment / quota / credits — not going to recover this run; treat as
-            # a rotate-and-cool signal so the router moves to the next provider.
-            raise RateLimited(
+            # payment-required / key rejected — not recoverable without a human.
+            raise OutOfBalance(
                 f"{self.name}: {resp.status_code} {resp.text[:160]}", status=resp.status_code
             )
         if resp.status_code >= 500:
@@ -126,7 +132,7 @@ class OpenAICompatProvider:
             raise RateLimited(f"{self.name}: 429", status=429,
                               retry_after=_parse_retry_after(resp.headers.get("retry-after")))
         if resp.status_code in {402, 403}:
-            raise RateLimited(f"{self.name}: {resp.status_code}", status=resp.status_code)
+            raise OutOfBalance(f"{self.name}: {resp.status_code}", status=resp.status_code)
         if resp.status_code >= 500:
             raise ProviderUnavailable(f"{self.name}: {resp.status_code}", status=resp.status_code)
         if resp.status_code >= 400:

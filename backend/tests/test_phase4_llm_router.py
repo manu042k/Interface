@@ -4,8 +4,18 @@ from __future__ import annotations
 
 import pytest
 
-from cua.llm.providers import ModelResponse, ProviderUnavailable, RateLimited
-from cua.llm.router import AllProvidersExhausted, LLMRouter, ProviderStatus
+from cua.llm.providers import (
+    ModelResponse,
+    OutOfBalance,
+    ProviderUnavailable,
+    RateLimited,
+)
+from cua.llm.router import (
+    AllProvidersExhausted,
+    AllProvidersOutOfBalance,
+    LLMRouter,
+    ProviderStatus,
+)
 
 
 class FakeProvider:
@@ -22,6 +32,8 @@ class FakeProvider:
             raise RateLimited(f"{self.name}: 429", status=429, retry_after=0.2)
         if self.behavior == "500":
             raise ProviderUnavailable(f"{self.name}: 500", status=500)
+        if self.behavior == "402":
+            raise OutOfBalance(f"{self.name}: 402", status=402)
         raise AssertionError("bad behavior")
 
 
@@ -59,8 +71,40 @@ async def test_all_exhausted_raises_distinct_error():
     p1 = FakeProvider("p1", behavior="429")
     p2 = FakeProvider("p2", behavior="429")
     r = LLMRouter([p1, p2])
-    with pytest.raises(AllProvidersExhausted):
+    with pytest.raises(AllProvidersExhausted) as ei:
         await r.call("s", "u", [])
+    # rate-limited, not disabled — it is NOT the out-of-balance variant
+    assert not isinstance(ei.value, AllProvidersOutOfBalance)
+    assert r.health["p1"].status == ProviderStatus.COOLING_DOWN
+
+
+async def test_out_of_balance_disables_provider_and_rotates():
+    p1 = FakeProvider("p1", behavior="402")
+    p2 = FakeProvider("p2", behavior="ok")
+    r = LLMRouter([p1, p2])
+    resp = await r.call("s", "u", [])
+    assert resp.provider == "p2"
+    assert r.health["p1"].status == ProviderStatus.DISABLED
+
+
+async def test_all_out_of_balance_raises_stop_signal():
+    p1 = FakeProvider("p1", behavior="402")
+    p2 = FakeProvider("p2", behavior="402")
+    r = LLMRouter([p1, p2])
+    with pytest.raises(AllProvidersOutOfBalance):
+        await r.call("s", "u", [])
+
+
+async def test_reset_does_not_revive_a_disabled_provider():
+    p1 = FakeProvider("p1", behavior="402")
+    p2 = FakeProvider("p2", behavior="429")
+    r = LLMRouter([p1, p2])
+    with pytest.raises(AllProvidersExhausted) as ei:
+        await r.call("s", "u", [])
+    assert not isinstance(ei.value, AllProvidersOutOfBalance)  # p2 only cooling
+    r.reset()
+    assert r.health["p1"].status == ProviderStatus.DISABLED  # stays out
+    assert r.health["p2"].status == ProviderStatus.HEALTHY  # re-armed
 
 
 async def test_logs_which_provider_served():
