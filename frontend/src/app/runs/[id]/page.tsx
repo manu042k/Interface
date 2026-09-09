@@ -34,7 +34,17 @@ export default function RunPage() {
   });
 
   const isStuck = run?.status === "stuck" && !handled;
-  const inControl = isStuck;
+
+  // The live canvas stays view-only for the whole run. Input is only unlocked
+  // once the model has escalated (run → stuck) AND an operator has claimed the
+  // handoff — never while automation is driving.
+  const { data: intervention } = useQuery({
+    queryKey: ["run-intervention", id],
+    queryFn: () => api.runIntervention(id),
+    enabled: isStuck,
+    refetchInterval: 2000,
+  });
+  const inControl = isStuck && intervention?.status === "claimed";
   const ended =
     !!run && (TERMINAL.has(run.status) || (run.status === "stuck" && handled));
   const ok = run?.status === "completed";
