@@ -352,17 +352,46 @@ class PlaywrightAdapter(SurfaceAdapter):
             return {"matched": False, "count": 0, "visible": False, "describe": describe, "reason": str(exc).splitlines()[0]}
         if count == 0:
             return {"matched": False, "count": 0, "visible": False, "describe": describe, "reason": "no element matched"}
+        idx = 0
         if count > 1:
-            return {"matched": False, "count": count, "visible": False, "describe": describe, "reason": f"ambiguous: {count} matches"}
+            # Legacy consoles repeat the same nav link in a top bar and a menu
+            # body. N matches that are all anchors to the SAME href are
+            # interchangeable — take the first visible one rather than failing.
+            # Anything else genuinely ambiguous still fails closed.
+            equiv_idx = await self._equivalent_link_index(loc, count)
+            if equiv_idx is None:
+                return {"matched": False, "count": count, "visible": False, "describe": describe, "reason": f"ambiguous: {count} matches"}
+            idx = equiv_idx
+            describe = f"{describe} (1 of {count} equivalent links)"
         visible = False
         try:
-            visible = await loc.first.is_visible()
+            visible = await loc.nth(idx).is_visible()
         except Exception:  # noqa: BLE001
             pass
         return {
             "matched": True, "count": 1, "visible": visible, "describe": describe,
             "reason": None, "target": target,
         }
+
+    async def _equivalent_link_index(self, loc: Locator, count: int) -> int | None:
+        """If every match is an <a> with the same href, return the index of the
+        first visible one; else None (truly ambiguous)."""
+        try:
+            hrefs: list[str] = []
+            for i in range(min(count, 8)):
+                el = loc.nth(i)
+                tag = (await el.evaluate("e => e.tagName")).lower()
+                if tag != "a":
+                    return None
+                hrefs.append(await el.evaluate("e => e.getAttribute('href') || ''"))
+            if len(set(hrefs)) != 1 or not hrefs[0]:
+                return None
+            for i in range(min(count, 8)):
+                if await loc.nth(i).is_visible():
+                    return i
+            return 0
+        except Exception:  # noqa: BLE001
+            return None
 
     # -- ST-007: primitive actions ---------------------------------------
     async def execute(self, session_handle: str, action: Action) -> ActionResult:

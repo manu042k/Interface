@@ -363,6 +363,18 @@ def _rank_locators(target: Any, matched: str | None) -> list[LocatorStrategy]:
 
     cands: list[LocatorStrategy] = []
     role, name = target.get("role"), target.get("name")
+    # The model often puts the accessible name in `text` instead of `name`, and
+    # the discovery resolver already treats either as the a11y name
+    # (`acc_name = name or text`). If we don't mirror that here, rank 0 becomes a
+    # bare `role_name {role}` that matches every link on the page at replay.
+    # Ground truth wins: if the adapter reported it resolved by `role=X name='Y'`,
+    # use that Y.
+    if not name and isinstance(target.get("text"), str):
+        name = target["text"]
+    if isinstance(matched, str):
+        m = re.match(r"role=\S+\s+name=['\"](.+?)['\"]", matched)
+        if m:
+            name = m.group(1)
     # A model often passes a form-control `name`/`id` token as `name` — not an
     # accessible label. Detect that and emit a name-attr strategy + a role-only
     # fallback, rather than a role_name that won't resolve.
