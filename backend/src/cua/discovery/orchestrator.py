@@ -383,12 +383,20 @@ class Orchestrator:
                 last_sig = sig if ok else last_sig
 
                 if repeats >= 1:
-                    note = (
-                        "You have already performed this exact action and the screen "
-                        "did not change. If you have the data the goal asks for, call "
-                        "done now with the outputs. Otherwise do something genuinely "
-                        "different (scroll, a different control) or call stuck."
-                    )
+                    if call.tool == "scroll":
+                        note = (
+                            f"Scrolling is NOT helping — you have scrolled {repeats + 1} times "
+                            f"with no change. You are on {result.url_after}. The control you want "
+                            "is already loaded. Call observe, then act on a field or button BY "
+                            "NAME (type into it / click it / select an option). Do not scroll again."
+                        )
+                    else:
+                        note = (
+                            "You have already performed this exact action and the screen did not "
+                            f"change — you are on {result.url_after}. Re-observe. If the goal's data "
+                            "is on screen, verify with assert_state/extract and call done. Otherwise "
+                            "take the NEXT step toward the goal (a different control), or call stuck."
+                        )
                 if repeats >= 3:
                     reason = f"no progress: repeated {call.tool} 4x with no screen change"
                     resumed_note = await self._escalate_and_wait(
