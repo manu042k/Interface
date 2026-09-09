@@ -34,7 +34,7 @@ export default function NewRunPage() {
         params: p,
         confirm_risky: confirmRisky,
       });
-      toast.success("Discovery run started — watch it live");
+      toast.success("Discovery run started - watch it live");
       router.push(`/runs/${run_id}`);
     } catch (e) {
       toast.error(String((e as Error).message));

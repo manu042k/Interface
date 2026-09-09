@@ -124,7 +124,7 @@ export function NoVncFrame({
             <div
               className="absolute inset-0"
               aria-hidden
-              title="View only — the model is driving this run"
+              title="View only - the model is driving this run"
             />
           )}
         </div>

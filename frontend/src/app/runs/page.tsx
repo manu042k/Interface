@@ -100,7 +100,7 @@ function RunsTable({
               <TableCell className="max-w-[20rem]">
                 <div className="truncate font-medium">
                   {r.name || r.goal || (
-                    <span className="text-muted-foreground">—</span>
+                    <span className="text-muted-foreground">-</span>
                   )}
                 </div>
                 {r.name && r.goal && (

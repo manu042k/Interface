@@ -84,7 +84,7 @@ export default function ReviewPage() {
                 </TableCell>
                 <TableCell>{a.steps}</TableCell>
                 <TableCell className="text-muted-foreground text-xs">
-                  {a.known_outcomes.join(", ") || "—"}
+                  {a.known_outcomes.join(", ") || "-"}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button size="sm" variant="outline" onClick={() => setOpen(a)}>

@@ -56,7 +56,7 @@ export function HandoffPanel({
     try {
       await api.claim(iv.intervention_id, OPERATOR);
       const h = await api.takeControl(iv.intervention_id, OPERATOR);
-      step(`control acquired — ${h.live_handle} (${h.remote_display})`);
+      step(`control acquired - ${h.live_handle} (${h.remote_display})`);
       setIv({ ...iv, status: "claimed", claimed_by: OPERATOR });
       toast.success("You are in control of the live session");
     } catch (e) {
@@ -76,7 +76,7 @@ export function HandoffPanel({
         { kind: "text_present", params: { text: "Savings" } },
       );
       step(
-        `handed back — resumed=${out.resumed}, checkpoint_holds=${out.checkpoint_already_holds}`,
+        `handed back - resumed=${out.resumed}, checkpoint_holds=${out.checkpoint_already_holds}`,
       );
       toast.success(out.detail);
       setIv(null);
@@ -94,7 +94,7 @@ export function HandoffPanel({
         <HandMetal className="text-warning mt-0.5 h-5 w-5 shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="font-medium">
-            The run is stuck at step {iv.step_index} — a human is needed.
+            The run is stuck at step {iv.step_index} - a human is needed.
           </p>
           <p className="text-muted-foreground text-sm">{iv.reason}</p>
 
@@ -107,7 +107,7 @@ export function HandoffPanel({
             ) : (
               <>
                 <span className="text-muted-foreground text-sm">
-                  {iv.claimed_by} in control — drive the page above, then:
+                  {iv.claimed_by} in control - drive the page above, then:
                 </span>
                 <Button size="sm" onClick={handBack} disabled={busy}>
                   {busy && (

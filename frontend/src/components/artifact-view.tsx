@@ -48,7 +48,7 @@ type Artifact = {
 /* ---- humanisers ---------------------------------------------------------- */
 
 function phraseCondition(c?: Condition | null): string {
-  if (!c?.kind) return "—";
+  if (!c?.kind) return "-";
   const p = c.params ?? {};
   const s = (k: string) => (p[k] === undefined ? "…" : String(p[k]));
   switch (c.kind) {
@@ -96,7 +96,7 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
           <ShieldAlert className="mt-px h-4 w-4 shrink-0" />
           <span>
             This capability performs an <strong>irreversible action</strong>.
-            Approving lets agents invoke it unattended — check every step marked{" "}
+            Approving lets agents invoke it unattended - check every step marked{" "}
             <em>mutates state</em>.
           </span>
         </div>
@@ -174,7 +174,7 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
                 <span>
                   <code className="text-warning">{o.code}</code>
                   {o.message && (
-                    <span className="text-muted-foreground"> — {o.message}</span>
+                    <span className="text-muted-foreground"> - {o.message}</span>
                   )}
                   {o.when?.kind && (
                     <span className="text-muted-foreground">

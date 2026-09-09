@@ -63,7 +63,7 @@ export default function CapabilitiesPage() {
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">Capabilities</h1>
         <p className="text-muted-foreground mt-1">
-          Approved, agent-invocable. Invoking runs a deterministic replay — no
+          Approved, agent-invocable. Invoking runs a deterministic replay - no
           model in the loop.
         </p>
       </header>
@@ -79,7 +79,7 @@ export default function CapabilitiesPage() {
       {data?.length === 0 && (
         <Card>
           <CardContent className="text-muted-foreground py-10 text-center text-sm">
-            No approved capabilities yet — run a discovery, then approve it in
+            No approved capabilities yet - run a discovery, then approve it in
             Review.
           </CardContent>
         </Card>
@@ -194,8 +194,8 @@ function CapabilityDetail({
                   </TooltipTrigger>
                   <TooltipContent>
                     {cap.risk_class === "risky_irreversible"
-                      ? "Performs an irreversible action — replay needs pre-authorization."
-                      : "Safe and reversible — replay runs unattended."}
+                      ? "Performs an irreversible action - replay needs pre-authorization."
+                      : "Safe and reversible - replay runs unattended."}
                   </TooltipContent>
                 </Tooltip>
                 {cap.confirmations > 0 && (
@@ -212,7 +212,7 @@ function CapabilityDetail({
                     <TooltipContent>
                       {cap.confirmations} later discovery run
                       {cap.confirmations === 1 ? "" : "s"} reproduced this exact
-                      flow — no new version needed.
+                      flow - no new version needed.
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -283,7 +283,7 @@ function CapabilityDetail({
                                     </Badge>
                                   ) : (
                                     <span className="text-muted-foreground">
-                                      —
+                                      -
                                     </span>
                                   )}
                                 </TableCell>
@@ -358,7 +358,7 @@ function CapabilityDetail({
                     <p className="text-muted-foreground text-xs">
                       Recorded from run{" "}
                       <code>
-                        {cap.provenance.created_from_run_id?.slice(0, 8) ?? "—"}
+                        {cap.provenance.created_from_run_id?.slice(0, 8) ?? "-"}
                       </code>
                       {cap.provenance.reviewed_by &&
                         ` · approved by ${cap.provenance.reviewed_by}`}
@@ -464,7 +464,7 @@ function CapabilityDetail({
                                 <p className="text-muted-foreground">
                                   {s.checkpoint
                                     ? `checkpoint: ${JSON.stringify(s.checkpoint)}`
-                                    : "no element — control / assertion step"}
+                                    : "no element - control / assertion step"}
                                 </p>
                               )}
                             </div>
@@ -474,7 +474,7 @@ function CapabilityDetail({
                     </Accordion>
                     <p className="text-muted-foreground/80 mt-3 text-xs">
                       Replay tries each step&rsquo;s strategies top-down and takes
-                      the first that resolves to one visible element — no model. A
+                      the first that resolves to one visible element - no model. A
                       match below rank 0 is logged as drift.
                     </p>
                   </div>

@@ -53,7 +53,7 @@ export default function ReportPage() {
             <Row k="Mode" v={run.mode} />
             <Row k="Target" v={<code className="text-xs">{run.app_target}</code>} />
             <Row k="Steps" v={String(run.step_count)} />
-            <Row k="Detail" v={run.detail ?? "—"} />
+            <Row k="Detail" v={run.detail ?? "-"} />
             {run.artifact_id && (
               <Row
                 k="Artifact"

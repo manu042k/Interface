@@ -36,7 +36,7 @@ function hostOf(url: string): string {
 }
 
 function elapsed(run: RunView): string {
-  if (!run.started_at) return "—";
+  if (!run.started_at) return "-";
   const end = run.ended_at ?? Date.now() / 1000;
   const s = Math.max(0, Math.round(end - run.started_at));
   if (s < 60) return `${s}s`;
@@ -59,7 +59,7 @@ function Stat({
 }
 
 function ago(ts: number | null): string {
-  if (!ts) return "—";
+  if (!ts) return "-";
   return new Date(ts * 1000).toLocaleString();
 }
 
@@ -96,7 +96,7 @@ export default function RunPage() {
 
   // The live canvas stays view-only for the whole run. Input unlocks only once
   // the model has escalated (run → stuck) AND an operator has claimed the
-  // handoff — never while automation is driving.
+  // handoff - never while automation is driving.
   const { data: intervention } = useQuery({
     queryKey: ["run-intervention", id],
     queryFn: () => api.runIntervention(id),
@@ -207,9 +207,9 @@ export default function RunPage() {
 
       {run && showDetails && (
         <div className="bg-card shrink-0 divide-y divide-border/50 rounded-lg border px-3 py-1">
-          <DetailRow label="Goal name">{run.name || "—"}</DetailRow>
+          <DetailRow label="Goal name">{run.name || "-"}</DetailRow>
           <DetailRow label="Description">
-            {run.goal || "—"}
+            {run.goal || "-"}
           </DetailRow>
           <DetailRow label="Run ID">
             <code>{id}</code>
@@ -228,7 +228,7 @@ export default function RunPage() {
           <DetailRow label="Browser">{run.browser}</DetailRow>
           <DetailRow label="Parameters">
             {Object.keys(run.params ?? {}).length === 0 ? (
-              "—"
+              "-"
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {Object.entries(run.params).map(([k, v]) => (
@@ -254,7 +254,7 @@ export default function RunPage() {
           </DetailRow>
           <DetailRow label="Status">
             {run.status}
-            {run.detail ? ` — ${run.detail}` : ""}
+            {run.detail ? ` - ${run.detail}` : ""}
           </DetailRow>
           {run.artifact_id && (
             <DetailRow label="Artifact">
@@ -299,7 +299,7 @@ export default function RunPage() {
               : `Run ${run?.status}`}
           </span>
           {run?.detail && (
-            <span className="text-muted-foreground">— {run.detail}</span>
+            <span className="text-muted-foreground">- {run.detail}</span>
           )}
           {run?.artifact_id && (
             <>
@@ -313,12 +313,12 @@ export default function RunPage() {
               </Link>
               <span className="text-muted-foreground">
                 {run.record_outcome === "reused"
-                  ? "(reproduced an existing capability — confirmation logged, no new draft)"
+                  ? "(reproduced an existing capability - confirmation logged, no new draft)"
                   : run.record_outcome === "updated_draft"
-                    ? "(flow changed — updated the pending draft, review to approve)"
+                    ? "(flow changed - updated the pending draft, review to approve)"
                     : run.record_outcome === "new_version"
-                      ? "(flow differs from the approved version — saved as a new draft, review to approve)"
-                      : "(new draft — review to approve)"}
+                      ? "(flow differs from the approved version - saved as a new draft, review to approve)"
+                      : "(new draft - review to approve)"}
               </span>
             </>
           )}
