@@ -100,6 +100,8 @@ def _summarize_fields(values: list[dict[str, Any]]) -> str:
         who = f.get("label") or f.get("name") or f.get("id") or f.get("type") or f["tag"]
         val = f.get("value")
         shown = f'"{val}"' if val else "(empty)"
+        if f.get("untouched"):
+            shown += "  <-- still on the default option, NOT chosen yet"
         lines.append(f"  - {who}: {shown}")
     return "\n".join(lines)
 

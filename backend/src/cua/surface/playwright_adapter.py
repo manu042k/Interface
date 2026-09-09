@@ -707,6 +707,7 @@ class PlaywrightAdapter(SurfaceAdapter):
                         id: e.id || null,
                         label: (e.labels && e.labels[0] && e.labels[0].innerText.trim()) || null,
                         value: (e.value || '').slice(0, 120),
+                        untouched: e.tagName === 'SELECT' && e.selectedIndex <= 0,
                     }))"""
             )
         except Exception:  # noqa: BLE001
