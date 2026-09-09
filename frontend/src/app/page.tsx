@@ -98,8 +98,7 @@ export default function NewRunPage() {
               onChange={(e) => setTarget(e.target.value)}
             />
             <p className="text-muted-foreground text-xs">
-              The URL the agent starts from — any screen of an allow-listed app.
-              Each run opens it in a throwaway Docker container you watch live.
+              The URL the agent starts from — must be permitted by the allowlist.
             </p>
             <div className="flex flex-wrap gap-1.5 pt-0.5">
               {[
