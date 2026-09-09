@@ -319,6 +319,29 @@ class PlaywrightAdapter(SurfaceAdapter):
             if await loc.count():
                 return loc.first, f"placeholder={placeholder!r}"
 
+        # 3b. legacy table form: the label sits in a plain <td>/<th> with no
+        # <label for=...>, so get_by_label above found nothing. Find the text
+        # node and take the first form control that follows it in DOM order
+        # (same row, or the next cell). This is THE legacy-form pattern.
+        landmark = near or label or (text if text and " " in str(text) else None)
+        if landmark and not near:
+            lm = str(landmark).rstrip(":").strip()
+            anchor = page.get_by_text(lm, exact=False)
+            if await anchor.count():
+                a0 = anchor.first
+                for xp, why in (
+                    ("xpath=ancestor::tr[1]//*[self::select or self::input or self::textarea]",
+                     f"label-cell={lm!r}:row-control"),
+                    ("xpath=(following::select | following::input | following::textarea)[1]",
+                     f"label-cell={lm!r}:next-control"),
+                ):
+                    try:
+                        cand = a0.locator(xp)
+                        if await cand.count():
+                            return cand.first, why
+                    except Exception:  # noqa: BLE001
+                        continue
+
         # 4. "the control (or value cell) in the row labelled 'Savings'"
         if near:
             anchor = page.get_by_text(near, exact=True)
@@ -497,15 +520,26 @@ class PlaywrightAdapter(SurfaceAdapter):
                 loc, strat = await self._locator(sess, action)
                 res.matched_strategy = strat
                 want = (action.value or "").strip()
-                opts = await loc.locator("option").evaluate_all(
+                # the resolver may have landed on a wrapper; find the <select>
+                sel = loc
+                if (await loc.evaluate("e => e.tagName")).lower() != "select":
+                    inner = loc.locator("select")
+                    if await inner.count():
+                        sel = inner.first
+                    else:
+                        anc = loc.locator("xpath=ancestor-or-self::*[.//select][1]//select")
+                        if await anc.count():
+                            sel = anc.first
+                opts = await sel.locator("option").evaluate_all(
                     "els => els.map(e => ({value: e.value, label: (e.label||e.textContent||'').trim()}))"
                 )
-                pick = _match_option(want, opts)
+                loc = sel
+                pick = _match_option(want, opts) if opts else None
                 if pick is None:
                     res.ok = False
                     res.error = (
-                        f"no <option> matches {want!r}. available: "
-                        + ", ".join(f"{o['label']!r}" for o in opts[:20])
+                        f"no <option> matches {want!r} on a <select>. available: "
+                        + (", ".join(f"{o['label']!r}" for o in opts[:20]) or "(no <select> at the resolved target)")
                     )
                 else:
                     # the option definitely exists — use explicit kwargs (a
