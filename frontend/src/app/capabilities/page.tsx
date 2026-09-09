@@ -6,13 +6,11 @@ import {
   Loader2,
   Play,
   Sparkles,
-  ArrowRight,
   Flag,
   RotateCcw,
-  ChevronDown,
   Crosshair,
   CheckCircle2,
-  ArrowLeft,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Capability, type ReplayResult } from "@/lib/api";
@@ -28,6 +26,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OutcomeBadge, RiskBadge } from "@/components/badges";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function CapabilitiesPage() {
   const { data, isLoading } = useQuery({
@@ -136,22 +157,7 @@ function CapabilityCard({
   );
 }
 
-/* ---- detail modal (view + inline invoke) --------------------------- */
-
-function SectionTitle({
-  children,
-  right,
-}: {
-  children: React.ReactNode;
-  right?: React.ReactNode;
-}) {
-  return (
-    <div className="text-muted-foreground mb-1.5 flex items-center justify-between text-xs font-medium uppercase tracking-wide">
-      <span>{children}</span>
-      {right}
-    </div>
-  );
-}
+/* ---- detail modal -------------------------------------------------- */
 
 function CapabilityDetail({
   cap,
@@ -160,8 +166,7 @@ function CapabilityDetail({
   cap: Capability | null;
   onClose: () => void;
 }) {
-  const [invoking, setInvoking] = useState(false);
-  const [showTargets, setShowTargets] = useState(false);
+  const [tab, setTab] = useState("overview");
 
   return (
     <Dialog
@@ -169,246 +174,351 @@ function CapabilityDetail({
       onOpenChange={(o) => {
         if (!o) {
           onClose();
-          setInvoking(false);
-          setShowTargets(false);
+          setTab("overview");
         }
       }}
     >
-      <DialogContent
-        showCloseButton={!invoking}
-        className="flex max-h-[88vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl"
-      >
-        {cap && !invoking && (
+      <DialogContent className="flex max-h-[88vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+        {cap && (
           <>
-            <DialogHeader className="border-b px-5 py-4 text-left">
+            <DialogHeader className="space-y-2 border-b px-5 py-4 text-left">
               <div className="flex flex-wrap items-center gap-2">
                 <DialogTitle className="font-mono text-sm">
                   {cap.name}
                 </DialogTitle>
-                <RiskBadge risk={cap.risk_class} />
-                <span className="text-muted-foreground text-xs">
-                  v{cap.version}
-                  {cap.supersedes != null &&
-                    ` · supersedes v${cap.supersedes}`}
-                  {cap.older_versions > 0 && ` · ${cap.older_versions} older`}
-                  {" · "}
-                  {cap.vendor_app_id} {cap.app_version}
-                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <RiskBadge risk={cap.risk_class} />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {cap.risk_class === "risky_irreversible"
+                      ? "Performs an irreversible action — replay needs pre-authorization."
+                      : "Safe and reversible — replay runs unattended."}
+                  </TooltipContent>
+                </Tooltip>
                 {cap.confirmations > 0 && (
-                  <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium">
-                    <CheckCircle2 className="h-3 w-3" />
-                    confirmed {cap.confirmations}×
-                  </span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant="outline"
+                        className="text-primary border-primary/30 gap-1"
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                        confirmed {cap.confirmations}×
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {cap.confirmations} later discovery run
+                      {cap.confirmations === 1 ? "" : "s"} reproduced this exact
+                      flow — no new version needed.
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
+              <p className="text-muted-foreground font-mono text-xs">
+                v{cap.version}
+                {cap.supersedes != null && ` · supersedes v${cap.supersedes}`}
+                {cap.older_versions > 0 && ` · ${cap.older_versions} older`}
+                {" · "}
+                {cap.vendor_app_id} {cap.app_version}
+              </p>
             </DialogHeader>
 
-            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
-              <p className="text-sm leading-relaxed">
-                {cap.summary_source === "model" && (
-                  <Sparkles className="text-primary mr-1 inline h-3.5 w-3.5 align-[-2px]" />
-                )}
-                {cap.summary}
-              </p>
+            <Tabs
+              value={tab}
+              onValueChange={setTab}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              <TabsList className="mx-5 mt-3 w-fit">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="steps">Steps ({cap.steps.length})</TabsTrigger>
+                <TabsTrigger value="invoke">Invoke</TabsTrigger>
+              </TabsList>
 
-              {/* Contract */}
-              <section className="border-border/70 divide-border/60 grid divide-y rounded-lg border sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-                <div className="p-3">
-                  <SectionTitle>Takes</SectionTitle>
-                  <div className="flex flex-wrap gap-1.5">
-                    {cap.inputs.length === 0 && (
-                      <span className="text-muted-foreground text-xs">
-                        no inputs
-                      </span>
-                    )}
-                    {cap.inputs.map((p) => (
-                      <code
-                        key={p.name}
-                        className="bg-muted rounded px-1.5 py-0.5 text-xs"
-                      >
-                        {p.name}
-                        <span className="text-muted-foreground">:{p.type}</span>
-                        {p.sensitive && (
-                          <span className="text-warning"> ·sensitive</span>
-                        )}
-                      </code>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-3">
-                  <SectionTitle>Returns</SectionTitle>
-                  <div className="flex flex-wrap gap-1.5">
-                    {cap.outputs.length === 0 && (
-                      <span className="text-muted-foreground text-xs">
-                        no outputs
-                      </span>
-                    )}
-                    {cap.outputs.map((o) => (
-                      <code
-                        key={o.field}
-                        className="bg-muted rounded px-1.5 py-0.5 text-xs"
-                      >
-                        {o.field}
-                        <span className="text-muted-foreground">:{o.shape}</span>
-                      </code>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              {/* Steps */}
-              <section>
-                <SectionTitle
-                  right={
-                    <button
-                      type="button"
-                      onClick={() => setShowTargets((v) => !v)}
-                      className="hover:text-foreground flex items-center gap-1 normal-case"
-                    >
-                      <Crosshair className="h-3 w-3" />
-                      how each step is targeted
-                      <ChevronDown
-                        className={`h-3 w-3 transition-transform ${showTargets ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                  }
-                >
-                  Steps · {cap.steps.length}
-                </SectionTitle>
-
-                <ol className="flex flex-wrap items-center gap-x-1 gap-y-1.5 text-xs">
-                  {cap.steps.map((s, i) => (
-                    <li key={s.i} className="flex items-center gap-1">
-                      {i > 0 && (
-                        <ArrowRight className="text-muted-foreground h-3 w-3 shrink-0" />
+              {/* Overview */}
+              <TabsContent
+                value="overview"
+                className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+              >
+                <ScrollArea className="h-full">
+                  <div className="space-y-4 px-5 py-4">
+                    <p className="text-sm leading-relaxed">
+                      {cap.summary_source === "model" && (
+                        <Sparkles className="text-primary mr-1 inline h-3.5 w-3.5 align-[-2px]" />
                       )}
-                      <span
-                        className="bg-accent rounded px-1.5 py-0.5"
-                        title={s.description}
-                      >
-                        <span className="font-medium">{s.action}</span>
-                        {s.target && (
-                          <span className="text-muted-foreground">
-                            {" "}
-                            {s.target}
-                          </span>
-                        )}
-                        {s.output && (
-                          <span className="text-muted-foreground">
-                            {" "}
-                            → {s.output}
-                          </span>
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
+                      {cap.summary}
+                    </p>
 
-                {showTargets && (
-                  <div className="border-border/60 mt-2.5 space-y-2.5 rounded-lg border p-3 text-xs">
-                    {cap.steps.map((s) => (
-                      <div key={s.i}>
-                        <div className="flex flex-wrap items-baseline gap-1.5">
-                          <span className="text-muted-foreground">{s.i}</span>
-                          <span className="font-medium">{s.action}</span>
-                          <span className="text-muted-foreground">
-                            {s.description}
-                          </span>
-                          <span className="text-muted-foreground">
-                            · {s.idempotent ? "idempotent" : "NON-idempotent"}
-                          </span>
-                        </div>
-                        {s.locators.length > 0 ? (
-                          <ul className="mt-1 space-y-1">
-                            {s.locators.map((l, li) => (
-                              <li key={li} className="text-muted-foreground">
-                                <span className="text-foreground">
-                                  rank {l.rank} · {l.kind}
-                                </span>{" "}
-                                <code>{JSON.stringify(l.params)}</code>
-                                <br />
-                                <span className="opacity-80">
-                                  ↳ {l.rationale}
-                                </span>
-                              </li>
+                    <div>
+                      <SectionLabel>Takes</SectionLabel>
+                      {cap.inputs.length === 0 ? (
+                        <Muted>no inputs</Muted>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Param</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Notes</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {cap.inputs.map((p) => (
+                              <TableRow key={p.name}>
+                                <TableCell className="font-mono">
+                                  {p.name}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground font-mono">
+                                  {p.type}
+                                </TableCell>
+                                <TableCell>
+                                  {p.sensitive ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-warning border-warning/30"
+                                    >
+                                      sensitive
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground">
+                                      —
+                                    </span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
                             ))}
-                          </ul>
-                        ) : (
-                          <p className="text-muted-foreground mt-1">
-                            {s.checkpoint
-                              ? `checkpoint: ${JSON.stringify(s.checkpoint)}`
-                              : "no element — control/assertion step"}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                    <p className="text-muted-foreground border-border/60 border-t pt-2 opacity-80">
-                      Replay tries these strategies top-down and uses the first
-                      that resolves to one visible element — no model. A match
-                      below rank 0 is logged as a drift signal.
+                          </TableBody>
+                        </Table>
+                      )}
+                    </div>
+
+                    <div>
+                      <SectionLabel>Returns</SectionLabel>
+                      {cap.outputs.length === 0 ? (
+                        <Muted>no outputs</Muted>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {cap.outputs.map((o) => (
+                            <code
+                              key={o.field}
+                              className="bg-muted rounded px-1.5 py-0.5 text-xs"
+                            >
+                              {o.field}
+                              <span className="text-muted-foreground">
+                                :{o.shape}
+                              </span>
+                            </code>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {(cap.handles.business_outcomes.length > 0 ||
+                      cap.handles.recoverable.length > 0) && (
+                      <>
+                        <Separator />
+                        <div>
+                          <SectionLabel>Handles</SectionLabel>
+                          <div className="flex flex-wrap gap-1.5">
+                            {cap.handles.business_outcomes.map((o) => (
+                              <Tooltip key={o.code}>
+                                <TooltipTrigger asChild>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-warning border-warning/30 gap-1"
+                                  >
+                                    <Flag className="h-3 w-3" />
+                                    {o.code}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {o.message ||
+                                    "A legitimate non-happy outcome the caller is told about."}
+                                </TooltipContent>
+                              </Tooltip>
+                            ))}
+                            {cap.handles.recoverable.map((r) => (
+                              <Badge
+                                key={r}
+                                variant="outline"
+                                className="text-muted-foreground bg-muted gap-1"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                {r}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    <Separator />
+                    <p className="text-muted-foreground text-xs">
+                      Recorded from run{" "}
+                      <code>
+                        {cap.provenance.created_from_run_id?.slice(0, 8) ?? "—"}
+                      </code>
+                      {cap.provenance.reviewed_by &&
+                        ` · approved by ${cap.provenance.reviewed_by}`}
                     </p>
                   </div>
-                )}
-              </section>
+                </ScrollArea>
+              </TabsContent>
 
-              {/* Handles */}
-              {(cap.handles.business_outcomes.length > 0 ||
-                cap.handles.recoverable.length > 0) && (
-                <section>
-                  <SectionTitle>Handles</SectionTitle>
-                  <div className="flex flex-wrap gap-1.5">
-                    {cap.handles.business_outcomes.map((o) => (
-                      <span
-                        key={o.code}
-                        title={o.message}
-                        className="bg-warning/12 text-warning inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs"
-                      >
-                        <Flag className="h-3 w-3" />
-                        {o.code}
-                      </span>
-                    ))}
-                    {cap.handles.recoverable.map((r) => (
-                      <span
-                        key={r}
-                        className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs"
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                        {r}
-                      </span>
-                    ))}
+              {/* Steps */}
+              <TabsContent
+                value="steps"
+                className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+              >
+                <ScrollArea className="h-full">
+                  <div className="px-5 py-4">
+                    <Accordion type="multiple" className="gap-0">
+                      {cap.steps.map((s) => (
+                        <AccordionItem key={s.i} value={String(s.i)}>
+                          <AccordionTrigger className="hover:no-underline">
+                            <span className="flex flex-1 items-center gap-2 pr-2 text-left">
+                              <span className="bg-muted text-muted-foreground grid h-5 w-5 shrink-0 place-items-center rounded text-[11px]">
+                                {s.i}
+                              </span>
+                              <code className="bg-muted text-foreground shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold">
+                                {s.action}
+                              </code>
+                              <span className="text-muted-foreground truncate text-sm font-normal">
+                                {s.description}
+                              </span>
+                              {!s.idempotent && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-warning border-warning/30 ml-auto shrink-0 text-[10px]"
+                                >
+                                  mutates state
+                                </Badge>
+                              )}
+                            </span>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="space-y-2 pl-7 text-xs">
+                              <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+                                {s.binding?.param && (
+                                  <span>
+                                    input{" "}
+                                    <code className="text-foreground">
+                                      ← {s.binding.param}
+                                    </code>
+                                  </span>
+                                )}
+                                {s.output && (
+                                  <span>
+                                    output{" "}
+                                    <code className="text-foreground">
+                                      → {s.output}
+                                    </code>
+                                  </span>
+                                )}
+                                <span>
+                                  {s.idempotent ? "idempotent" : "NON-idempotent"}
+                                </span>
+                              </div>
+
+                              {s.locators.length > 0 ? (
+                                <div>
+                                  <div className="text-muted-foreground mb-1 flex items-center gap-1 uppercase">
+                                    <Crosshair className="h-3 w-3" /> finds the
+                                    element by
+                                  </div>
+                                  <ol className="space-y-1">
+                                    {s.locators.map((l, li) => (
+                                      <li
+                                        key={li}
+                                        className={
+                                          li === 0
+                                            ? ""
+                                            : "text-muted-foreground"
+                                        }
+                                      >
+                                        <span className="tabular-nums">
+                                          {l.rank}.
+                                        </span>{" "}
+                                        <span
+                                          className={
+                                            li === 0 ? "font-medium" : ""
+                                          }
+                                        >
+                                          {l.kind}
+                                        </span>{" "}
+                                        <code className="text-muted-foreground">
+                                          {JSON.stringify(l.params)}
+                                        </code>
+                                        {l.rationale && (
+                                          <span className="text-muted-foreground/80 block pl-4">
+                                            ↳ {l.rationale}
+                                          </span>
+                                        )}
+                                      </li>
+                                    ))}
+                                  </ol>
+                                </div>
+                              ) : (
+                                <p className="text-muted-foreground">
+                                  {s.checkpoint
+                                    ? `checkpoint: ${JSON.stringify(s.checkpoint)}`
+                                    : "no element — control / assertion step"}
+                                </p>
+                              )}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                    <p className="text-muted-foreground/80 mt-3 text-xs">
+                      Replay tries each step&rsquo;s strategies top-down and takes
+                      the first that resolves to one visible element — no model. A
+                      match below rank 0 is logged as drift.
+                    </p>
                   </div>
-                </section>
-              )}
+                </ScrollArea>
+              </TabsContent>
 
-              <p className="text-muted-foreground border-border/60 border-t pt-3 text-xs">
-                recorded from run{" "}
-                <code>
-                  {cap.provenance.created_from_run_id?.slice(0, 8) ?? "—"}
-                </code>
-                {cap.provenance.reviewed_by &&
-                  ` · approved by ${cap.provenance.reviewed_by}`}
-              </p>
-            </div>
+              {/* Invoke */}
+              <TabsContent
+                value="invoke"
+                className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
+              >
+                <InvokePanel cap={cap} />
+              </TabsContent>
+            </Tabs>
 
-            <div className="bg-muted/30 flex items-center justify-end border-t px-5 py-3">
-              <Button onClick={() => setInvoking(true)}>
-                <Play className="mr-1.5 h-4 w-4" /> Invoke
-              </Button>
-            </div>
+            {tab !== "invoke" && (
+              <div className="bg-muted/30 flex justify-end border-t px-5 py-3">
+                <Button onClick={() => setTab("invoke")}>
+                  <Play className="mr-1.5 h-4 w-4" /> Invoke
+                </Button>
+              </div>
+            )}
           </>
-        )}
-
-        {cap && invoking && (
-          <InvokePanel cap={cap} onBack={() => setInvoking(false)} />
         )}
       </DialogContent>
     </Dialog>
   );
 }
 
-/* ---- invoke panel (inside the detail modal) ----------------------- */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-muted-foreground mb-1.5 text-xs font-medium uppercase tracking-wide">
+      {children}
+    </div>
+  );
+}
 
-function InvokePanel({ cap, onBack }: { cap: Capability; onBack: () => void }) {
+function Muted({ children }: { children: React.ReactNode }) {
+  return <span className="text-muted-foreground text-xs">{children}</span>;
+}
+
+/* ---- invoke panel ------------------------------------------------- */
+
+function InvokePanel({ cap }: { cap: Capability }) {
   const [params, setParams] = useState<Record<string, string>>({});
   const [target, setTarget] = useState("");
   const [result, setResult] = useState<ReplayResult | null>(null);
@@ -421,79 +531,76 @@ function InvokePanel({ cap, onBack }: { cap: Capability; onBack: () => void }) {
 
   return (
     <>
-      <DialogHeader className="flex-row items-center gap-2 border-b px-5 py-4 text-left">
-        <button
-          type="button"
-          onClick={onBack}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <DialogTitle className="font-mono text-sm">
-          Invoke — {cap.name} v{cap.version}
-        </DialogTitle>
-      </DialogHeader>
-
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-5">
-        <div className="space-y-1.5">
-          <Label>Target</Label>
-          <Input
-            value={target}
-            placeholder="https://…"
-            onChange={(e) => setTarget(e.target.value)}
-          />
-        </div>
-        {cap.inputs.map((p) => (
-          <div key={p.name} className="space-y-1.5">
-            <Label>
-              {p.name}{" "}
-              {p.sensitive && (
-                <span className="text-warning text-xs">(sensitive)</span>
-              )}
-            </Label>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="space-y-3 px-5 py-4">
+          <div className="space-y-1.5">
+            <Label>Target</Label>
             <Input
-              value={params[p.name] ?? ""}
-              placeholder={p.example ? String(p.example) : undefined}
-              onChange={(e) =>
-                setParams((s) => ({ ...s, [p.name]: e.target.value }))
-              }
+              value={target}
+              placeholder="https://…"
+              onChange={(e) => setTarget(e.target.value)}
             />
           </div>
-        ))}
-
-        {result && (
-          <div className="space-y-2 rounded-lg border p-3">
-            <div className="flex items-center gap-2">
-              <OutcomeBadge outcome={result.outcome} />
-              {result.business_outcome_code && (
-                <code className="text-warning text-xs">
-                  {result.business_outcome_code}
-                </code>
-              )}
-              {result.recovered_conditions?.length ? (
-                <span className="text-muted-foreground text-xs">
-                  recovered: {result.recovered_conditions.join(", ")}
-                </span>
-              ) : null}
+          {cap.inputs.map((p) => (
+            <div key={p.name} className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                {p.name}
+                {p.sensitive && (
+                  <Badge
+                    variant="outline"
+                    className="text-warning border-warning/30 text-[10px]"
+                  >
+                    sensitive
+                  </Badge>
+                )}
+              </Label>
+              <Input
+                value={params[p.name] ?? ""}
+                placeholder={p.example ? String(p.example) : undefined}
+                onChange={(e) =>
+                  setParams((s) => ({ ...s, [p.name]: e.target.value }))
+                }
+              />
             </div>
-            <pre className="overflow-auto rounded bg-black/5 p-2 text-xs">
-              {JSON.stringify(
-                result.outputs ?? result.failure_detail ?? {},
-                null,
-                2,
-              )}
-            </pre>
-          </div>
-        )}
-      </div>
+          ))}
 
+          {result && (
+            <div className="space-y-2 rounded-lg border p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <OutcomeBadge outcome={result.outcome} />
+                {result.business_outcome_code && (
+                  <code className="text-warning text-xs">
+                    {result.business_outcome_code}
+                  </code>
+                )}
+                {result.recovered_conditions?.length ? (
+                  <span className="text-muted-foreground text-xs">
+                    recovered: {result.recovered_conditions.join(", ")}
+                  </span>
+                ) : null}
+              </div>
+              <pre className="overflow-auto rounded bg-black/5 p-2 text-xs">
+                {JSON.stringify(
+                  result.outputs ?? result.failure_detail ?? {},
+                  null,
+                  2,
+                )}
+              </pre>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
       <div className="bg-muted/30 border-t px-5 py-3">
         <Button
           onClick={() => mut.mutate()}
           disabled={mut.isPending || !target.trim()}
           className="w-full"
         >
-          {mut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {mut.isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <ShieldCheck className="mr-2 h-4 w-4" />
+          )}
           Run deterministic replay
         </Button>
       </div>
