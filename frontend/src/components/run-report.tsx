@@ -30,6 +30,68 @@ function pathOf(url: unknown): string {
   }
 }
 
+/** step index encoded in an evidence filename: .../step12-screenshot-….png -> 12 */
+function stepOfEvidence(path: string): number | null {
+  const m = path.match(/\/step(\d+)-/);
+  return m ? Number(m[1]) : null;
+}
+
+type StepBlock = {
+  step: number | null;
+  events: Record<string, unknown>[];
+  shots: string[];
+};
+
+/** Interleave the timeline and the evidence: one block per step index, holding
+ *  that step's events on the left and its screenshot(s) on the right. */
+function buildBlocks(
+  timeline: Record<string, unknown>[],
+  evidence: string[],
+): { blocks: StepBlock[]; orphanShots: string[]; docs: string[] } {
+  const shotsByStep = new Map<number, string[]>();
+  const orphanShots: string[] = [];
+  const docs: string[] = [];
+  for (const e of evidence) {
+    if (!e.endsWith(".png")) {
+      docs.push(e);
+      continue;
+    }
+    const s = stepOfEvidence(e);
+    if (s == null) orphanShots.push(e);
+    else shotsByStep.set(s, [...(shotsByStep.get(s) ?? []), e]);
+  }
+
+  const blocks: StepBlock[] = [];
+  for (const e of timeline) {
+    const step = typeof e.step === "number" ? e.step : null;
+    const last = blocks[blocks.length - 1];
+    if (last && last.step === step) last.events.push(e);
+    else blocks.push({ step, events: [e], shots: [] });
+  }
+  for (const b of blocks) {
+    if (b.step != null) b.shots = shotsByStep.get(b.step) ?? [];
+  }
+  return { blocks, orphanShots, docs };
+}
+
+function Shot({ src }: { src: string }) {
+  return (
+    <a
+      href={API_BASE + src}
+      target="_blank"
+      rel="noreferrer"
+      className="block"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={API_BASE + src}
+        alt={src}
+        className="max-h-64 w-full rounded border object-contain object-top transition-opacity hover:opacity-80"
+      />
+    </a>
+  );
+}
+
 /**
  * One timeline event, rendered so a fast (headless) replay can still be audited
  * after the fact: which locator strategy actually matched, whether it was a
@@ -147,6 +209,7 @@ export function RunReport({
       <p className="text-muted-foreground text-sm">Assembling report…</p>
     );
   const run = rep.run;
+  const { blocks, orphanShots, docs } = buildBlocks(rep.timeline, rep.evidence);
 
   return (
     <div className="space-y-4">
@@ -183,68 +246,61 @@ export function RunReport({
         </Card>
       )}
 
-      {/* steps and evidence side by side */}
-      <div
-        className={
-          rep.evidence.length > 0
-            ? "grid gap-4 lg:grid-cols-[1.7fr_1fr]"
-            : ""
-        }
-      >
-        <Card className="print-card min-w-0">
-          <CardHeader>
-            <CardTitle className="text-base">Timeline</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ol className="space-y-1 text-sm">
-              {rep.timeline.map((e, i) => (
-                <TimelineRow key={i} e={e} />
-              ))}
-            </ol>
-          </CardContent>
-        </Card>
-
-        {rep.evidence.length > 0 && (
-          <Card className="print-card min-w-0 self-start">
-            <CardHeader>
-              <CardTitle className="text-base">Evidence</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-2">
-                {rep.evidence
-                  .filter((e) => e.endsWith(".png"))
-                  .map((e) => (
-                    <a
-                      key={e}
-                      href={API_BASE + e}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={API_BASE + e}
-                        alt={e}
-                        className="w-full rounded border transition-opacity hover:opacity-80"
-                      />
-                    </a>
+      {/* one row per step: its events on the left, its screenshot on the right */}
+      <Card className="print-card min-w-0">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Timeline{rep.evidence.length > 0 ? " & evidence" : ""}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ol className="divide-border/50 divide-y text-sm">
+            {blocks.map((b, i) => (
+              <li
+                key={i}
+                className="grid gap-3 py-2 first:pt-0 last:pb-0 lg:grid-cols-[1.7fr_1fr]"
+              >
+                <div className="min-w-0 space-y-1">
+                  {b.events.map((e, j) => (
+                    <TimelineRow key={j} e={e} />
                   ))}
-              </div>
-              {rep.evidence.some((e) => !e.endsWith(".png")) && (
-                <ul className="text-muted-foreground mt-2 space-y-0.5 text-xs">
-                  {rep.evidence
-                    .filter((e) => !e.endsWith(".png"))
-                    .map((e) => (
-                      <li key={e} className="truncate">
-                        {e.split("/").pop()}
-                      </li>
+                </div>
+                {b.shots.length > 0 && (
+                  <div className="min-w-0 space-y-2 lg:justify-self-end">
+                    {b.shots.map((s) => (
+                      <Shot key={s} src={s} />
                     ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ol>
+
+          {orphanShots.length > 0 && (
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {orphanShots.map((s) => (
+                <Shot key={s} src={s} />
+              ))}
+            </div>
+          )}
+          {docs.length > 0 && (
+            <ul className="text-muted-foreground mt-3 space-y-0.5 text-xs">
+              {docs.map((d) => (
+                <li key={d}>
+                  <a
+                    href={API_BASE + d}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    {d.split("/").pop()}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       {rep.replays.length > 0 && (
         <Card className="print-card">
