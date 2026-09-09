@@ -171,7 +171,7 @@ export default function NewRunPage() {
             Pre-authorize risky / irreversible steps for this goal
           </label>
 
-          <div className="flex items-center gap-3 pt-1">
+          <div className="flex justify-end pt-1">
             <Button
               onClick={submit}
               disabled={busy || !description.trim() || !target.trim()}
@@ -180,12 +180,6 @@ export default function NewRunPage() {
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Run discovery
             </Button>
-            <Link
-              href="/runs"
-              className="text-muted-foreground hover:text-foreground text-sm"
-            >
-              past runs
-            </Link>
           </div>
         </CardContent>
       </Card>
