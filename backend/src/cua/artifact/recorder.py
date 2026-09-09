@@ -203,7 +203,11 @@ class ArtifactRecorder:
             output_binding = OutputBinding(field=field, shape=args.get("expected_shape", "string"))
 
         if tool == "assert_state":
-            step_checkpoint = _condition_from_arg(args.get("condition"))
+            # strip per-run values (a member number, a confirmation id) the same
+            # way the final checkpoint is stabilized — otherwise a step
+            # checkpoint recorded as "Member No.: 100234" fails every replay
+            # with a different member.
+            step_checkpoint = _stabilize_checkpoint(_condition_from_arg(args.get("condition")))
 
         idempotent = _is_idempotent(tool, entry)
         risk_class = RiskClass(entry.action_result.get("risk_class", RiskClass.SAFE_REVERSIBLE))
@@ -289,13 +293,19 @@ class ArtifactRecorder:
         if any(w in g for w in ("look up", "member", "search", "find")):
             out.append(BusinessOutcomeRule(
                 code="member_not_found",
-                when=Condition(kind="text_present", params={"any": ["No members matched", "was not found"]}),
+                when=Condition(kind="text_present", params={"any": [
+                    "No members matched", "no member records matched", "no records matched",
+                    "no matching members", "was not found", "not found", "no results",
+                ]}),
                 message="The requested member does not exist.",
                 from_step=1,
             ))
             out.append(BusinessOutcomeRule(
                 code="permission_denied",
-                when=Condition(kind="text_present", params={"any": ["do not have permission", "member record is restricted"]}),
+                when=Condition(kind="text_present", params={"any": [
+                    "do not have permission", "member record is restricted", "not authorized",
+                    "access denied", "requires supervisor", "supervisor override",
+                ]}),
                 message="Caller is not permitted to view this record.",
                 from_step=1,
             ))
