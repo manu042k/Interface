@@ -9,7 +9,6 @@
   GET  /replays/{invocation_id}       replay result
   GET  /capabilities                  agent-facing catalog of approved capabilities (stretch)
   WS   /ws/runs/{run_id}/events       live event timeline (backlog + stream)
-  WS   /ws/runs/{run_id}/terminal     bash into the run's live sandbox container
   GET  /runs/{run_id}/report[.md]     assembled run report (JSON / Markdown)
   GET  /evidence/{run_id}/{path}      evidence blob (screenshots for the report)
 
@@ -370,51 +369,6 @@ def create_app(config: Config | None = None) -> FastAPI:
         except (WebSocketDisconnect, Exception):  # noqa: BLE001
             pass
         finally:
-            with _suppress():
-                await websocket.close()
-
-    # -- live sandbox terminal (docker exec) ----------------------
-    @app.websocket("/ws/runs/{run_id}/terminal")
-    async def run_terminal_ws(websocket: WebSocket, run_id: str) -> None:
-        await websocket.accept()
-        sys: System = app.state.system
-        run = app.state.runs.get(run_id)
-        mgr = sys.sandbox_manager
-        if run is None or not run.sandbox_container or mgr is None:
-            await websocket.send_text("\r\n[no live sandbox for this run]\r\n")
-            await websocket.close()
-            return
-
-        import os
-
-        proc, master = await mgr.exec_pty(
-            run.sandbox_container, ["env", "TERM=xterm-256color", "bash", "-l"]
-        )
-        loop = asyncio.get_running_loop()
-
-        async def pump_out() -> None:
-            while True:
-                try:
-                    data = await loop.run_in_executor(None, os.read, master, 2048)
-                except OSError:
-                    break
-                if not data:
-                    break
-                await websocket.send_bytes(data)
-
-        out_task = asyncio.create_task(pump_out())
-        try:
-            while True:
-                msg = await websocket.receive_text()
-                await loop.run_in_executor(None, os.write, master, msg.encode())
-        except (WebSocketDisconnect, Exception):  # noqa: BLE001
-            pass
-        finally:
-            out_task.cancel()
-            with _suppress():
-                os.close(master)
-            with _suppress():
-                proc.kill()
             with _suppress():
                 await websocket.close()
 

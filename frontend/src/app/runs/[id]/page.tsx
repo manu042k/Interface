@@ -6,10 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   FileText,
-  TerminalSquare,
   CheckCircle2,
   XCircle,
-  ChevronUp,
   Cpu,
   Coins,
   Clock,
@@ -21,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/badges";
 import { NoVncFrame } from "@/components/novnc-frame";
 import { EventTimeline } from "@/components/event-timeline";
-import { SandboxTerminal } from "@/components/sandbox-terminal";
 import { HandoffPanel } from "@/components/handoff-panel";
 
 const TERMINAL = new Set(["completed", "failed", "dead_end"]);
@@ -59,7 +56,6 @@ function Stat({
 
 export default function RunPage() {
   const { id } = useParams<{ id: string }>();
-  const [showTerm, setShowTerm] = useState(false);
   const [handled, setHandled] = useState(false);
 
   const { data: run, refetch } = useQuery({
@@ -84,7 +80,6 @@ export default function RunPage() {
   const ended =
     !!run && (TERMINAL.has(run.status) || (run.status === "stuck" && handled));
   const ok = run?.status === "completed";
-  const canTerm = !!run?.sandbox_container && !ended;
   const tokens = (run?.tokens_in ?? 0) + (run?.tokens_out ?? 0);
 
   return (
@@ -212,24 +207,6 @@ export default function RunPage() {
         />
         <EventTimeline runId={id} />
       </div>
-
-      {/* Terminal drawer */}
-      {canTerm && (
-        <div className="shrink-0">
-          {showTerm && <SandboxTerminal runId={id} />}
-          <button
-            type="button"
-            onClick={() => setShowTerm((v) => !v)}
-            className="bg-card text-muted-foreground hover:text-foreground mt-1.5 flex w-full items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
-          >
-            <TerminalSquare className="h-3.5 w-3.5" />
-            Sandbox terminal
-            <ChevronUp
-              className={`ml-auto h-3.5 w-3.5 transition-transform ${showTerm ? "" : "rotate-180"}`}
-            />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

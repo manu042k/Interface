@@ -110,25 +110,6 @@ class SandboxManager:
         if ids:
             await self._run(["docker", "rm", "-f", *ids])
 
-    # -- terminal --------------------------------------------------
-    async def exec_pty(
-        self, container: str, argv: list[str]
-    ) -> tuple[asyncio.subprocess.Process, int]:
-        """Start `docker exec -it <container> <argv...>` attached to a real PTY
-        so it's a proper interactive shell (prompt, job control, colours).
-        Returns (proc, master_fd); the caller pumps master_fd <-> websocket and
-        closes the fd + kills the proc on disconnect."""
-        import os
-        import pty
-
-        master, slave = pty.openpty()
-        proc = await asyncio.create_subprocess_exec(
-            "docker", "exec", "-it", container, *argv,
-            stdin=slave, stdout=slave, stderr=slave, close_fds=True,
-        )
-        os.close(slave)
-        return proc, master
-
     async def is_running(self, container: str) -> bool:
         rc, out, _ = await self._run(["docker", "inspect", "-f", "{{.State.Running}}", container])
         return rc == 0 and out.strip() == "true"

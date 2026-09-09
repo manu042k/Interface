@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Plus, X, Loader2, Radio } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -23,12 +21,6 @@ export default function NewRunPage() {
   ]);
   const [confirmRisky, setConfirmRisky] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  const { data: active } = useQuery({
-    queryKey: ["active-run"],
-    queryFn: api.activeRun,
-    refetchInterval: 3000,
-  });
 
   async function submit() {
     setBusy(true);
@@ -52,24 +44,14 @@ export default function NewRunPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Start a discovery run
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Give the agent a goal and an entry point. It drives the real UI and
-            you watch it live.
-          </p>
-        </div>
-        {active && (
-          <Button asChild variant="outline">
-            <Link href={`/runs/${active.run_id}`}>
-              <Radio className="text-primary mr-1.5 h-4 w-4 animate-pulse" />
-              View current run
-            </Link>
-          </Button>
-        )}
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Start a discovery run
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Give the agent a goal and an entry point. It drives the real UI and you
+          watch it live.
+        </p>
       </header>
 
       <Card>

@@ -52,7 +52,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
                   activeNav
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                    ? "bg-[#cc3f00] font-medium text-white"
                     : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
                 )}
               >
@@ -60,8 +60,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {label}
                 {showLive && (
                   <span className="relative ml-auto flex h-2 w-2">
-                    <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
-                    <span className="bg-primary relative inline-flex h-2 w-2 rounded-full" />
+                    <span
+                      className={cn(
+                        "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+                        activeNav ? "bg-white" : "bg-primary",
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "relative inline-flex h-2 w-2 rounded-full",
+                        activeNav ? "bg-white" : "bg-primary",
+                      )}
+                    />
                   </span>
                 )}
               </Link>
