@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 const NAV = [
   { href: "/", label: "New run", icon: Sparkles, exact: true },
@@ -80,8 +81,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       </aside>
 
-      <main className="min-w-0 flex-1 overflow-y-auto px-6 py-8 md:px-10">
-        <div className="mx-auto h-full max-w-6xl">{children}</div>
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="no-print bg-background/85 sticky top-0 z-10 flex h-12 shrink-0 items-center gap-3 border-b px-6 backdrop-blur md:px-10">
+          <Breadcrumbs />
+          {path !== "/" && (
+            <Link
+              href="/"
+              className="border-input hover:border-primary hover:text-foreground text-muted-foreground ml-auto flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              New run
+            </Link>
+          )}
+        </header>
+        <div className="flex-1 overflow-y-auto px-6 py-8 md:px-10">
+          <div className="mx-auto h-full max-w-6xl">{children}</div>
+        </div>
       </main>
     </div>
   );

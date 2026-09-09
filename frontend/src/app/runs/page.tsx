@@ -38,16 +38,11 @@ export default function RunsPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Runs</h1>
-          <p className="text-muted-foreground mt-1">
-            Discovery and replay runs, newest first.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/">New run</Link>
-        </Button>
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight">Runs</h1>
+        <p className="text-muted-foreground mt-1">
+          Discovery and replay runs, newest first.
+        </p>
       </header>
 
       <Tabs defaultValue="all">

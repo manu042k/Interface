@@ -4,13 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  FileText,
-  TerminalSquare,
-  ChevronRight,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
+import { FileText, TerminalSquare, CheckCircle2, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/badges";
@@ -53,16 +47,10 @@ export default function RunPage() {
     <div className="flex h-full min-h-[640px] flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            <Link href="/" className="hover:text-foreground">
-              runs
-            </Link>
-            <ChevronRight className="h-3 w-3" />
-            <code>{id.slice(0, 12)}</code>
-          </div>
           <h1 className="truncate text-xl font-semibold tracking-tight">
             {run?.goal ?? "…"}
           </h1>
+          <code className="text-muted-foreground text-xs">{id.slice(0, 12)}</code>
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={run?.status} />
