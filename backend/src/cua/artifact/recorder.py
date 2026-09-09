@@ -327,11 +327,22 @@ class ArtifactRecorder:
                 message="The operator is not permitted to perform this action.",
                 from_step=1,
             ))
-        if "sub-account" in g or "sub account" in g:
+        # any multi-field money/servicing form can be rejected by server-side
+        # validation before it posts — a legitimate result the caller must know
+        # about, distinct from a crash.
+        if any(w in g for w in (
+            "sub-account", "sub account", "transfer", "open ", "new share",
+            "deposit", "account hold", "place a hold",
+        )):
             out.append(BusinessOutcomeRule(
                 code="validation_error",
-                when=Condition(kind="text_present", params={"any": ["Please choose an account type", "is required"]}),
-                message="The form was rejected by server-side validation.",
+                when=Condition(kind="text_present", params={"any": [
+                    "could not be validated", "transaction could not be validated",
+                    "cannot be debited", "insufficient", "is on hold", "share is HOLD",
+                    "Please choose an account type", "is required", "invalid amount",
+                    "must be greater than", "not a valid",
+                ]}),
+                message="The request was rejected by server-side validation before it posted.",
                 from_step=1,
             ))
         return out
