@@ -217,7 +217,9 @@ class ArtifactRecorder:
     def _derive_checkpoint(self, transcript: DiscoveryTranscript, actionable: list[TranscriptEntry]) -> Condition:
         for entry in reversed(actionable):
             if entry.tool_call.tool == "assert_state":
-                return _condition_from_arg(entry.tool_call.args.get("condition"))
+                return _stabilize_checkpoint(
+                    _condition_from_arg(entry.tool_call.args.get("condition"))
+                )
         st = transcript.final_state
         if st is not None:
             base = re.sub(r"\d+", r"\\d+", re.escape(st.url.split("?")[0]))
@@ -408,6 +410,38 @@ def _bind_url(url: str, params: dict[str, Any]) -> ValueBinding:
         if pv and str(pv) in templ:
             templ = templ.replace(str(pv), "{" + pk + "}")
     return ValueBinding(literal=templ)
+
+
+_DYNAMIC_TOKEN = re.compile(
+    r"\b("
+    r"[A-Z]{1,5}[-–]\d{3,}"               # ref numbers: SA-736851, CONF-12
+    r"|\$[\d,]+\.\d{2}"                     # currency: $4,182.55
+    r"|\d{1,2}/\d{1,2}/\d{2,4}"            # dates 9/9/2026
+    r"|\d{4}-\d{2}-\d{2}"                  # dates 2026-09-09
+    r"|\d{2}:\d{2}(:\d{2})?"              # clock times
+    r"|\d{4,}"                             # long bare numbers (ids, amounts)
+    r")\b"
+)
+
+
+def _stabilize_checkpoint(cond: Condition) -> Condition:
+    """A `text_present` checkpoint whose text carries a per-invocation value (a
+    confirmation number, an amount, a date, an id) would only ever match the one
+    run it was recorded on. Strip those tokens so replay with other inputs still
+    verifies the success screen by its stable wording."""
+    if cond.kind != "text_present":
+        return cond
+    txt = cond.params.get("text")
+    if not isinstance(txt, str) or len(txt) < 4:
+        return cond
+    stripped = re.sub(r"\s{2,}", " ", _DYNAMIC_TOKEN.sub("", txt)).strip(" :–-,.")
+    if stripped and stripped != txt and len(stripped) >= 3:
+        return Condition(
+            kind="text_present",
+            params={**cond.params, "text": stripped},
+            description=(cond.description or "") + " (dynamic values removed)",
+        )
+    return cond
 
 
 def _condition_from_arg(cond: Any) -> Condition:

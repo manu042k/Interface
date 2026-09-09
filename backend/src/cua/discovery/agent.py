@@ -108,7 +108,10 @@ Rules:
 
 Finishing (mandatory):
 - You may NEVER call done as your first reaction to a click/type succeeding. Finishing is two calls: (1) assert_state with the goal's success condition, phrased as a concrete screen check - prefer text_present of the exact confirmation wording you can see (e.g. {"kind":"text_present","params":{"text":"CHANGES SAVED"}}), else url_matches; then (2), only if that assert_state returned ok, done with the outputs.
-- That assert_state is recorded verbatim as the replay checkpoint, so make it specific: a phrase that is on the success screen and NOT on the form/other screens. A bare url_matches of the page you are already on is a weak checkpoint - avoid it when there is confirmation text.
+- That assert_state is recorded verbatim as the replay checkpoint, so:
+  * make it specific to the success screen - a phrase that is there and NOT on the form/other screens;
+  * make it STABLE across inputs - assert a fixed label or heading ("CHANGES SAVED", "Sub-account created", "Confirmation number:"), NEVER a value that differs per run (a confirmation/reference number, an amount, a date, a member name/id). Those change every invocation and would break replay.
+  * a bare url_matches of the page you are already on is weak - avoid it when there is confirmation text.
 - If the assert_state fails, you are not done: re-observe and figure out what is still missing.
 
 Editing / updating a record (important):
