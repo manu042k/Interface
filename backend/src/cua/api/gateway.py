@@ -48,6 +48,9 @@ class StartRunRequest(BaseModel):
     capability_name: str | None = Field(default=None, description="name to record the resulting artifact under")
     vendor_app_id: str = "mockbank"
     app_version: str = "7.2"
+    # Optional success Condition (e.g. {"kind":"text_present","params":{"text":"..."}}).
+    # When it holds the run auto-completes - no need for the model to call done.
+    success_check: dict[str, Any] | None = None
 
 
 class StartRunResponse(BaseModel):
@@ -148,6 +151,7 @@ def create_app(config: Config | None = None) -> FastAPI:
                 _finished, transcript = await sys.orchestrator.run_discovery(
                     goal=req.goal, target=target, tenant=req.tenant,
                     params=req.params, run=run, confirm_risky=req.confirm_risky,
+                    success_check=req.success_check,
                 )
                 app.state.transcripts[run.run_id] = transcript
                 if run.status == RunStatus.COMPLETED:

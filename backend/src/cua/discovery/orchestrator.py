@@ -10,6 +10,7 @@ kept open for Phase 8 escalation, never torn down.
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -108,6 +109,7 @@ class Orchestrator:
         confirm_risky: bool = False,
         exhausted_ceiling: int = 20,
         max_steps: int | None = None,
+        success_check: dict[str, Any] | None = None,
     ) -> tuple[RunRecord, DiscoveryTranscript]:
         params = params or {}
         step_budget = max_steps if max_steps is not None else self.cfg.max_steps
@@ -128,6 +130,9 @@ class Orchestrator:
             target=target, tenant=tenant, run=run, logger=log,
         )
         session = surface.session_handle
+        # no-progress loop guard: (tool, target) signature + a hash of the screen
+        last_sig: str | None = None
+        repeats = 0
         try:
             step = 0
             while True:
@@ -266,16 +271,53 @@ class Orchestrator:
                 else:
                     history.append(desc)
 
-                # break repeat-loops: the model re-issuing the same action over
-                # and over (typically extract) means it isn't recognising it's
-                # done. Nudge it explicitly.
-                if ok and history[-3:].count(history[-1]) >= 2:
+                # --- no-progress loop guard -------------------------------
+                # An action that "succeeds" but leaves the screen exactly as it
+                # was, repeated, means the run is stuck in a loop the model
+                # can't see its way out of. Nudge on the 2nd repeat; hard-stop
+                # on the 4th (comp-use style: don't rely on the model to bail).
+                sig = f"{call.tool}|{json.dumps(call.args.get('target') or call.args.get('url') or call.args.get('key') or '', sort_keys=True)}|{result.url_after}"
+                if ok and sig == last_sig:
+                    repeats += 1
+                else:
+                    repeats = 0
+                last_sig = sig if ok else last_sig
+
+                if repeats >= 1:
                     note = (
-                        "You have already performed this exact action and it succeeded. "
-                        "If you have collected the data the goal asks for, call done now "
-                        "with the outputs. Otherwise choose a genuinely different action, "
-                        "or call stuck."
+                        "You have already performed this exact action and the screen "
+                        "did not change. If you have the data the goal asks for, call "
+                        "done now with the outputs. Otherwise do something genuinely "
+                        "different (scroll, a different control) or call stuck."
                     )
+                if repeats >= 3:
+                    run.status = RunStatus.STUCK
+                    run.detail = f"no progress: repeated {call.tool} 4x with no screen change"
+                    transcript.stuck_reason = run.detail
+                    transcript.final_state = state
+                    log.stuck(step, run.detail)
+                    break
+
+                # --- goal checkpoint auto-complete -----------------------
+                # If the caller gave a success condition, end the run the moment
+                # it holds - don't wait for the model to call done.
+                if ok and success_check:
+                    chk = await self.adapter.execute(
+                        session, Action(type=ActionType.ASSERT_STATE, condition=success_check)
+                    )
+                    if chk.ok:
+                        transcript.done_outputs = {
+                            e.extract_as: e.action_result.get("extracted")
+                            for e in transcript.entries
+                            if e.extract_as and e.action_result.get("extracted") is not None
+                        }
+                        transcript.final_state = state
+                        run.status = RunStatus.COMPLETED
+                        run.detail = "goal checkpoint reached"
+                        log.checkpoint(step, True, "success_check satisfied")
+                        log.run_finished("completed", outputs=list(transcript.done_outputs))
+                        break
+
                 step += 1
 
             transcript.final_state = transcript.final_state or await self.perception.observe(self.adapter, session)
