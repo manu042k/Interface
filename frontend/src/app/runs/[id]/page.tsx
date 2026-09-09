@@ -6,7 +6,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  FileText,
   CheckCircle2,
   XCircle,
   Ban,
@@ -17,6 +16,8 @@ import {
   Globe,
   Footprints,
   ChevronDown,
+  Printer,
+  Download,
 } from "lucide-react";
 import { api, type RunView } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -136,7 +137,7 @@ export default function RunPage() {
             </p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="no-print flex shrink-0 items-center gap-2">
           <StatusBadge status={run?.status} />
           {run && !ended && (
             <Button
@@ -155,11 +156,19 @@ export default function RunPage() {
             </Button>
           )}
           {ended && (
-            <Button asChild size="sm" variant="outline">
-              <Link href={`/runs/${id}/report`}>
-                <FileText className="mr-1.5 h-4 w-4" /> Full report / print
-              </Link>
-            </Button>
+            <>
+              <Button size="sm" variant="outline" onClick={() => window.print()}>
+                <Printer className="mr-1.5 h-4 w-4" /> Print / Save PDF
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <a
+                  href={api.reportMdUrl(id)}
+                  download={`report-${id}.md`}
+                >
+                  <Download className="mr-1.5 h-4 w-4" /> .md
+                </a>
+              </Button>
+            </>
           )}
         </div>
       </header>
@@ -199,7 +208,7 @@ export default function RunPage() {
           <button
             type="button"
             onClick={() => setShowDetails((v) => !v)}
-            className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-1 text-xs font-medium"
+            className="no-print text-muted-foreground hover:text-foreground ml-auto flex items-center gap-1 text-xs font-medium"
           >
             Details
             <ChevronDown
