@@ -17,7 +17,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 
 const NAV = [
   { href: "/", label: "New run", icon: Sparkles, exact: true },
-  { href: "/runs", label: "Runs", icon: Activity, exact: true },
+  { href: "/runs", label: "Runs", icon: Activity },
   { href: "/capabilities", label: "Capabilities", icon: ListChecks },
   { href: "/review", label: "Review", icon: ClipboardCheck },
   { href: "/interventions", label: "Interventions", icon: LifeBuoy },

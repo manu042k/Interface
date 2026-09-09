@@ -13,6 +13,7 @@ import {
   Clock,
   Globe,
   Footprints,
+  ChevronDown,
 } from "lucide-react";
 import { api, type RunView } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -54,9 +55,32 @@ function Stat({
   );
 }
 
+function ago(ts: number | null): string {
+  if (!ts) return "—";
+  return new Date(ts * 1000).toLocaleString();
+}
+
+function DetailRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex gap-3 py-1.5">
+      <span className="text-muted-foreground w-32 shrink-0 text-xs">
+        {label}
+      </span>
+      <span className="min-w-0 flex-1 break-words text-xs">{children}</span>
+    </div>
+  );
+}
+
 export default function RunPage() {
   const { id } = useParams<{ id: string }>();
   const [handled, setHandled] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const { data: run, refetch } = useQuery({
     queryKey: ["run", id],
@@ -140,6 +164,81 @@ export default function RunPage() {
           <Stat icon={Globe}>
             <span className="font-mono">{hostOf(run.app_target)}</span>
           </Stat>
+          <button
+            type="button"
+            onClick={() => setShowDetails((v) => !v)}
+            className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-1 text-xs font-medium"
+          >
+            Details
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform ${showDetails ? "rotate-180" : ""}`}
+            />
+          </button>
+        </div>
+      )}
+
+      {run && showDetails && (
+        <div className="bg-card shrink-0 divide-y divide-border/50 rounded-lg border px-3 py-1">
+          <DetailRow label="Goal name">{run.name || "—"}</DetailRow>
+          <DetailRow label="Description">
+            {run.goal || "—"}
+          </DetailRow>
+          <DetailRow label="Run ID">
+            <code>{id}</code>
+          </DetailRow>
+          <DetailRow label="Target">
+            <a
+              href={run.app_target}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary break-all underline underline-offset-2"
+            >
+              {run.app_target}
+            </a>
+          </DetailRow>
+          <DetailRow label="Tenant">{run.tenant_id}</DetailRow>
+          <DetailRow label="Browser">{run.browser}</DetailRow>
+          <DetailRow label="Parameters">
+            {Object.keys(run.params ?? {}).length === 0 ? (
+              "—"
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {Object.entries(run.params).map(([k, v]) => (
+                  <code
+                    key={k}
+                    className="bg-muted rounded px-1.5 py-0.5 text-[11px]"
+                  >
+                    {k}={String(v)}
+                  </code>
+                ))}
+              </div>
+            )}
+          </DetailRow>
+          <DetailRow label="Steps">{run.step_count}</DetailRow>
+          <DetailRow label="LLM">
+            {run.llm_calls} calls · {run.tokens_in.toLocaleString()} in /{" "}
+            {run.tokens_out.toLocaleString()} out ({tokens.toLocaleString()}{" "}
+            total)
+          </DetailRow>
+          <DetailRow label="Started">{ago(run.started_at)}</DetailRow>
+          <DetailRow label="Ended">
+            {run.ended_at ? `${ago(run.ended_at)} · ${elapsed(run)}` : "running"}
+          </DetailRow>
+          <DetailRow label="Status">
+            {run.status}
+            {run.detail ? ` — ${run.detail}` : ""}
+          </DetailRow>
+          {run.artifact_id && (
+            <DetailRow label="Artifact">
+              <Link
+                href="/capabilities"
+                className="text-primary underline underline-offset-2"
+              >
+                {run.artifact_id.slice(0, 8)} v{run.artifact_version}
+              </Link>
+              {run.record_outcome ? ` · ${run.record_outcome}` : ""}
+            </DetailRow>
+          )}
         </div>
       )}
 

@@ -23,35 +23,19 @@ import { wsUrl } from "@/lib/api";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-type Ev = Record<string, unknown> & { event: string; step?: number | null };
+type Ev = Record<string, unknown> & {
+  event: string;
+  step?: number | null;
+  ts?: number;
+};
 
-type Style = { Icon: React.ElementType; chip: string; text: string };
+type Style = { Icon: React.ElementType; color: string };
 
-const NEUTRAL: Style = {
-  Icon: Radio,
-  chip: "bg-muted text-muted-foreground",
-  text: "text-muted-foreground",
-};
-const BLUE: Style = {
-  Icon: Brain,
-  chip: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  text: "text-sky-700 dark:text-sky-300",
-};
-const GREEN: Style = {
-  Icon: CheckCircle2,
-  chip: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  text: "text-emerald-700 dark:text-emerald-300",
-};
-const AMBER: Style = {
-  Icon: AlertTriangle,
-  chip: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  text: "text-amber-700 dark:text-amber-300",
-};
-const ROSE: Style = {
-  Icon: AlertTriangle,
-  chip: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
-  text: "text-rose-700 dark:text-rose-300",
-};
+const NEUTRAL: Style = { Icon: Radio, color: "text-zinc-400" };
+const BLUE: Style = { Icon: Brain, color: "text-sky-400" };
+const GREEN: Style = { Icon: CheckCircle2, color: "text-emerald-400" };
+const AMBER: Style = { Icon: AlertTriangle, color: "text-amber-400" };
+const ROSE: Style = { Icon: AlertTriangle, color: "text-rose-400" };
 
 const BASE: Record<string, Style> = {
   run_started: { ...NEUTRAL, Icon: Radio },
@@ -94,12 +78,25 @@ function styleFor(e: Ev): Style {
   return BASE[e.event] ?? NEUTRAL;
 }
 
+function clock(ts?: number): string {
+  const d = ts ? new Date(ts * 1000) : new Date();
+  return d.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
 export function EventTimeline({ runId }: { runId: string }) {
   const [events, setEvents] = useState<Ev[]>([]);
+  const [live, setLive] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ws = new WebSocket(wsUrl(`/ws/runs/${runId}/events`));
+    ws.onopen = () => setLive(true);
+    ws.onclose = () => setLive(false);
     ws.onmessage = (m) => {
       try {
         const ev = JSON.parse(m.data) as Ev;
@@ -117,21 +114,31 @@ export function EventTimeline({ runId }: { runId: string }) {
   }, [events.length]);
 
   return (
-    <div className="bg-card flex h-full min-h-0 flex-col overflow-hidden rounded-lg border">
-      <div className="border-border/60 flex items-center justify-between border-b px-3 py-2 text-xs font-medium uppercase tracking-wide">
-        <span>Event timeline</span>
-        <span className="text-muted-foreground normal-case">
-          {events.length} events
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-[#0c0c0e] text-zinc-300 shadow-inner">
+      {/* title bar */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 bg-[#161619] px-3 py-2">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-rose-500/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
+        </span>
+        <span className="flex-1 text-center font-mono text-[11px] tracking-wide text-zinc-500">
+          agent · event log
+        </span>
+        <span className="font-mono text-[10px] text-zinc-600">
+          {events.length}
         </span>
       </div>
+
       <ScrollArea className="min-h-0 flex-1">
-        <ol className="p-2 font-mono text-xs">
+        <div className="p-2.5 font-mono text-[11px] leading-relaxed">
           {events.map((e, i) => {
             const s = styleFor(e);
             const detail =
               (typeof e.reasoning === "string" && e.reasoning) ||
               (typeof e.reason === "string" && e.reason) ||
               (typeof e.description === "string" && e.description) ||
+              (typeof e.detail === "string" && e.detail) ||
               "";
             const meta = [
               typeof e.tool === "string" ? e.tool : null,
@@ -140,49 +147,52 @@ export function EventTimeline({ runId }: { runId: string }) {
               typeof e.code === "string" ? e.code : null,
               typeof e.matched_strategy === "string" ? e.matched_strategy : null,
               e.event === "tokens"
-                ? `${e.tokens_in ?? 0} in / ${e.tokens_out ?? 0} out`
+                ? `${e.tokens_in ?? 0}in/${e.tokens_out ?? 0}out`
                 : null,
             ].filter(Boolean);
             return (
-              <li
-                key={i}
-                className="hover:bg-muted/40 flex items-start gap-2 rounded px-1.5 py-1 transition-colors"
-              >
-                <s.Icon className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", s.text)} />
-                <span className="text-muted-foreground/60 w-10 shrink-0 pt-0.5 tabular-nums">
-                  {e.step != null ? `s${e.step}` : ""}
-                </span>
-                <div className="min-w-0 flex-1 leading-relaxed">
-                  <span
-                    className={cn(
-                      "rounded px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                      s.chip,
-                    )}
-                  >
+              <div key={i} className="px-1 py-[3px]">
+                <div className="flex items-start gap-2">
+                  <span className="shrink-0 tabular-nums text-zinc-600">
+                    {clock(e.ts)}
+                  </span>
+                  <s.Icon
+                    className={cn("mt-[3px] h-3 w-3 shrink-0", s.color)}
+                  />
+                  <span className="shrink-0 text-zinc-600">
+                    {e.step != null ? `s${e.step}` : "  ·"}
+                  </span>
+                  <span className={cn("font-semibold uppercase", s.color)}>
                     {e.event.replaceAll("_", " ")}
                   </span>
                   {meta.map((m, j) => (
-                    <span
-                      key={j}
-                      className="text-muted-foreground ml-1.5 text-[11px]"
-                    >
+                    <span key={j} className="text-zinc-500">
                       {m}
                     </span>
                   ))}
-                  {detail && (
-                    <p className={cn("mt-0.5 not-italic", s.text, "opacity-80")}>
-                      {detail}
-                    </p>
-                  )}
                 </div>
-              </li>
+                {detail && (
+                  <div className="pl-[3.6rem] text-zinc-400/80">
+                    <span className="text-zinc-600">↳ </span>
+                    {detail}
+                  </div>
+                )}
+              </div>
             );
           })}
           {events.length === 0 && (
-            <li className="text-muted-foreground p-2">waiting for events…</li>
+            <div className="px-1 py-1 text-zinc-600">
+              <span className="text-emerald-500">$</span> waiting for events…
+            </div>
+          )}
+          {live && (
+            <div className="flex items-center gap-1 px-1 pt-1 text-zinc-600">
+              <span className="text-emerald-500">$</span>
+              <span className="inline-block h-3 w-1.5 animate-pulse bg-zinc-500" />
+            </div>
           )}
           <div ref={endRef} />
-        </ol>
+        </div>
       </ScrollArea>
     </div>
   );

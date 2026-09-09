@@ -62,6 +62,7 @@ class RunView(BaseModel):
     app_target: str
     goal: str | None
     name: str | None = None
+    params: dict[str, Any] = Field(default_factory=dict)
     detail: str | None
     step_count: int
     artifact_id: str | None = None
@@ -155,7 +156,8 @@ def create_app(config: Config | None = None) -> FastAPI:
         runs = sorted(app.state.runs.values(), key=lambda r: r.started_at, reverse=True)
         return [
             {
-                "run_id": r.run_id, "mode": r.mode, "status": r.status, "goal": r.goal,
+                "run_id": r.run_id, "mode": r.mode, "status": r.status,
+                "goal": r.goal, "name": r.name,
                 "started_at": r.started_at, "ended_at": r.ended_at,
                 "step_count": r.step_count, "artifact_id": r.artifact_id,
                 "has_sandbox": bool(r.sandbox_container),
@@ -537,7 +539,7 @@ def _run_dict(run: RunRecord) -> dict[str, Any]:
     return {
         "run_id": run.run_id, "mode": run.mode, "status": run.status, "tenant_id": run.tenant_id,
         "app_target": run.app_target, "goal": run.goal, "detail": run.detail, "step_count": run.step_count,
-        "name": run.name,
+        "name": run.name, "params": run.params or {},
         "artifact_id": run.artifact_id, "artifact_version": run.artifact_version,
         "record_outcome": run.record_outcome,
         "novnc_url": run.novnc_url, "sandbox_container": run.sandbox_container,

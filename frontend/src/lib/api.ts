@@ -27,6 +27,7 @@ export type RunView = {
   app_target: string;
   goal: string | null;
   name: string | null;
+  params: Record<string, string>;
   detail: string | null;
   step_count: number;
   artifact_id: string | null;
@@ -47,6 +48,7 @@ export type RunRow = {
   mode: string;
   status: string;
   goal: string | null;
+  name: string | null;
   started_at: number;
   ended_at: number | null;
   step_count: number;

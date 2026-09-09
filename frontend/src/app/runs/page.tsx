@@ -99,7 +99,7 @@ function RunsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Goal</TableHead>
+            <TableHead>Run</TableHead>
             <TableHead>Mode</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Steps</TableHead>
@@ -110,8 +110,17 @@ function RunsTable({
         <TableBody>
           {rows.map((r) => (
             <TableRow key={r.run_id}>
-              <TableCell className="max-w-md truncate">
-                {r.goal ?? <span className="text-muted-foreground">—</span>}
+              <TableCell className="max-w-md">
+                <div className="truncate font-medium">
+                  {r.name || r.goal || (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </div>
+                {r.name && r.goal && (
+                  <div className="text-muted-foreground truncate text-xs">
+                    {r.goal}
+                  </div>
+                )}
               </TableCell>
               <TableCell className="text-muted-foreground">{r.mode}</TableCell>
               <TableCell>
