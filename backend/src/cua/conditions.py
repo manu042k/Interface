@@ -36,6 +36,10 @@ def shape_pattern(shape: str) -> str:
     return SHAPE_PATTERNS.get(shape, r"\S")
 
 
+def _norm_ws(s: str) -> str:
+    return re.sub(r"\s+", " ", s).strip()
+
+
 async def evaluate(
     cond: Condition,
     state: SurfaceState,
@@ -45,7 +49,11 @@ async def evaluate(
 ) -> bool:
     p = cond.params
     kind = cond.kind
-    haystack = f"{state.title}\n{state.ax_summary}\n{state.dom_excerpt}"
+    # Collapse all whitespace runs to single spaces before substring matching:
+    # legacy table markup renders `<td>Name:</td><td>Ada</td>` as "Name:\tAda"
+    # or "Name:\nAda", so an assertion of "Name: Ada" would never match the raw
+    # text. Normalising both sides makes "Label: Value" checkpoints robust.
+    haystack = _norm_ws(f"{state.title}\n{state.ax_summary}\n{state.dom_excerpt}")
 
     if kind in {"all_of", "any_of"}:
         subs = [
@@ -62,10 +70,10 @@ async def evaluate(
         return re.search(p.get("pattern", ".*"), state.url) is not None
     if kind == "text_present":
         needles = p.get("any") or [p.get("text", "")]
-        return any(n and n.lower() in haystack.lower() for n in needles)
+        return any(n and _norm_ws(n).lower() in haystack.lower() for n in needles)
     if kind == "text_absent":
         needles = p.get("any") or [p.get("text", "")]
-        return all(not n or n.lower() not in haystack.lower() for n in needles)
+        return all(not n or _norm_ws(n).lower() not in haystack.lower() for n in needles)
     if kind == "element_present":
         if probe is None:
             return False
