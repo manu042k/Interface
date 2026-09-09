@@ -49,7 +49,7 @@ export function Breadcrumbs() {
           <span key={c.href} className="flex min-w-0 items-center gap-1.5">
             <ChevronRight className="text-muted-foreground/40 h-3.5 w-3.5 shrink-0" />
             {last ? (
-              <span className="text-foreground truncate font-medium">
+              <span className="text-foreground truncate font-bold">
                 {c.label}
               </span>
             ) : (
