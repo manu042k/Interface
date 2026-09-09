@@ -205,6 +205,33 @@ def create_app(config: Config | None = None) -> FastAPI:
             app.state.persist_runs()
         return RunView(**_run_dict(run))
 
+    @app.post("/runs/{run_id}/cancel", response_model=RunView)
+    async def cancel_run(run_id: str) -> RunView:
+        run = app.state.runs.get(run_id)
+        if run is None:
+            raise HTTPException(404, f"no such run: {run_id}")
+        if run.status in {RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.DEAD_END}:
+            return RunView(**_run_dict(run))
+
+        task = app.state.tasks.get(run_id)
+        if task is not None and not task.done():
+            task.cancel()
+
+        # tear the sandbox down directly — the orchestrator's cleanup may not
+        # run if the task was cancelled while holding a stuck session
+        mgr = app.state.system.sandbox_manager
+        if mgr is not None and run.sandbox_container:
+            try:
+                await mgr.stop_by_name(run.sandbox_container)
+            except Exception:  # noqa: BLE001
+                pass
+
+        run.status = RunStatus.FAILED
+        run.detail = "cancelled by user"
+        run.ended_at = run.ended_at or time.time()
+        app.state.persist_runs()
+        return RunView(**_run_dict(run))
+
     # -- ST-025: artifact review -------------------------------------
     @app.get("/artifacts")
     async def list_artifacts(

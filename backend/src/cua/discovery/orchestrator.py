@@ -129,6 +129,7 @@ class Orchestrator:
         try:
             step = 0
             while True:
+                run.step_count = step  # keep the live view current
                 if step >= step_budget:
                     run.status = RunStatus.DEAD_END
                     run.detail = f"max steps ({step_budget}) reached without done/stuck"

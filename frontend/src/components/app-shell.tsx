@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="no-print bg-background/85 sticky top-0 z-10 flex h-12 shrink-0 items-center gap-3 border-b px-6 backdrop-blur md:px-10">
           <Breadcrumbs />
-          {path !== "/" && (
+          {path !== "/" && !/^\/runs\/.+/.test(path) && (
             <Link
               href="/"
               className="border-input hover:border-primary hover:text-foreground text-muted-foreground ml-auto flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors"

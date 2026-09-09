@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   FileText,
   CheckCircle2,
   XCircle,
+  Ban,
+  Loader2,
   Cpu,
   Coins,
   Clock,
@@ -106,6 +109,15 @@ export default function RunPage() {
   const ok = run?.status === "completed";
   const tokens = (run?.tokens_in ?? 0) + (run?.tokens_out ?? 0);
 
+  const cancel = useMutation({
+    mutationFn: () => api.cancelRun(id),
+    onSuccess: () => {
+      toast.success("Run cancelled");
+      refetch();
+    },
+    onError: (e) => toast.error(String((e as Error).message)),
+  });
+
   return (
     <div className="flex h-full min-h-[640px] flex-col gap-3">
       {/* Title */}
@@ -122,6 +134,22 @@ export default function RunPage() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <StatusBadge status={run?.status} />
+          {run && !ended && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-destructive hover:text-destructive border-destructive/30"
+              onClick={() => cancel.mutate()}
+              disabled={cancel.isPending}
+            >
+              {cancel.isPending ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Ban className="mr-1.5 h-4 w-4" />
+              )}
+              Cancel run
+            </Button>
+          )}
           {run?.artifact_id && (
             <Button asChild size="sm">
               <Link href={`/runs/${id}/report`}>

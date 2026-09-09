@@ -170,6 +170,8 @@ export const api = {
       body: JSON.stringify(body),
     }),
   run: (id: string) => j<RunView>(`/runs/${id}`),
+  cancelRun: (id: string) =>
+    j<RunView>(`/runs/${id}/cancel`, { method: "POST" }),
   runs: () => j<RunRow[]>("/runs"),
   activeRun: () =>
     j<{ run_id: string; status: string; goal: string | null; mode: string } | null>(
