@@ -234,29 +234,23 @@ class Orchestrator:
                         step += 1
                         continue
                     # A supplied input param that was NEVER typed/selected means
-                    # the agent skipped part of the task (e.g. saved an update
-                    # form without touching a single field). Push back once.
+                    # the agent skipped part of the task. Push back ONCE (the
+                    # other loop guards — no-progress, stuck-nudge, assert-twice-
+                    # completes — keep this from wedging), then let `done` through.
                     _skip = {"branch", "tenant", "operator", "password"}
                     form_params = {
                         k for k, v in params.items()
                         if k not in _skip and len(str(v)) >= 4
                     }
-                    # Only block when the agent filled NONE of the form params
-                    # (the "opened the form and just clicked Save" case). If it
-                    # entered some, the checkpoint is the real gate — a partial
-                    # fill with a passing success check is a completion, not a
-                    # wedge. One nudge only.
-                    if (
-                        form_params
-                        and not (form_params & used_params)
-                        and unused_param_nudged < 1
-                    ):
+                    missed = sorted(form_params - used_params)
+                    if missed and unused_param_nudged < 1:
                         unused_param_nudged += 1
-                        history.append(f"done -> REJECTED: no form fields filled ({sorted(form_params)})")
+                        history.append(f"done -> REJECTED: params never entered: {missed}")
                         note = (
-                            f"You clicked submit without entering ANY of the values the goal "
-                            f"supplied: {', '.join(sorted(form_params))}. Go back to the form, "
-                            "type each one into its field, submit, then done."
+                            f"You have not entered these supplied values into a field yet: "
+                            f"{', '.join(missed)}. Check CURRENT FORM FIELD VALUES — any field "
+                            "marked 'still the ORIGINAL value' or 'still the DEFAULT option' is "
+                            "one you skipped. Go back, set each, submit, then done."
                         )
                         step += 1
                         continue

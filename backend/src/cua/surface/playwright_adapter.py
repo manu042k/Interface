@@ -707,7 +707,13 @@ class PlaywrightAdapter(SurfaceAdapter):
                         id: e.id || null,
                         label: (e.labels && e.labels[0] && e.labels[0].innerText.trim()) || null,
                         value: (e.value || '').slice(0, 120),
-                        untouched: e.tagName === 'SELECT' && e.selectedIndex <= 0,
+                        untouched: e.tagName === 'SELECT'
+                            ? e.selectedIndex <= 0
+                            : (e.tagName === 'TEXTAREA'
+                                ? e.value === e.defaultValue
+                                : ((e.type === 'text' || e.type === 'email' || e.type === 'tel'
+                                    || e.type === 'url' || e.type === 'number' || e.type === 'search')
+                                   && e.value !== '' && e.value === e.defaultValue)),
                     }))"""
             )
         except Exception:  # noqa: BLE001

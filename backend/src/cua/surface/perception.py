@@ -101,7 +101,11 @@ def _summarize_fields(values: list[dict[str, Any]]) -> str:
         val = f.get("value")
         shown = f'"{val}"' if val else "(empty)"
         if f.get("untouched"):
-            shown += "  <-- still on the default option, NOT chosen yet"
+            shown += (
+                "  <-- still the DEFAULT option, not chosen yet"
+                if f.get("tag") == "select"
+                else "  <-- still the ORIGINAL value, you have not changed it yet"
+            )
         lines.append(f"  - {who}: {shown}")
     return "\n".join(lines)
 
