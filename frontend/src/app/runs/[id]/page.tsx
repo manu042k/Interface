@@ -17,7 +17,6 @@ import {
   Footprints,
   ChevronDown,
   Printer,
-  Download,
 } from "lucide-react";
 import { api, type RunView } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -156,19 +155,9 @@ export default function RunPage() {
             </Button>
           )}
           {ended && (
-            <>
-              <Button size="sm" variant="outline" onClick={() => window.print()}>
-                <Printer className="mr-1.5 h-4 w-4" /> Print / Save PDF
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <a
-                  href={api.reportMdUrl(id)}
-                  download={`report-${id}.md`}
-                >
-                  <Download className="mr-1.5 h-4 w-4" /> .md
-                </a>
-              </Button>
-            </>
+            <Button size="sm" variant="outline" onClick={() => window.print()}>
+              <Printer className="mr-1.5 h-4 w-4" /> Print / Save PDF
+            </Button>
           )}
         </div>
       </header>

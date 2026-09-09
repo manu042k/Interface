@@ -181,7 +181,6 @@ export const api = {
     ),
   replay: (id: string) => j<ReplayResult>(`/replays/${id}`),
   report: (id: string) => j<RunReport>(`/runs/${id}/report`),
-  reportMdUrl: (id: string) => `${API_BASE}/runs/${id}/report.md`,
 
   capabilities: () => j<Capability[]>("/capabilities"),
   artifacts: (status?: string) =>
