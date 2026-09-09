@@ -9,6 +9,7 @@ is the production hardening of this same seam (ADR-09, design-only here).
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import re
 import uuid
@@ -85,10 +86,33 @@ class PlaywrightAdapter(SurfaceAdapter):
         if cdp_url:
             # Attach to the headed browser running inside the run's sandbox
             # container and drive the SAME page the user watches over noVNC.
+            # The CDP HTTP endpoint answers a beat before the browser is really
+            # ready (Chromium-in-Docker race -> WS "socket hang up code=1006",
+            # then "Target.createTarget Protocol error"), so retry the whole
+            # attach - connect, grab a context, grab a page.
             pw = await self._ensure_pw()
-            cdp_browser = await pw.chromium.connect_over_cdp(cdp_url)
-            context = cdp_browser.contexts[0] if cdp_browser.contexts else await cdp_browser.new_context()
-            page = context.pages[0] if context.pages else await context.new_page()
+            last_exc: Exception | None = None
+            context = page = None
+            for attempt in range(8):
+                try:
+                    cdp_browser = await pw.chromium.connect_over_cdp(cdp_url)
+                    context = (
+                        cdp_browser.contexts[0]
+                        if cdp_browser.contexts
+                        else await cdp_browser.new_context()
+                    )
+                    page = context.pages[0] if context.pages else await context.new_page()
+                    await page.evaluate("1")  # prove the target really answers
+                    break
+                except Exception as exc:  # noqa: BLE001 - transient CDP handshake failure
+                    last_exc = exc
+                    if cdp_browser is not None:
+                        with contextlib.suppress(Exception):
+                            await cdp_browser.close()
+                        cdp_browser = None
+                    await asyncio.sleep(1.5 + attempt)
+            if cdp_browser is None or page is None or context is None:
+                raise SurfaceError(f"could not attach to sandbox CDP at {cdp_url}: {last_exc}")
         else:
             browser = await self._ensure_browser()
             context = await browser.new_context()
