@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RiskBadge } from "@/components/badges";
+import { Pager, usePaged } from "@/components/pager";
 import { ArtifactView } from "@/components/artifact-view";
 
 export default function ReviewPage() {
@@ -30,6 +31,9 @@ export default function ReviewPage() {
     refetchInterval: 4000,
   });
   const [open, setOpen] = useState<ArtifactSummary | null>(null);
+
+  const rows = data ?? [];
+  const paged = usePaged(rows);
 
   const full = useQuery({
     queryKey: ["artifact", open?.artifact_id, open?.version],
@@ -71,7 +75,7 @@ export default function ReviewPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data?.map((a) => (
+            {paged.pageRows.map((a) => (
               <TableRow key={a.artifact_id + a.version}>
                 <TableCell className="font-mono text-xs">
                   {a.name} v{a.version}
@@ -93,7 +97,7 @@ export default function ReviewPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {data?.length === 0 && (
+            {rows.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={6}
@@ -105,6 +109,12 @@ export default function ReviewPage() {
             )}
           </TableBody>
         </Table>
+        <Pager
+          page={paged.page}
+          pageCount={paged.pageCount}
+          total={paged.total}
+          onPage={paged.setPage}
+        />
       </div>
 
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>

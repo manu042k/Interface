@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/badges";
+import { Pager, usePaged } from "@/components/pager";
 
 const LIVE = new Set(["pending", "running", "stuck"]);
 
@@ -81,6 +82,7 @@ function RunsTable({
   live?: boolean;
   empty: string;
 }) {
+  const { pageRows, page, setPage, pageCount, total } = usePaged(rows);
   return (
     <div className="bg-card rounded-lg border">
       <Table>
@@ -95,7 +97,7 @@ function RunsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((r) => (
+          {pageRows.map((r) => (
             <TableRow key={r.run_id}>
               <TableCell className="max-w-[20rem]">
                 <div className="truncate font-medium">
@@ -145,6 +147,12 @@ function RunsTable({
           )}
         </TableBody>
       </Table>
+      <Pager
+        page={page}
+        pageCount={pageCount}
+        total={total}
+        onPage={setPage}
+      />
     </div>
   );
 }

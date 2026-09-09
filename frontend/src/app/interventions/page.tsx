@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Pager, usePaged } from "@/components/pager";
 
 export default function InterventionsPage() {
   const { data } = useQuery({
@@ -19,6 +20,8 @@ export default function InterventionsPage() {
     queryFn: () => api.interventions("open"),
     refetchInterval: 3000,
   });
+  const rows = data ?? [];
+  const { pageRows, page, setPage, pageCount, total } = usePaged(rows);
 
   return (
     <div className="space-y-5">
@@ -42,7 +45,7 @@ export default function InterventionsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data?.map((i) => (
+            {pageRows.map((i) => (
               <TableRow key={i.intervention_id}>
                 <TableCell className="text-muted-foreground max-w-xs truncate">
                   {i.goal}
@@ -57,7 +60,7 @@ export default function InterventionsPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {data?.length === 0 && (
+            {rows.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={5}
@@ -70,6 +73,12 @@ export default function InterventionsPage() {
             )}
           </TableBody>
         </Table>
+        <Pager
+          page={page}
+          pageCount={pageCount}
+          total={total}
+          onPage={setPage}
+        />
       </div>
     </div>
   );
