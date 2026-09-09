@@ -112,6 +112,12 @@ export default function RunPage() {
   const ok = run?.status === "completed";
   const tokens = (run?.tokens_in ?? 0) + (run?.tokens_out ?? 0);
   const isReplay = run?.mode === "replay";
+  // a fresh/updated draft lives in Review until approved; a reused one is
+  // already in the catalog.
+  const artifactHref =
+    run?.record_outcome && run.record_outcome !== "reused"
+      ? "/review"
+      : "/capabilities";
 
   const cancel = useMutation({
     mutationFn: () => api.cancelRun(id),
@@ -261,7 +267,7 @@ export default function RunPage() {
           {run.artifact_id && (
             <DetailRow label="Artifact">
               <Link
-                href="/capabilities"
+                href={artifactHref}
                 className="text-primary underline underline-offset-2"
               >
                 {run.artifact_id.slice(0, 8)} v{run.artifact_version}
@@ -295,20 +301,31 @@ export default function RunPage() {
             <>
               <span className="text-muted-foreground">·</span>
               <Link
-                href="/capabilities"
+                href={artifactHref}
                 className="text-primary underline underline-offset-2"
               >
                 {run.record_outcome === "reused" ? "matched" : "recorded"}{" "}
                 {run.artifact_id.slice(0, 8)} v{run.artifact_version}
               </Link>
               <span className="text-muted-foreground">
-                {run.record_outcome === "reused"
-                  ? "(reproduced an existing capability - confirmation logged, no new draft)"
-                  : run.record_outcome === "updated_draft"
-                    ? "(flow changed - updated the pending draft, review to approve)"
-                    : run.record_outcome === "new_version"
-                      ? "(flow differs from the approved version - saved as a new draft, review to approve)"
-                      : "(new draft - review to approve)"}
+                {run.record_outcome === "reused" ? (
+                  "(reproduced an existing capability - confirmation logged, no new draft)"
+                ) : (
+                  <>
+                    {run.record_outcome === "updated_draft"
+                      ? "(flow changed - updated the pending draft, "
+                      : run.record_outcome === "new_version"
+                        ? "(flow differs from the approved version - new draft, "
+                        : "(new draft - "}
+                    <Link
+                      href="/review"
+                      className="text-primary underline underline-offset-2"
+                    >
+                      review to approve
+                    </Link>
+                    )
+                  </>
+                )}
               </span>
             </>
           )}
