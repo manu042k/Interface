@@ -390,6 +390,15 @@ class Orchestrator:
                             "is already loaded. Call observe, then act on a field or button BY "
                             "NAME (type into it / click it / select an option). Do not scroll again."
                         )
+                    elif call.tool in ("type", "select"):
+                        tgt = call.args.get("target")
+                        who = tgt.get("name") or tgt.get("label") or tgt.get("near") if isinstance(tgt, dict) else tgt
+                        note = (
+                            f"The '{who}' field ALREADY holds the value you just entered — see "
+                            "CURRENT FORM FIELD VALUES in the observation. Do NOT type into it "
+                            "again. Move to the NEXT field the goal names, or if every field is "
+                            "set, click the submit/save button."
+                        )
                     else:
                         note = (
                             "You have already performed this exact action and the screen did not "
@@ -397,8 +406,8 @@ class Orchestrator:
                             "is on screen, verify with assert_state/extract and call done. Otherwise "
                             "take the NEXT step toward the goal (a different control), or call stuck."
                         )
-                if repeats >= 3:
-                    reason = f"no progress: repeated {call.tool} 4x with no screen change"
+                if repeats >= (2 if call.tool in ("type", "select") else 3):
+                    reason = f"no progress: repeated {call.tool} {repeats + 1}x with no screen change"
                     resumed_note = await self._escalate_and_wait(
                         run, transcript, session, step, reason, goal, history, log,
                         handoff_wait_s, last_call,
