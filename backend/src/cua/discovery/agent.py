@@ -71,7 +71,13 @@ TOOL_SCHEMA: list[dict[str, Any]] = [
     _tool("extract", "Read a value off the screen with an expected shape.",
           {"target": _TARGET, "expected_shape": {"type": "string", "enum": ["string", "number", "currency", "integer", "boolean", "date"]},
            "as": {"type": "string", "description": "output field name"}}, ["target", "expected_shape", "as"]),
-    _tool("assert_state", "Verify a condition holds mid-flow or as the checkpoint.",
+    _tool("assert_state",
+          "Verify a condition holds on the CURRENT screen (a checkpoint). Cannot read an "
+          "<input> value or save a form. condition must be one of: "
+          '{"kind":"text_present","params":{"text":"CHANGES SAVED"}}, '
+          '{"kind":"text_absent","params":{"text":"..."}}, '
+          '{"kind":"url_matches","params":{"pattern":"/members/\\\\d+$"}}, '
+          '{"kind":"element_present","params":{"target":{...}}}.',
           {"condition": {"type": "object"}}, ["condition"]),
     _tool("scroll", "Scroll the page when the control or content you need is off-screen.",
           {"direction": {"type": "string", "enum": ["down", "up", "top", "bottom"]},
@@ -95,9 +101,15 @@ Rules:
 - Bounded waits only. If a control is missing or the screen is unexpected and you cannot safely proceed, call stuck with a clear reason.
 - If the control or value you need is below the fold, scroll first. Do not repeat the same extract - once you have read a value it is captured; move on.
 - When the goal's success condition is visibly true, call assert_state to check it, then done with the extracted outputs.
+- assert_state checks a condition on the SCREEN (a heading/text is present, the URL matches). It does NOT save a form and it cannot read an <input> field's value - never use it to "confirm" an edit you have not submitted yet.
+
+Editing / updating a record (important):
+- The flow is: type into each field -> click the form's Save / Submit / Update / Confirm button -> WAIT for the result screen.
+- Typing a value into a field changes nothing until you click that button. Do not assert_state or navigate away before clicking it.
+- Success is the app's own confirmation after the save: a "Changes saved" / "... UPDATED" / "... has been updated" screen, or the record page now showing the new value. When you see that, call done. If you typed the fields but never saw a save button, scroll the form to find it before giving up.
 
 Progress discipline (important):
-- Check "CURRENT FORM FIELD VALUES" and the ACTION HISTORY before each step. If a field already holds the value you need, DO NOT type it again — move to the next control (e.g. click the submit/search button).
+- Check "CURRENT FORM FIELD VALUES" and the ACTION HISTORY before each step. If a field already holds the value you need, DO NOT type it again — move to the next control (e.g. click the submit/search/save button).
 - Never repeat the same action twice in a row. If your last action succeeded, the next action must advance the flow (submit, navigate, open a result, extract).
 - One field per type call; after filling the inputs a form needs, click its submit control.
 - If an unexpected modal / notice / interstitial blocks the flow (e.g. a "Session Notice", cookie banner, confirmation dialog), dismiss it via its own continue/OK/acknowledge control — do NOT click site navigation to escape it.
