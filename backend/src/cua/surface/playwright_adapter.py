@@ -707,17 +707,16 @@ class PlaywrightAdapter(SurfaceAdapter):
                         id: e.id || null,
                         label: (e.labels && e.labels[0] && e.labels[0].innerText.trim()) || null,
                         value: (e.value || '').slice(0, 120),
+                        // Only for a <select> whose option 0 is a real
+                        // placeholder — a text input's defaultValue is unreliable
+                        // on server-rendered forms that echo the submitted value
+                        // back into the value= attribute.
                         untouched: (() => {
-                            if (e.tagName === 'SELECT') {
-                                // only meaningful when option 0 is a placeholder
-                                const o0 = e.options && e.options[0];
-                                const ph = o0 && (o0.value === ''
-                                    || /^\\s*(--|\\(|select|choose|please|pick)\\b/i.test(o0.textContent || ''));
-                                return !!ph && e.selectedIndex <= 0;
-                            }
-                            if (e.tagName === 'TEXTAREA') return e.value === e.defaultValue;
-                            return ['text','email','tel','url','number','search'].includes(e.type)
-                                && e.value !== '' && e.value === e.defaultValue;
+                            if (e.tagName !== 'SELECT') return false;
+                            const o0 = e.options && e.options[0];
+                            const ph = o0 && (o0.value === ''
+                                || /^\\s*(--|\\(|select|choose|please|pick)\\b/i.test(o0.textContent || ''));
+                            return !!ph && e.selectedIndex <= 0;
                         })(),
                     }))"""
             )

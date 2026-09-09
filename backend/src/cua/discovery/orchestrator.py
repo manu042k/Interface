@@ -247,10 +247,9 @@ class Orchestrator:
                         unused_param_nudged += 1
                         history.append(f"done -> REJECTED: params never entered: {missed}")
                         note = (
-                            f"You have not entered these supplied values into a field yet: "
-                            f"{', '.join(missed)}. Check CURRENT FORM FIELD VALUES — any field "
-                            "marked 'still the ORIGINAL value' or 'still the DEFAULT option' is "
-                            "one you skipped. Go back, set each, submit, then done."
+                            "You have not entered these supplied values into a field yet: "
+                            f"{', '.join(missed)}. Each one belongs in a field the goal named. "
+                            "Go back to the form, type/select each, submit, then done."
                         )
                         step += 1
                         continue
