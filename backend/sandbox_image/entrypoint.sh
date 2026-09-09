@@ -2,8 +2,8 @@
 set -euo pipefail
 
 export DISPLAY="${DISPLAY:-:99}"
-export SCREEN_WIDTH="${SCREEN_WIDTH:-1366}"
-export SCREEN_HEIGHT="${SCREEN_HEIGHT:-768}"
+export SCREEN_WIDTH="${SCREEN_WIDTH:-1280}"
+export SCREEN_HEIGHT="${SCREEN_HEIGHT:-720}"
 export SCREEN_DEPTH="${SCREEN_DEPTH:-24}"
 
 # Neutral defaults: no hardcoded site/settings beyond a standard PC screen.
