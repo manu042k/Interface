@@ -274,10 +274,6 @@ export default function RunPage() {
         </div>
       )}
 
-      {isStuck && (
-        <HandoffPanel runId={id} onResolved={() => refetch()} />
-      )}
-
       {ended && (
         <div
           className={`flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm ${
@@ -343,11 +339,10 @@ export default function RunPage() {
         </div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
-          {/* self-start + the feed's own 16:9 aspect ratio keep this panel a
-              FIXED size - the handoff panel appearing above only shifts it down,
-              it never rescales or reconnects. min-w-0 stops the log column from
-              stealing width. */}
-          <div className="min-w-0 self-start">
+          {/* the live view stays put: self-start + the feed's own 16:9 aspect
+              ratio fix its size, and the handoff prompt is OVERLAID on it (not
+              inserted above) so nothing on the page ever shifts. */}
+          <div className="relative min-w-0 self-start">
             <NoVncFrame
               novncUrl={run?.novnc_url ?? null}
               interactive={!!inControl}
@@ -358,6 +353,11 @@ export default function RunPage() {
                 (run?.status === "pending" || run?.status === "running")
               }
             />
+            {isStuck && (
+              <div className="absolute inset-x-0 top-9 z-10 p-2">
+                <HandoffPanel runId={id} onResolved={() => refetch()} />
+              </div>
+            )}
           </div>
           <div className="h-[440px] min-w-0 self-start lg:h-[600px]">
             <EventTimeline runId={id} />

@@ -86,8 +86,26 @@ export function HandoffPanel({
     setBusy(false);
   }
 
+  // Once the operator is driving, collapse to a slim bar so the live page
+  // underneath stays usable.
+  if (inControl) {
+    return (
+      <div className="border-warning/50 bg-card/95 flex items-center gap-3 rounded-lg border px-3 py-2 shadow-lg backdrop-blur">
+        <HandMetal className="text-warning h-4 w-4 shrink-0" />
+        <span className="min-w-0 flex-1 truncate text-sm">
+          <span className="text-muted-foreground">{iv.claimed_by} in control</span>{" "}
+          - drive the page below
+        </span>
+        <Button size="sm" onClick={handBack} disabled={busy}>
+          {busy && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+          Hand control back
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="border-warning/40 bg-warning/8 rounded-lg border p-4">
+    <div className="border-warning/50 bg-card/95 mx-auto max-w-2xl rounded-lg border p-4 shadow-xl backdrop-blur">
       <div className="flex items-start gap-3">
         <HandMetal className="text-warning mt-0.5 h-5 w-5 shrink-0" />
         <div className="min-w-0 flex-1">
@@ -105,24 +123,10 @@ export function HandoffPanel({
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {!inControl ? (
-              <Button size="sm" onClick={claimAndTake} disabled={busy}>
-                {busy && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-                Claim &amp; take control
-              </Button>
-            ) : (
-              <>
-                <span className="text-muted-foreground text-sm">
-                  {iv.claimed_by} in control - drive the page above, then:
-                </span>
-                <Button size="sm" onClick={handBack} disabled={busy}>
-                  {busy && (
-                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                  )}
-                  Hand control back
-                </Button>
-              </>
-            )}
+            <Button size="sm" onClick={claimAndTake} disabled={busy}>
+              {busy && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+              Claim &amp; take control
+            </Button>
           </div>
 
           {log.length > 0 && (
