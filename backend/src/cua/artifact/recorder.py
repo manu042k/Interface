@@ -279,6 +279,19 @@ class ArtifactRecorder:
             settle=Condition(kind="text_absent", params={"any": ["Loading", "please wait"]}),
             timeout_ms=8000,
         ))
+        # an outright app error is usually transient - reload once and retry
+        rules.append(RecoverableRule(
+            name="transient_server_error",
+            when=Condition(kind="text_present", params={"any": [
+                "unexpected error", "please retry", "try again later",
+                "temporarily unavailable", "Internal Server Error",
+            ]}),
+            action="reload",
+            settle=Condition(kind="text_absent", params={"any": [
+                "unexpected error", "please retry", "Internal Server Error",
+            ]}),
+            max_attempts=2,
+        ))
         return rules
 
 

@@ -103,6 +103,7 @@ Rules:
 - Identify controls by role+name, label, visible text, or row label ("near") — not by guessing CSS.
 - Never enter real credentials or invent data. Use only values from the goal/params.
 - Bounded waits only. If a control is missing or the screen is unexpected and you cannot safely proceed, call stuck with a clear reason.
+- Transient errors: if the screen shows a server/app error ("unexpected error", "please retry", a 500 page, "temporarily unavailable", "try again"), that is usually transient. Navigate to the SAME url again (or re-click the control that led here) ONCE - if it clears, carry on. Only call stuck if it persists after that retry.
 - If the control or value you need is below the fold, scroll first. Do not repeat the same extract - once you have read a value it is captured; move on.
 - assert_state checks a condition on the SCREEN (a heading/text is present, the URL matches). It does NOT save a form and it cannot read an <input> field's value - never use it to "confirm" an edit you have not submitted yet.
 
