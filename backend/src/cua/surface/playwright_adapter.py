@@ -653,31 +653,35 @@ class PlaywrightAdapter(SurfaceAdapter):
     async def _wait_for(self, page: Page, condition: dict[str, Any], timeout_ms: int) -> bool:
         """Bounded poll — never an unbounded sleep (§3.3)."""
         deadline = asyncio.get_event_loop().time() + timeout_ms / 1000
-        kind = condition.get("kind", "text_present")
-        params = condition.get("params", condition)
         while asyncio.get_event_loop().time() < deadline:
             try:
-                if kind == "url_matches":
-                    if re.search(params.get("pattern", ".*"), page.url):
-                        return True
-                elif kind in {"text_present", "text_absent"}:
-                    body = await page.evaluate("() => document.body ? document.body.innerText : ''")
-                    # collapse whitespace runs: legacy tables render
-                    # <td>Label:</td><td>Value</td> as "Label:\tValue", so an
-                    # assertion of "Label: Value" would never match otherwise.
-                    body = _WS_RE.sub(" ", body).lower()
-                    needles = params.get("any") or [params.get("text", "")]
-                    present = any(n and _WS_RE.sub(" ", n).strip().lower() in body for n in needles)
-                    if (kind == "text_present" and present) or (kind == "text_absent" and not present):
-                        return True
-                elif kind in {"element_present", "element_absent"}:
-                    loc = page.locator(params.get("selector", "body"))
-                    cnt = await loc.count()
-                    if (kind == "element_present" and cnt) or (kind == "element_absent" and not cnt):
-                        return True
+                if await self._eval_condition_now(page, condition):
+                    return True
             except Exception:  # noqa: BLE001
                 pass
             await asyncio.sleep(0.15)
+        return False
+
+    async def _eval_condition_now(self, page: Page, condition: dict[str, Any]) -> bool:
+        kind = condition.get("kind", "text_present")
+        params = condition.get("params", condition)
+        if kind in {"all_of", "any_of"}:
+            subs = params.get("conditions", [])
+            if not subs:
+                return False
+            results = [await self._eval_condition_now(page, c) for c in subs]
+            return all(results) if kind == "all_of" else any(results)
+        if kind == "url_matches":
+            return re.search(params.get("pattern", ".*"), page.url) is not None
+        if kind in {"text_present", "text_absent"}:
+            body = await page.evaluate("() => document.body ? document.body.innerText : ''")
+            body = _WS_RE.sub(" ", body).lower()
+            needles = params.get("any") or [params.get("text", "")]
+            present = any(n and _WS_RE.sub(" ", n).strip().lower() in body for n in needles)
+            return present if kind == "text_present" else not present
+        if kind in {"element_present", "element_absent"}:
+            cnt = await page.locator(params.get("selector", "body")).count()
+            return bool(cnt) if kind == "element_present" else not cnt
         return False
 
     # -- ST-008 raw material ----------------------------------------
