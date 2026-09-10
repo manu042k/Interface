@@ -141,17 +141,19 @@ function CapabilityCard({
               {cap.confirmations}×
             </span>
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="ml-auto"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen();
-            }}
-          >
-            <Play className="mr-1.5 h-3.5 w-3.5" /> Invoke
-          </Button>
+          {cap.inputs.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen();
+              }}
+            >
+              <Play className="mr-1.5 h-3.5 w-3.5" /> Invoke
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -179,7 +181,7 @@ function CapabilityDetail({
         }
       }}
     >
-      <DialogContent className="flex max-h-[88vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+      <DialogContent className="flex h-[85vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
         {cap && (
           <>
             <DialogHeader className="space-y-2 border-b px-5 py-4 text-left">
@@ -228,14 +230,18 @@ function CapabilityDetail({
             </DialogHeader>
 
             <Tabs
-              value={tab}
+              value={
+                cap.inputs.length === 0 && tab === "invoke" ? "overview" : tab
+              }
               onValueChange={setTab}
               className="flex min-h-0 flex-1 flex-col"
             >
               <TabsList className="mx-5 mt-3 w-fit">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="steps">Steps ({cap.steps.length})</TabsTrigger>
-                <TabsTrigger value="invoke">Invoke</TabsTrigger>
+                {cap.inputs.length > 0 && (
+                  <TabsTrigger value="invoke">Invoke</TabsTrigger>
+                )}
               </TabsList>
 
               {/* Overview */}
@@ -483,15 +489,17 @@ function CapabilityDetail({
               </TabsContent>
 
               {/* Invoke */}
-              <TabsContent
-                value="invoke"
-                className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
-              >
-                <InvokePanel cap={cap} />
-              </TabsContent>
+              {cap.inputs.length > 0 && (
+                <TabsContent
+                  value="invoke"
+                  className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
+                >
+                  <InvokePanel cap={cap} />
+                </TabsContent>
+              )}
             </Tabs>
 
-            {tab !== "invoke" && (
+            {tab !== "invoke" && cap.inputs.length > 0 && (
               <div className="bg-muted/30 flex justify-end border-t px-5 py-3">
                 <Button onClick={() => setTab("invoke")}>
                   <Play className="mr-1.5 h-4 w-4" /> Invoke
