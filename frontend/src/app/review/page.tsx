@@ -62,8 +62,8 @@ export default function ReviewPage() {
         </p>
       </header>
 
-      <div className="bg-card rounded-lg border">
-        <Table>
+      <div className="bg-card overflow-x-auto rounded-lg border">
+        <Table className="min-w-[720px]">
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -77,33 +77,40 @@ export default function ReviewPage() {
           <TableBody>
             {paged.pageRows.map((a) => (
               <TableRow key={a.artifact_id + a.version}>
-                <TableCell className="font-mono text-xs">
-                  {a.name} v{a.version}
-                  {a.record_outcome === "drift_patch" && (
-                    <span className="bg-warning/12 text-warning border-warning/30 ml-2 rounded border px-1.5 py-0.5 text-[10px] font-medium">
-                      drift patch
+                <TableCell className="align-top font-mono text-xs">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="whitespace-nowrap">
+                      {a.name} v{a.version}
                     </span>
-                  )}
-                  {a.duplicate_of && (
-                    <span
-                      className="bg-destructive/10 text-destructive border-destructive/30 ml-2 rounded border px-1.5 py-0.5 text-[10px] font-medium"
-                      title={`possible duplicate of ${a.duplicate_of}`}
-                    >
-                      dup of {a.duplicate_of}
-                    </span>
-                  )}
+                    {a.record_outcome === "drift_patch" && (
+                      <span className="bg-warning/12 text-warning border-warning/30 rounded border px-1.5 py-0.5 text-[10px] font-medium">
+                        drift patch
+                      </span>
+                    )}
+                    {a.duplicate_of && (
+                      <span
+                        className="bg-destructive/10 text-destructive border-destructive/30 max-w-[180px] truncate rounded border px-1.5 py-0.5 text-[10px] font-medium"
+                        title={`possible duplicate of ${a.duplicate_of}`}
+                      >
+                        dup of {a.duplicate_of}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
-                <TableCell className="text-muted-foreground max-w-sm truncate">
+                <TableCell className="text-muted-foreground max-w-[280px] truncate align-top">
                   {a.goal}
                 </TableCell>
-                <TableCell>
+                <TableCell className="align-top whitespace-nowrap">
                   <RiskBadge risk={a.risk_class} />
                 </TableCell>
-                <TableCell>{a.steps}</TableCell>
-                <TableCell className="text-muted-foreground text-xs">
+                <TableCell className="align-top">{a.steps}</TableCell>
+                <TableCell
+                  className="text-muted-foreground max-w-[220px] truncate align-top text-xs"
+                  title={a.known_outcomes.join(", ")}
+                >
                   {a.known_outcomes.join(", ") || "-"}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="align-top text-right">
                   <Button size="sm" variant="outline" onClick={() => setOpen(a)}>
                     Review
                   </Button>
