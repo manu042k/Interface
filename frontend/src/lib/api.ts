@@ -309,6 +309,81 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ operator, goal_checkpoint }),
     }),
+
+  metrics: () => j<Metrics>(`/metrics`),
+};
+
+export type MetricSeriesPoint = {
+  date: string;
+  discovery_runs: number;
+  replay_runs: number;
+  tokens: number;
+  avg_tokens_per_discovery: number;
+  avg_llm_calls_per_discovery: number;
+  discovery_success_rate: number;
+  replay_share_to_date: number;
+};
+
+export type Metrics = {
+  generated_at: number;
+  overview: {
+    total_runs: number;
+    discovery_runs: number;
+    replay_invocations: number;
+    tokens_in: number;
+    tokens_out: number;
+    tokens_total: number;
+    llm_calls: number;
+    est_cost_usd: number;
+    cost_rate_per_mtok: { in: number; out: number };
+  };
+  efficiency: {
+    avg_tokens_per_discovery: number;
+    avg_llm_calls_per_discovery: number;
+    avg_steps_per_discovery: number;
+    replay_share_pct: number;
+    tokens_saved_by_replay: number;
+    est_cost_saved_usd: number;
+    cost_per_successful_run_usd: number;
+  };
+  trend: {
+    direction: "improving" | "regressing" | "flat";
+    detail: string;
+    tokens_per_successful_discovery_early?: number;
+    tokens_per_successful_discovery_late?: number;
+    delta_pct?: number;
+    replay_share_now?: number;
+  };
+  reliability: {
+    discovery: {
+      completed: number;
+      needs_human: number;
+      dead_end_or_failed: number;
+      business_outcome: number;
+      success_rate_pct: number;
+      escalation_rate_pct: number;
+    };
+    replay: { ok: number; failed: number; success_rate_pct: number };
+    duration_seconds: {
+      discovery_p50: number;
+      discovery_p95: number;
+      replay_p50: number;
+      replay_p95: number;
+    };
+  };
+  capabilities: {
+    total: number;
+    approved: number;
+    draft_pending_review: number;
+    most_invoked: {
+      artifact_id: string | null;
+      name: string | null;
+      invocations: number;
+      ok: number;
+      success_rate: number;
+    }[];
+  };
+  series: MetricSeriesPoint[];
 };
 
 export function wsUrl(path: string): string {

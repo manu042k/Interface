@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import time
 import uuid
@@ -646,6 +647,27 @@ def create_app(config: Config | None = None) -> FastAPI:
         finally:
             with _suppress():
                 await websocket.close()
+
+    # -- cross-run metrics -------------------------------------
+    @app.get("/metrics")
+    async def metrics() -> dict[str, Any]:
+        from ..metrics import compute_metrics
+
+        store = app.state.system.store
+        try:
+            total = len(store.list())
+            approved = len(store.list(status=ArtifactStatus.APPROVED))
+            draft = len(store.list(status=ArtifactStatus.DRAFT))
+        except Exception:  # noqa: BLE001
+            total = approved = draft = 0
+        return compute_metrics(
+            list(app.state.runs.values()),
+            artifacts_total=total,
+            artifacts_approved=approved,
+            artifacts_draft=draft,
+            cost_per_mtok_in=float(os.environ.get("CUA_COST_PER_MTOK_IN", "0.15")),
+            cost_per_mtok_out=float(os.environ.get("CUA_COST_PER_MTOK_OUT", "0.60")),
+        )
 
     # -- run report ---------------------------------------------
     @app.get("/runs/{run_id}/report")

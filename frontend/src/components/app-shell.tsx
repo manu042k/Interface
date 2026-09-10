@@ -10,6 +10,7 @@ import {
   LifeBuoy,
   Activity,
   Waypoints,
+  BarChart3,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ const NAV = [
   { href: "/capabilities", label: "Capabilities", icon: ListChecks },
   { href: "/review", label: "Review", icon: ClipboardCheck },
   { href: "/interventions", label: "Interventions", icon: LifeBuoy },
+  { href: "/metrics", label: "Metrics", icon: BarChart3 },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
