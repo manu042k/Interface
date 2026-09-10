@@ -78,6 +78,12 @@ class System:
             confirmed.record_outcome = "reused"
             return confirmed
 
+        # Same flow already recorded under a DIFFERENT name — don't silently
+        # proliferate. Save it (the user asked to record) but flag it loudly.
+        twin = self.store.find_by_fingerprint(None, vendor_app_id, fp)
+        if twin is not None and twin.name != name:
+            built.duplicate_of = f"{twin.name}@v{twin.version}"
+
         latest = self.store.latest(name, vendor_app_id)
         if latest is not None and latest.status == ArtifactStatus.DRAFT:
             saved = self.store.replace_draft(built, artifact_id=latest.artifact_id, version=latest.version)
@@ -87,7 +93,7 @@ class System:
         if latest is not None:
             built.supersedes = latest.version
         saved = self.store.save_draft(built)
-        saved.record_outcome = "new_version" if latest else "new"
+        saved.record_outcome = "duplicate" if built.duplicate_of else ("new_version" if latest else "new")
         return saved
 
     async def summarize_capability(self, artifact: CapabilityArtifact) -> str:

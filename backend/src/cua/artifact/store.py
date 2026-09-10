@@ -261,8 +261,10 @@ class ArtifactStore:
         return CapabilityArtifact.model_validate_json(row["body"]) if row else None
 
     def find_by_fingerprint(
-        self, name: str, vendor_app_id: str, fingerprint: str, *, scope_kind: str = "base"
+        self, name: str | None, vendor_app_id: str, fingerprint: str, *, scope_kind: str = "base"
     ) -> CapabilityArtifact | None:
+        """Same recorded flow already stored? `name=None` searches every
+        capability for this vendor app (cross-name duplicate detection)."""
         if not fingerprint:
             return None
         for a in self.list(name=name, vendor_app_id=vendor_app_id):

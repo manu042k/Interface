@@ -309,8 +309,12 @@ class CapabilityArtifact(BaseModel):
     supersedes: int | None = None
     confirmations: int = 0
     last_confirmed_at: float | None = None
+    # Set when a capability with an IDENTICAL flow_fingerprint already exists
+    # under a DIFFERENT name for this vendor app — "name@vN". A review signal:
+    # the reviewer should reject this and point callers at the existing one.
+    duplicate_of: str | None = None
     # how this row came to be, from the last record() call: new | new_version |
-    # reused | updated_draft. Informational.
+    # reused | updated_draft | duplicate. Informational.
     record_outcome: str | None = None
 
     @model_validator(mode="after")
