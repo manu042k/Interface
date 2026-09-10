@@ -370,14 +370,14 @@ function CapabilityDetail({
                       {cap.steps.map((s) => (
                         <AccordionItem key={s.i} value={String(s.i)}>
                           <AccordionTrigger className="hover:no-underline">
-                            <span className="flex flex-1 items-center gap-2 pr-2 text-left">
-                              <span className="bg-muted text-muted-foreground grid h-5 w-5 shrink-0 place-items-center rounded text-[11px]">
+                            <span className="flex min-w-0 flex-1 items-start gap-2 pr-2 text-left">
+                              <span className="bg-muted text-muted-foreground mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded text-[11px]">
                                 {s.i}
                               </span>
-                              <code className="bg-muted text-foreground shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold">
+                              <code className="bg-muted text-foreground mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold">
                                 {s.action}
                               </code>
-                              <span className="text-muted-foreground truncate text-sm font-normal">
+                              <span className="text-muted-foreground min-w-0 flex-1 break-words text-sm font-normal">
                                 {s.description}
                               </span>
                               {!s.idempotent && (
@@ -440,7 +440,7 @@ function CapabilityDetail({
                                         >
                                           {l.kind}
                                         </span>{" "}
-                                        <code className="text-muted-foreground">
+                                        <code className="text-muted-foreground break-all">
                                           {JSON.stringify(l.params)}
                                         </code>
                                         {l.rationale && (
@@ -619,7 +619,7 @@ function InvokePanel({ cap }: { cap: Capability }) {
                   </span>
                 ) : null}
               </div>
-              <pre className="overflow-auto rounded bg-black/5 p-2 text-xs">
+              <pre className="max-w-full overflow-x-auto rounded bg-black/5 p-2 text-xs whitespace-pre-wrap break-words">
                 {JSON.stringify(
                   result.outputs ?? result.failure_detail ?? {},
                   null,
