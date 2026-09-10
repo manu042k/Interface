@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api, API_BASE, type RunReport as RunReportData } from "@/lib/api";
 import {
@@ -206,6 +207,7 @@ export function RunReport({
   showSummary?: boolean;
 }) {
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [artifactOpen, setArtifactOpen] = useState(false);
   const { data: rep } = useQuery<RunReportData>({
     queryKey: ["report", id],
     queryFn: () => api.report(id),
@@ -276,6 +278,36 @@ export function RunReport({
         </Card>
       )}
 
+      {rep.artifact && (
+        <Card className="print-card">
+          <button
+            type="button"
+            onClick={() => setArtifactOpen((v) => !v)}
+            className="hover:bg-muted/40 flex w-full items-center gap-2 rounded-t-xl px-6 py-4 text-left transition-colors"
+            aria-expanded={artifactOpen}
+          >
+            <CardTitle className="flex flex-1 flex-wrap items-center gap-2 text-base">
+              Capability artifact
+              <span className="text-muted-foreground text-xs font-normal">
+                {run.name}
+                {run.artifact_version ? ` v${run.artifact_version}` : ""} ·{" "}
+                {run.step_count} steps
+              </span>
+            </CardTitle>
+            <ChevronDown
+              className={`text-muted-foreground h-4 w-4 shrink-0 transition-transform ${
+                artifactOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+          {artifactOpen && (
+            <CardContent className="border-t pt-5">
+              <ArtifactView artifact={rep.artifact as never} />
+            </CardContent>
+          )}
+        </Card>
+      )}
+
       {/* one table row per step: step no · action(s) · evidence */}
       <Card className="print-card min-w-0">
         <CardHeader>
@@ -286,9 +318,9 @@ export function RunReport({
         <CardContent className="overflow-x-auto">
           <div
             className={
-              "grid min-w-[640px] gap-x-6 text-sm " +
+              "grid gap-x-6 text-sm " +
               (hasEvidence
-                ? "grid-cols-[2.5rem_minmax(0,1fr)_16rem]"
+                ? "min-w-[640px] grid-cols-[2.5rem_minmax(0,1fr)_16rem]"
                 : "grid-cols-[2.5rem_minmax(0,1fr)]")
             }
           >
@@ -370,51 +402,106 @@ export function RunReport({
       {rep.replays.length > 0 && (
         <Card className="print-card">
           <CardHeader>
-            <CardTitle className="text-base">Replay invocations</CardTitle>
+            <CardTitle className="text-base">
+              Replay invocations
+              <span className="text-muted-foreground ml-1.5 text-sm font-normal">
+                · {rep.replays.length}
+              </span>
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
+          <CardContent className="space-y-2.5">
             {rep.replays.map((r, i) => {
               const rr = r as {
-                params?: unknown;
+                invocation_id?: string;
+                params?: Record<string, unknown>;
                 business_outcome_code?: string;
-                outputs?: unknown;
+                outputs?: Record<string, unknown> | null;
                 recovered_conditions?: string[];
+                steps_executed?: number;
+                duration_seconds?: number;
                 failure_detail?: {
                   step_index: number;
                   expected: string;
                   observed: string;
                 } | null;
               };
+              const params = Object.entries(rr.params ?? {});
+              const outputs = Object.entries(rr.outputs ?? {});
               return (
-                <div key={i} className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
+                <div
+                  key={i}
+                  className="border-border/70 rounded-lg border p-3 text-sm"
+                >
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-muted-foreground font-mono text-xs">
+                      #{i + 1}
+                    </span>
                     <OutcomeBadge outcome={r.outcome} />
-                    <code className="text-xs">
-                      {JSON.stringify(rr.params ?? {})}
-                    </code>
                     {rr.business_outcome_code && (
-                      <code className="text-warning text-xs">
+                      <code className="bg-warning/12 text-warning rounded px-1.5 py-0.5 text-[11px]">
                         {rr.business_outcome_code}
                       </code>
                     )}
+                    <span className="text-muted-foreground ml-auto text-xs tabular-nums">
+                      {rr.steps_executed != null && `${rr.steps_executed} steps`}
+                      {rr.duration_seconds != null &&
+                        ` · ${rr.duration_seconds.toFixed(1)}s`}
+                    </span>
                   </div>
-                  {rr.outputs != null &&
-                    Object.keys(rr.outputs as object).length > 0 && (
-                      <pre className="bg-muted overflow-x-auto rounded p-2 text-[11px]">
-                        {JSON.stringify(rr.outputs, null, 2)}
-                      </pre>
-                    )}
+
+                  {params.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {params.map(([k, v]) => (
+                        <code
+                          key={k}
+                          className="bg-muted rounded px-1.5 py-0.5 text-[11px]"
+                        >
+                          {k}
+                          <span className="text-muted-foreground">
+                            :{typeof v === "string" ? v : JSON.stringify(v)}
+                          </span>
+                        </code>
+                      ))}
+                    </div>
+                  )}
+
+                  {outputs.length > 0 && (
+                    <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                      {outputs.map(([k, v]) => (
+                        <Fragment key={k}>
+                          <dt className="text-muted-foreground font-medium">
+                            {k}
+                          </dt>
+                          <dd className="min-w-0 break-words font-mono">
+                            {typeof v === "string" || typeof v === "number"
+                              ? String(v)
+                              : JSON.stringify(v)}
+                          </dd>
+                        </Fragment>
+                      ))}
+                    </dl>
+                  )}
+
                   {!!rr.recovered_conditions?.length && (
-                    <p className="text-muted-foreground text-xs">
-                      recovered: {rr.recovered_conditions.join(", ")}
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      recovered:{" "}
+                      <span className="text-foreground">
+                        {rr.recovered_conditions.join(", ")}
+                      </span>
                     </p>
                   )}
+
                   {rr.failure_detail && (
-                    <p className="text-destructive text-xs">
+                    <div className="border-destructive/30 bg-destructive/5 text-destructive mt-2 rounded border px-2.5 py-1.5 text-xs">
                       step {rr.failure_detail.step_index}: expected{" "}
-                      {rr.failure_detail.expected}, observed{" "}
-                      {rr.failure_detail.observed}
-                    </p>
+                      <span className="font-medium">
+                        {rr.failure_detail.expected}
+                      </span>
+                      , observed{" "}
+                      <span className="font-medium">
+                        {rr.failure_detail.observed}
+                      </span>
+                    </div>
                   )}
                 </div>
               );
@@ -423,16 +510,6 @@ export function RunReport({
         </Card>
       )}
 
-      {rep.artifact && (
-        <Card className="print-card">
-          <CardHeader>
-            <CardTitle className="text-base">Capability artifact</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ArtifactView artifact={rep.artifact as never} />
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
