@@ -123,6 +123,7 @@ class Orchestrator:
         log.run_started("discovery", target, goal)
 
         transcript = DiscoveryTranscript(run_id=run.run_id, goal=goal, target=target, tenant=tenant, params=params)
+        self._run_target = target  # for _discovery_business_outcome's per-host library lookup
 
         # A goal that is ONLY "log in" has no explicit finish line, so the model
         # can sign on successfully and then thrash (re-click submit, sign off,
@@ -619,6 +620,41 @@ class Orchestrator:
                     surface=surface, run=run, logger=log,
                 )
 
+    async def _discovery_business_outcome(self, session: str) -> tuple[str, str] | None:
+        """The current screen against the same business-outcome patterns replay
+        uses (per-host library + generic not-found / permission phrasings). A
+        match means the goal has a legitimate non-happy answer — end the run
+        with it, don't route a human. Returns (code, message) or None."""
+        from ..conditions import evaluate as eval_condition
+        from ..models import Condition
+        from ..outcomes import business_outcomes_for
+
+        rules = list(business_outcomes_for(getattr(self, "_run_target", "") or ""))
+        rules += [
+            ("member_not_found", ["No member records matched", "no members matched",
+                                  "was not found", "no such member", "record not found"]),
+            ("permission_denied", ["is not authorized to perform this function",
+                                   "do not have permission", "authorization required",
+                                   "access denied"]),
+        ]  # generic fallbacks appended as (code, phrases) tuples
+        try:
+            state = await self.perception.observe(self.adapter, session)
+        except Exception:  # noqa: BLE001
+            return None
+        for r in rules:
+            if isinstance(r, tuple):
+                code, phrases = r
+                cond = Condition(kind="text_present", params={"any": phrases})
+                msg = f"the app reported: {phrases[0]}"
+            else:
+                code, cond, msg = r.code, r.when, (r.message or r.code)
+            try:
+                if await eval_condition(cond, state):
+                    return code, msg
+            except Exception:  # noqa: BLE001
+                continue
+        return None
+
     async def _escalate_and_wait(
         self, run, transcript, session, step, reason, goal, history, log, wait_s,
         last_call: ToolCall | None = None,
@@ -627,6 +663,20 @@ class Orchestrator:
         until an operator hands control back. Returns a resume `note` for the
         agent, or None if there is no escalation path / no operator ever came."""
         from ..models import InterventionStatus
+
+        # Before treating this as "needs a human": is the screen a recognised
+        # BUSINESS OUTCOME? "no member records matched" is a legitimate answer
+        # ("member 12345 doesn't exist"), not something an operator can fix.
+        bo = await self._discovery_business_outcome(session)
+        if bo is not None:
+            code, msg = bo
+            run.status = RunStatus.BUSINESS_OUTCOME
+            run.detail = f"{code}: {msg}"
+            transcript.stuck_reason = None
+            log.event(step, "business_outcome", code=code, message=msg,
+                      detail="recognised at discovery — ending run, no handoff")
+            log.run_finished("business_outcome", code=code)
+            return None
 
         run.status = RunStatus.STUCK
         run.detail = reason
