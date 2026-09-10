@@ -337,6 +337,8 @@ class Orchestrator:
         fail_streak = 0  # consecutive failed actions of the SAME tool (any error)
         fail_streak_tool: str | None = None
         committed: list[dict[str, str]] = []  # banking mutations that succeeded — never reverse/re-submit
+        risk_rejections = 0  # times a human rejected a risky action this run (2 -> dead end)
+        rejected_sigs: set[str] = set()
         try:
             step = 0
             while True:
@@ -646,24 +648,48 @@ class Orchestrator:
                         # Risk-approval gate: pause and ask a human to APPROVE or
                         # REJECT this exact action before it runs. No takeover.
                         phrase = _risk_action_phrase(call, goal)
-                        granted = await self._await_risk_approval(
-                            run, transcript, session, step, phrase, decision.reason,
-                            goal, history, log, handoff_wait_s,
-                        )
+                        sig = _commit_sig(call)
+                        if sig in rejected_sigs:
+                            # The model is re-proposing an action a human already
+                            # rejected — don't ask again, just count it and end.
+                            granted = False
+                            log.event(step, "risk_reject_repeat", proposed_action=phrase)
+                        else:
+                            granted = await self._await_risk_approval(
+                                run, transcript, session, step, phrase, decision.reason,
+                                goal, history, log, handoff_wait_s,
+                            )
                         if granted is None:
                             run.status = RunStatus.DEAD_END
                             run.detail = f"risk approval not granted at step {step}: {phrase}"
                             log.run_finished("dead_end", reason=run.detail)
                             break
                         if granted is False:
-                            note = (
-                                f"A human REJECTED this action: {phrase}. Do NOT attempt it "
-                                f"again. Either do something else the goal allows, or call stuck."
-                            )
-                            history.append(f"{call.tool} rejected by approver")
+                            rejected_sigs.add(sig)
+                            risk_rejections += 1
                             transcript.entries.append(TranscriptEntry(
                                 step, state, call, action, False, {"rejected": phrase}, decision.verdict,
                             ))
+                            # One rejection: tell the model to try a safe path or
+                            # stop. A SECOND rejection this run: the human does not
+                            # want this done — end now, don't loop the gate.
+                            if risk_rejections >= 2:
+                                run.status = RunStatus.DEAD_END
+                                run.detail = (
+                                    f"a human rejected the risky action {risk_rejections}x this run "
+                                    f"({phrase}) — ending; a human must decide how to proceed"
+                                )
+                                transcript.stuck_reason = run.detail
+                                log.event(step, "risk_rejected_final", count=risk_rejections, proposed_action=phrase)
+                                log.run_finished("dead_end", reason=run.detail)
+                                break
+                            note = (
+                                f"A human REJECTED this action: {phrase}. Do NOT propose it or any "
+                                f"variant of it again — it will not be approved. If the goal cannot "
+                                f"be met without it, call stuck now. If there is a genuinely "
+                                f"different, non-risky path the goal allows, take it."
+                            )
+                            history.append(f"{call.tool} rejected by approver ({risk_rejections}x)")
                             step += 1
                             continue
                         log.event(step, "risk_approved", proposed_action=phrase)

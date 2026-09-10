@@ -141,3 +141,36 @@ async def test_risk_approval_gate_open_and_decide(system):
         sys.console.decide(iv.intervention_id, approved=True, operator="op_kim")
 
     await sys.adapter.close_session(sess)
+
+
+async def test_two_risk_rejections_dead_end_instead_of_looping(system, monkeypatch):
+    """A rejected risky action must not re-open the gate forever: the second
+    rejection this run ends it DEAD_END."""
+    sys, mockbank = system
+    from cua.models import RiskClass
+    from cua.policy.engine import PolicyDecision, PolicyVerdict
+
+    real_check = sys.policy.check
+
+    def force_confirm(ctx):
+        d = real_check(ctx)
+        if d.verdict == PolicyVerdict.ALLOW and str(ctx.action_type) == "click":
+            return PolicyDecision(PolicyVerdict.REQUIRE_CONFIRMATION, "test: forced risky click", RiskClass.RISKY_IRREVERSIBLE)
+        return d
+
+    monkeypatch.setattr(sys.policy, "check", force_confirm)
+
+    async def always_reject(*a, **k):
+        return False
+
+    monkeypatch.setattr(sys.orchestrator, "_await_risk_approval", always_reject)
+
+    run, transcript = await sys.orchestrator.run_discovery(
+        goal="look up member 12345 and read their current savings balance",
+        target=f"{mockbank}/search",
+        handoff_wait_s=30,
+    )
+    assert run.status == RunStatus.DEAD_END
+    assert "rejected" in (run.detail or "").lower()
+    # ended promptly, not ground to the step ceiling
+    assert run.step_count < 12
