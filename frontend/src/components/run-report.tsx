@@ -10,14 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogTitle,
@@ -99,14 +91,14 @@ function Thumb({
     <button
       type="button"
       onClick={() => onOpen(src)}
-      className="bg-muted/40 block w-full max-w-[280px] overflow-hidden rounded border transition hover:opacity-80 hover:ring-2 hover:ring-primary/40"
+      className="block w-full max-w-[280px] overflow-hidden rounded border bg-white transition hover:opacity-80 hover:ring-2 hover:ring-primary/40"
       title="Click to enlarge"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={API_BASE + src}
         alt={src}
-        className="h-40 w-full object-contain"
+        className="h-24 w-full object-cover object-top"
       />
     </button>
   );
@@ -291,43 +283,31 @@ export function RunReport({
             Timeline{hasEvidence ? " & evidence" : ""}
           </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-14">Step</TableHead>
-                <TableHead>Action</TableHead>
+        <CardContent>
+          <div className="divide-border/60 max-w-3xl divide-y">
+            {blocks.map((b, i) => (
+              <div
+                key={i}
+                className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-4"
+              >
+                <span className="text-muted-foreground w-7 shrink-0 pt-0.5 font-mono text-xs tabular-nums">
+                  {b.step != null ? `s${b.step}` : "·"}
+                </span>
+                <div className="min-w-0 flex-1 space-y-0.5 sm:max-w-md">
+                  {b.events.map((e, j) => (
+                    <TimelineRow key={j} e={e} />
+                  ))}
+                </div>
                 {hasEvidence && (
-                  <TableHead className="w-[240px]">Evidence</TableHead>
+                  <div className="w-full shrink-0 space-y-2 sm:w-48">
+                    {b.shots.map((s) => (
+                      <Thumb key={s} src={s} onOpen={setLightbox} />
+                    ))}
+                  </div>
                 )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {blocks.map((b, i) => (
-                <TableRow key={i} className="align-top">
-                  <TableCell className="text-muted-foreground pt-2 font-mono text-xs tabular-nums">
-                    {b.step != null ? `s${b.step}` : "·"}
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <div className="space-y-0.5">
-                      {b.events.map((e, j) => (
-                        <TimelineRow key={j} e={e} />
-                      ))}
-                    </div>
-                  </TableCell>
-                  {hasEvidence && (
-                    <TableCell className="py-2">
-                      <div className="space-y-2">
-                        {b.shots.map((s) => (
-                          <Thumb key={s} src={s} onOpen={setLightbox} />
-                        ))}
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </div>
+            ))}
+          </div>
 
           {orphanShots.length > 0 && (
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
