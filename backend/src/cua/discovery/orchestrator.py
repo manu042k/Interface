@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -122,6 +123,32 @@ class Orchestrator:
         log.run_started("discovery", target, goal)
 
         transcript = DiscoveryTranscript(run_id=run.run_id, goal=goal, target=target, tenant=tenant, params=params)
+
+        # A bare "log in" goal has no explicit finish line, so the model can sign
+        # on successfully and then thrash (re-click submit, sign off, retry...).
+        # Derive one: you're done when you've LEFT the auth path and there is no
+        # rejection text on screen. Conservative — needs both.
+        if success_check is None and re.search(
+            r"\b(log\s?in|log\s?on|sign\s?on|sign\s?in|authenticat)", goal, re.I
+        ):
+            from urllib.parse import urlparse
+
+            auth_seg = (urlparse(target).path.rsplit("/", 1)[-1] or "signon").lower()
+            success_check = {
+                "kind": "all_of",
+                "params": {"conditions": [
+                    {"kind": "url_matches", "params": {
+                        "pattern": rf"^(?!.*/(?:{re.escape(auth_seg)}|signon|login|sign-?in|auth)\b).+"
+                    }},
+                    {"kind": "text_absent", "params": {"any": [
+                        "invalid operator", "invalid credentials", "incorrect password",
+                        "login failed", "sign-on failed", "not authorized", "try again",
+                        "access denied",
+                    ]}},
+                ]},
+            }
+            log.event(0, "derived_success_check", detail="login goal — done once off the auth page with no error")
+
         deadline = time.time() + self.cfg.run_timeout_seconds
         history: list[str] = []
         note: str | None = None
@@ -292,6 +319,27 @@ class Orchestrator:
                     note, last_sig, repeats = resumed_note, None, 0
                     deadline = time.time() + self.cfg.run_timeout_seconds  # fresh budget
                     continue
+
+                # Guard a login task from undoing itself: a click aimed at a
+                # sign-off / logout / cancel control means the model thinks it
+                # still needs to log in when it probably already has.
+                if (
+                    call.tool == "click"
+                    and success_check is not None
+                    and re.search(r"\b(log\s?in|log\s?on|sign\s?on|sign\s?in)", goal, re.I)
+                ):
+                    tgt = call.args.get("target") or {}
+                    tval = " ".join(str(v) for v in (tgt.values() if isinstance(tgt, dict) else [tgt])).lower()
+                    if any(w in tval for w in ("sign off", "signoff", "log out", "logout", "log off", "cancel")):
+                        note = (
+                            f"That control ({tval.strip()}) would SIGN YOU OUT. The goal is to "
+                            f"log IN, and you are on {state.url} — you have very likely already "
+                            "signed on. Call assert_state on the success condition (you are off "
+                            "the sign-on page, no error text) and then done. Do NOT click sign-off."
+                        )
+                        log.event(step, "counterproductive_click_blocked", target=tval.strip())
+                        step += 1
+                        continue
 
                 # actionable tool -> build Action, guardrail, execute
                 action, extract_as = self._to_action(call, params)
