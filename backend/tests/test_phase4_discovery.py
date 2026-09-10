@@ -157,6 +157,26 @@ def test_salvage_condition_rebuilds_a_degenerate_assert_state():
     assert sc({"condition": {}, "reasoning": "the page should be loaded now"}) == {}
 
 
+def test_stuck_reason_falls_back_to_reasoning_when_the_key_was_mangled():
+    from cua.discovery.orchestrator import _stuck_reason
+    from cua.models import ToolCall
+
+    # provider layer already swept the mangled `reas1on` into `.reasoning`
+    call = ToolCall(tool="stuck", args={}, reasoning="cannot resolve the fromAccount control")
+    assert _stuck_reason(call) == "cannot resolve the fromAccount control"
+
+    # explicit reason arg wins
+    assert _stuck_reason(ToolCall(tool="stuck", args={"reason": "no such screen"})) == "no such screen"
+
+    # nested context.reason
+    assert _stuck_reason(
+        ToolCall(tool="stuck", args={"context": {"reason": "blocked"}})
+    ) == "blocked"
+
+    # nothing usable anywhere
+    assert _stuck_reason(ToolCall(tool="stuck", args={})) == "unspecified"
+
+
 def test_pop_reasoning_tolerates_a_mangled_key():
     from cua.llm.providers import _pop_reasoning
 

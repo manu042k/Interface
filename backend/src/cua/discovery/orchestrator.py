@@ -454,7 +454,7 @@ class Orchestrator:
                     break
 
                 if call.tool == "stuck":
-                    reason = call.args.get("reason", "unspecified")
+                    reason = _stuck_reason(call)
                     # Don't escalate a run that is actually making progress: the
                     # model sometimes calls stuck right after a string of
                     # SUCCESSFUL actions (confused by an earlier failure it has
@@ -1182,6 +1182,20 @@ def _describe_call(call: ToolCall) -> str:
     if call.tool == "extract":
         return f"extract {a.get('as')} <- {a.get('target')} as {a.get('expected_shape')}"
     return f"{call.tool} {a.get('target') or a.get('condition') or ''}".strip()
+
+
+def _stuck_reason(call: ToolCall) -> str:
+    """Why the model called `stuck`. It puts this under `reason`, but the
+    provider layer sweeps any reason/reasoning-shaped key — including mangled
+    ones like Gemini's `reas1on` — into `call.reasoning` before the loop sees
+    the args, so fall back through that and a nested `context.reason`."""
+    ctx = call.args.get("context")
+    return (
+        (call.args.get("reason") or "").strip()
+        or (str(ctx.get("reason")).strip() if isinstance(ctx, dict) and ctx.get("reason") else "")
+        or (call.reasoning or "").strip()
+        or "unspecified"
+    )
 
 
 def _attempting_str(call: ToolCall | None, goal: str | None) -> str | None:
