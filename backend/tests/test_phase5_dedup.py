@@ -145,3 +145,37 @@ def test_store_set_duplicate_of_flags_and_annotates(tmp_path):
     assert "looks identical" in (out.review_notes or "")
     # persisted
     assert store.get(a.artifact_id, a.version).duplicate_of == "open_share@v1"
+
+
+async def test_semantic_twin_ranks_candidates_by_signal_before_the_model_budget(tmp_path):
+    """With more 'worth asking' candidates than the model-call budget (3), the
+    real twin (same input keys) must be asked — not dropped by name order."""
+    store = ArtifactStore(tmp_path / "s.db")
+
+    # four decoys sharing only the entry URL + partial step overlap (no keys)
+    for nm in ("aaa_first", "bbb_second", "ccc_third", "ddd_fourth"):
+        store.save_draft(_art(
+            nm, entry="https://x.test/signon", keys=["operator", "password"],
+            steps=[("type", "operator"), ("type", "password"), ("click", None), ("type", "member"),
+                   ("click", None), ("select", "share_type"), ("type", "deposit")],
+            checkpoint=Condition(kind="url_matches", params={"pattern": "/x"}),
+        ))
+    # the true twin: same entry AND same full key set, but a different-KIND
+    # checkpoint from `new` (text_present) so it's "worth asking", not "strong"
+    store.save_draft(_art("zzz_real_twin", **{**_OPEN_SHARE_A,
+                                              "checkpoint": Condition(kind="url_matches",
+                                                                      params={"pattern": "/ok"})}))
+
+    new = _art("add_account", **_OPEN_SHARE_B)
+    asked: list[str] = []
+
+    class FakeRouter:
+        async def call_text(self, system, user):
+            # capture which existing capability each call is about
+            asked.append(user.split("existing: ")[1].split(")")[0])
+            return "SAME\nsame function" if "zzz_real_twin" in user else "DIFFERENT\nno"
+
+    hit = await dedup.semantic_twin(new, store, router=FakeRouter())
+    assert hit is not None and hit[0].name == "zzz_real_twin"
+    assert asked[0] == "zzz_real_twin"  # strongest signal asked first
+    assert len(asked) <= 3

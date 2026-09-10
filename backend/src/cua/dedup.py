@@ -114,7 +114,7 @@ async def semantic_twin(
         by_name[c.name] = c
     ordered = sorted(by_name.values(), key=lambda c: (c.status != "approved", c.name))
 
-    ask: list[CapabilityArtifact] = []
+    ask: list[tuple[float, CapabilityArtifact]] = []
     for cand in ordered:
         ov = structural_overlap(built, cand)
         if ov["strong"]:
@@ -124,12 +124,17 @@ async def semantic_twin(
                 f"{int(ov['action_jaccard'] * 100)}% step overlap"
             )
         if ov["worth_asking"]:
-            ask.append(cand)
+            # rank by signal strength, not name order — same-keys beats a bare
+            # step overlap, then higher Jaccard, so the real twin isn't cut by
+            # the model-call budget below.
+            score = (1.0 if ov["same_keys"] else 0.0) + ov["action_jaccard"]
+            ask.append((score, cand))
 
     if not ask or router is None:
         return None
 
-    for cand in ask[:3]:  # bounded: at most 3 model calls, best signals first
+    ask.sort(key=lambda t: t[0], reverse=True)
+    for _score, cand in ask[:3]:  # bounded: at most 3 model calls, strongest signals first
         user = (
             f"APP: {built.vendor_app_id}\n\n"
             f"CAPABILITY A (new)\n  goal: {built.goal_description}\n  steps: {_steps_digest(built)}\n\n"
