@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Maximize2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api, API_BASE, type RunReport as RunReportData } from "@/lib/api";
 import {
@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { OutcomeBadge, StatusBadge } from "@/components/badges";
 import { ArtifactView } from "@/components/artifact-view";
 
@@ -92,15 +93,19 @@ function Thumb({
     <button
       type="button"
       onClick={() => onOpen(src)}
-      className="block w-full max-w-[280px] overflow-hidden rounded border bg-white transition hover:opacity-80 hover:ring-2 hover:ring-primary/40"
+      className="group focus-visible:ring-ring relative block w-full overflow-hidden rounded-md border bg-white shadow-sm transition hover:border-primary/50 focus-visible:ring-2 focus-visible:outline-none"
       title="Click to enlarge"
+      aria-label="Enlarge screenshot"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={API_BASE + src}
-        alt={src}
-        className="h-32 w-full bg-white object-contain"
+        alt=""
+        className="h-36 w-full object-cover object-top"
       />
+      <span className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/45 to-transparent p-1.5 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100">
+        <Maximize2 className="mr-1 h-3 w-3" /> enlarge
+      </span>
     </button>
   );
 }
@@ -167,28 +172,43 @@ function TimelineRow({ e }: { e: Record<string, unknown> }) {
     (typeof e.reasoning === "string" && e.reasoning) ||
     "";
 
+  const dot = bad
+    ? "bg-destructive"
+    : ok === true
+      ? "bg-success"
+      : ev === "decision"
+        ? "bg-muted-foreground/40"
+        : "bg-muted-foreground/60";
+
   return (
-    <div className="flex flex-wrap items-baseline gap-x-2 py-0.5">
-      <span
-        className={
-          bad
-            ? "text-destructive text-xs font-semibold"
-            : ok === true
-              ? "text-success text-xs font-semibold"
-              : "text-xs font-semibold"
-        }
-      >
-        {ev.replaceAll("_", " ")}
-        {ok === true ? " ✓" : ok === false ? " ✗" : ""}
-      </span>
-      {bits.map((b, j) => (
-        <span key={j} className="text-xs">
-          {b}
+    <div className="flex gap-2 py-[3px] text-xs">
+      <span className={`mt-[6px] size-1.5 shrink-0 rounded-full ${dot}`} />
+      <div className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-baseline gap-x-1.5">
+          <span
+            className={
+              bad
+                ? "text-destructive font-semibold"
+                : ok === true
+                  ? "text-success font-semibold"
+                  : "text-foreground font-medium"
+            }
+          >
+            {ev.replaceAll("_", " ")}
+            {ok === true ? " ✓" : ok === false ? " ✗" : ""}
+          </span>
+          {bits.map((b, j) => (
+            <span key={j} className="text-muted-foreground">
+              {b}
+            </span>
+          ))}
         </span>
-      ))}
-      {detail && (
-        <span className="text-muted-foreground w-full text-xs">↳ {detail}</span>
-      )}
+        {detail && (
+          <p className="text-muted-foreground mt-0.5 line-clamp-2 leading-snug">
+            {detail}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -220,6 +240,8 @@ export function RunReport({
   const run = rep.run;
   const { blocks, orphanShots, docs } = buildBlocks(rep.timeline, rep.evidence);
   const hasEvidence = rep.evidence.some((e) => e.endsWith(".png"));
+  const preEvents = blocks.find((b) => b.step == null)?.events ?? [];
+  const stepBlocks = blocks.filter((b) => b.step != null);
 
   const banner =
     run.status === "business_outcome"
@@ -308,8 +330,6 @@ export function RunReport({
         </Card>
       )}
 
-      {/* vertical timeline: a rail of numbered steps, each holding its events
-          and (when captured) its screenshot */}
       <Card className="print-card min-w-0">
         <CardHeader>
           <CardTitle className="text-base">
@@ -317,52 +337,100 @@ export function RunReport({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ol className="relative max-w-4xl">
-            {/* the rail */}
-            <span
-              aria-hidden
-              className="bg-border absolute top-3 bottom-3 left-[15px] w-px"
-            />
-            {blocks.map((b, i) => {
-              const pre = b.step == null;
-              return (
-                <li key={i} className="relative pb-5 pl-11 last:pb-0">
-                  <span
-                    className={
-                      "bg-card absolute left-0 top-0 grid place-items-center rounded-full border text-[11px] font-medium " +
-                      (pre
-                        ? "text-muted-foreground size-8"
-                        : "text-foreground size-8 font-mono tabular-nums")
-                    }
-                  >
-                    {pre ? "•" : b.step}
-                  </span>
+          {preEvents.length > 0 && (
+            <div className="text-muted-foreground mb-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+              {preEvents.map((e, j) => (
+                <Fragment key={j}>
+                  {j > 0 && <span className="opacity-40">·</span>}
+                  <span>{String(e.event).replaceAll("_", " ")}</span>
+                </Fragment>
+              ))}
+            </div>
+          )}
 
-                  <div
-                    className={
-                      b.shots.length > 0
-                        ? "flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4"
-                        : ""
-                    }
-                  >
-                    <div
-                      className={
-                        "border-border/70 min-w-0 space-y-0.5 rounded-lg border px-3 py-2.5 text-sm " +
-                        (b.shots.length > 0 ? "flex-1" : "max-w-2xl")
-                      }
-                    >
-                      {b.events.map((e, j) => (
-                        <TimelineRow key={j} e={e} />
-                      ))}
+          <ol className="max-w-5xl">
+            {stepBlocks.map((b, i) => {
+              const bad = b.events.some(
+                (e) =>
+                  e.ok === false ||
+                  e.verdict === "block" ||
+                  ["hard_failure", "stuck", "business_outcome"].includes(
+                    String(e.event),
+                  ),
+              );
+              const warn = b.events.some(
+                (e) =>
+                  e.drift_signal === true ||
+                  String(e.event) === "recoverable_condition",
+              );
+              const marker = bad
+                ? "bg-destructive"
+                : warn
+                  ? "bg-warning"
+                  : "bg-success";
+              const last =
+                [...b.events].reverse().find((e) => e.event === "action") ??
+                b.events[b.events.length - 1];
+              const gist =
+                (typeof last.action_type === "string" && last.action_type) ||
+                (typeof last.tool === "string" && last.tool) ||
+                String(last.event).replaceAll("_", " ");
+              const url = pathOf(last.url_after);
+              const isLast = i === stepBlocks.length - 1;
+
+              return (
+                <li
+                  key={b.step}
+                  className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-3"
+                >
+                  {/* rail */}
+                  <div className="relative flex justify-center">
+                    <span
+                      className={`ring-card z-10 mt-[7px] size-2.5 rounded-full ring-4 ${marker}`}
+                    />
+                    {!isLast && (
+                      <span className="bg-muted-foreground/20 absolute top-3 bottom-0 w-px" />
+                    )}
+                  </div>
+
+                  {/* content */}
+                  <div className={isLast ? "pb-0" : "pb-6"}>
+                    <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                      <span className="text-muted-foreground font-mono tabular-nums">
+                        s{b.step}
+                      </span>
+                      <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+                        {gist}
+                      </span>
+                      <span
+                        className={
+                          "font-semibold " +
+                          (bad ? "text-destructive" : "text-success")
+                        }
+                      >
+                        {bad ? "failed" : "ok"}
+                      </span>
+                      {url && (
+                        <span className="text-muted-foreground truncate font-mono">
+                          {url}
+                        </span>
+                      )}
                     </div>
 
-                    {b.shots.length > 0 && (
-                      <div className="w-full shrink-0 space-y-2 sm:w-56">
-                        {b.shots.map((s) => (
-                          <Thumb key={s} src={s} onOpen={setLightbox} />
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-6">
+                      <div className="min-w-0 flex-1">
+                        {b.events.map((e, j) => (
+                          <TimelineRow key={j} e={e} />
                         ))}
                       </div>
-                    )}
+                      {b.shots.length > 0 && (
+                        <div className="w-full shrink-0 space-y-2 sm:w-60">
+                          {b.shots.map((s) => (
+                            <Thumb key={s} src={s} onOpen={setLightbox} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </li>
               );
