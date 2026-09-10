@@ -206,3 +206,32 @@ def test_visible_controls_lists_the_real_button_labels():
     out = _visible_controls(s)
     assert "[Continue]" in out and "[Cancel]" in out and "[Post Transfer]" in out
     assert _visible_controls(None) == ""
+
+
+def test_salvage_reads_the_phrase_out_of_the_reasoning_string():
+    """After the provider splits reasoning off the args, the phrase the model
+    quoted ("HOLD RECORDED") must still be recoverable from call.reasoning."""
+    from cua.discovery.orchestrator import _salvage_condition as sc
+
+    cond = sc(
+        {"condition": {"kind": "text_present", "params": {}}},
+        'Verify the hold was applied by checking for the "HOLD RECORDED" text.',
+    )
+    assert cond == {"kind": "text_present", "params": {"any": ["HOLD RECORDED"]}}
+
+
+def test_salvage_from_state_recognises_recorded_and_applied_confirmations():
+    from cua.discovery.orchestrator import _salvage_from_state
+    from cua.models import SurfaceState
+
+    s = SurfaceState(
+        url="x", title="ACCOUNT HOLD APPLIED :: CoreServ", ax_summary="",
+        dom_excerpt=(
+            "VISIBLE PAGE TEXT:\nACCOUNT HOLD APPLIED\nHOLD RECORDED\n"
+            "Confirmation: CN480496\n\nDOM OUTLINE:\n<h1>\n  ACCOUNT HOLD APPLIED\n"
+        ),
+        fingerprint="f",
+    )
+    cond = _salvage_from_state(s)
+    assert cond and cond["kind"] == "text_present"
+    assert "HOLD RECORDED" in cond["params"]["any"]

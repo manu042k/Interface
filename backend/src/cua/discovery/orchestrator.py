@@ -49,19 +49,29 @@ _CAPS_RUN_RE = re.compile(r"\b([A-Z][A-Z0-9 ]{4,40}[A-Z0-9])\b")
 
 
 _CONFIRM_MARKERS = (
-    "changes saved", "has been updated", "has been saved", "successfully updated",
-    "successfully saved", "information updated", "record updated", "update saved",
+    "changes saved", "has been updated", "has been saved", "has been recorded",
+    "has been applied", "has been placed", "has been posted", "has been created",
+    "successfully updated", "successfully saved", "successfully created",
+    "information updated", "record updated", "update saved",
     "transfer posted", "transaction posted", "posted successfully", "payment posted",
-    "share opened", "account opened", "account created", "successfully created",
-    "hold placed", "hold has been placed", "confirmation number", "reference number",
+    "share opened", "account opened", "account created",
+    "hold placed", "hold recorded", "hold applied", "hold removed",
+    "confirmation number", "reference number", "confirmation:",
     "was successful", "completed successfully", "operation complete",
 )
+# past-tense outcome words that make an ALL-CAPS heading a confirmation
+_DONE_WORDS = (
+    "updated", "saved", "posted", "opened", "created", "complete", "completed",
+    "confirm", "confirmed", "applied", "recorded", "placed", "removed", "accepted",
+    "processed", "submitted", "approved", "rejected", "cancelled", "canceled", "denied",
+)
+_HEADING_RE = re.compile(r"<h[1-3]\b[^>]*>\s*\n?\s*([^\n<][^\n<]{2,60})", re.I)
 
 
 def _salvage_from_state(state: SurfaceState | None) -> dict[str, Any] | None:
     """The model gave assert_state nothing usable and its args carry no phrase —
     but it just observed a screen. If that screen shows a recognised confirmation
-    marker, assert THAT (exact-cased as it appears)."""
+    marker (or an outcome-y heading), assert THAT, exact-cased as it appears."""
     if state is None:
         return None
     hay = f"{state.title or ''}\n{state.dom_excerpt or ''}"
@@ -71,10 +81,15 @@ def _salvage_from_state(state: SurfaceState | None) -> dict[str, Any] | None:
         i = low.find(m)
         if i != -1:
             hits.append(hay[i:i + len(m)])  # preserve original casing
-    # also a prominent ALL-CAPS result heading, if present
+    # a page heading that reads like a result ("ACCOUNT HOLD APPLIED")
+    for h in _HEADING_RE.findall(hay):
+        h = h.strip()
+        if any(w in h.lower().split() for w in _DONE_WORDS):
+            hits.append(h)
+    # a prominent ALL-CAPS result banner, heading or not
     for cap in _CAPS_RUN_RE.findall(hay):
         c = cap.strip()
-        if any(w in c.lower() for w in ("updated", "saved", "posted", "opened", "created", "complete", "confirm")):
+        if any(w in c.lower().split() for w in _DONE_WORDS):
             hits.append(c)
     seen = list(dict.fromkeys(hits))
     return {"kind": "text_present", "params": {"any": seen[:4]}} if seen else None
@@ -116,13 +131,13 @@ def _condition_usable(cond: dict[str, Any]) -> bool:
     return bool(kind)
 
 
-def _salvage_condition(args: dict[str, Any]) -> dict[str, Any]:
+def _salvage_condition(args: dict[str, Any], reasoning: str = "") -> dict[str, Any]:
     """Models (esp. Gemini) sometimes send `assert_state`/`wait_for` with
     `condition: {}` and put the phrase they meant to check in the reasoning
-    text (which they also mis-key, e.g. `reas1oning`). Rebuild a usable
-    `text_present` / `url_matches` condition from whatever they gave us; return
-    the original if it's already well-formed, or `{}` if nothing is salvageable
-    (the caller then fails once with a sharp schema hint)."""
+    text (which the provider layer has already split off into `reasoning`).
+    Rebuild a usable `text_present` / `url_matches` condition from whatever they
+    gave us; return the original if it's already well-formed, or `{}` if nothing
+    is salvageable (the caller then fails once with a sharp schema hint)."""
     cond = args.get("condition")
     if isinstance(cond, dict) and _condition_usable(cond):
         return cond
@@ -130,10 +145,10 @@ def _salvage_condition(args: dict[str, Any]) -> dict[str, Any]:
     # fill the missing bit from the reasoning below
     keep_kind = cond.get("kind") if isinstance(cond, dict) else None
 
-    # 1) a phrase the model quoted anywhere in the args (handles mis-keyed
-    #    reasoning by scanning every string value, not a fixed key)
+    # 1) a phrase the model quoted — in reasoning (its stated intent) or
+    #    anywhere in the args (handles a phrase parked in a stray key)
     phrases: list[str] = []
-    for v in args.values():
+    for v in (reasoning, *(x for x in args.values() if isinstance(x, str))):
         if isinstance(v, str):
             phrases += _QUOTED_RE.findall(v)
             phrases += [m.strip() for m in _CAPS_RUN_RE.findall(v)]
@@ -1104,14 +1119,14 @@ class Orchestrator:
         if t == "navigate":
             return Action(type=ActionType.NAVIGATE, value=a["url"]), None
         if t == "wait_for":
-            return Action(type=ActionType.WAIT_FOR, condition=_salvage_condition(a), timeout_ms=int(a.get("timeout_ms", 15000))), None
+            return Action(type=ActionType.WAIT_FOR, condition=_salvage_condition(a, call.reasoning), timeout_ms=int(a.get("timeout_ms", 15000))), None
         if t == "extract":
             return (
                 Action(type=ActionType.EXTRACT, target_description=a["target"], expected_shape=a.get("expected_shape", "string")),
                 a.get("as"),
             )
         if t == "assert_state":
-            return Action(type=ActionType.ASSERT_STATE, condition=_salvage_condition(a)), None
+            return Action(type=ActionType.ASSERT_STATE, condition=_salvage_condition(a, call.reasoning)), None
         if t == "scroll":
             tgt = {"text": a["to_text"]} if a.get("to_text") else None
             return Action(type=ActionType.SCROLL, target_description=tgt, value=str(a.get("direction", "down"))), None

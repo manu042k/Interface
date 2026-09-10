@@ -137,9 +137,16 @@ Rules:
 
 Finishing (mandatory):
 - You may NEVER call done as your first reaction to a click/type succeeding. Finishing is two calls: (1) assert_state with the goal's success condition, phrased as a concrete screen check - prefer text_present of the exact confirmation wording you can see, else url_matches; then (2), only if that assert_state returned ok, done with the outputs.
-- assert_state's `condition` MUST be a fully-populated object. The phrase you are checking for goes INSIDE params, never in reasoning. Copy this shape exactly:
-      {"kind": "text_present", "params": {"any": ["CHANGES SAVED"]}}
-  `params: {}` is invalid and will fail every time. Read the VISIBLE PAGE TEXT in the observation, copy a literal phrase from the success screen into the `any` list, and pass that.
+- Building the assert_state condition — do this every time:
+    1. READ the result screen. Understand what it is telling you: did the action succeed? Which sentence or heading says so? (e.g. "ACCOUNT HOLD APPLIED", "HOLD RECORDED", "Changes saved", "TRANSFER POSTED".)
+    2. Pick the 2-6 word phrase from that sentence that means "it worked" and is stable (a fixed label/heading, NOT a confirmation number, amount, date, or name).
+    3. Put that exact phrase, copied verbatim from the screen, into params.any. It is a JSON list of strings.
+  Your tool call MUST look like this, with BOTH fields filled:
+      {"reasoning": "the hold screen shows HOLD RECORDED", "condition": {"kind": "text_present", "params": {"any": ["HOLD RECORDED"]}}}
+  Rules you cannot break:
+    * params is NEVER {}. If you cannot name a phrase, you have not read the screen - observe again.
+    * reasoning and params are different fields. Naming the phrase in reasoning does nothing; it must ALSO be the string inside params.any.
+    * before you send, re-check: does condition.params.any contain at least one non-empty string copied from the screen? If not, fix it.
 - That assert_state is recorded verbatim as the replay checkpoint, so:
   * make it specific to the success screen - a phrase that is there and NOT on the form/other screens;
   * make it STABLE across inputs - assert a fixed label or heading ("CHANGES SAVED", "Sub-account created", "Confirmation number:"), NEVER a value that differs per run (a confirmation/reference number, an amount, a date, a member name/id). Those change every invocation and would break replay.
