@@ -11,9 +11,9 @@ when replay or discovery gets stuck.
 > replay is how the agent invokes it in production.
 
 - **Design write-up:** [`REPORT.md`](./REPORT.md) (7 required headings)
-- **End-to-end evidence:** [`evidence/`](./evidence/) — a **real** `gpt-4o-mini` discovery run (via OpenRouter) with its recorded `artifact.json`, plus deterministic replays of that artifact covering every outcome class (`recoverable_then_success`, `business_outcome` ×2 codes, `hard_failure`). The offline `scripted` pilot is a CI/no-key demo path only, not evidence.
-- **User stories / build log:** [`USER_STORIES.md`](./USER_STORIES.md) — 45 stories, 10 phases, each committed with tests
-- **Original design doc:** [`TDD-ComputerUse-Automation-System.md`](./TDD-ComputerUse-Automation-System.md)
+- **End-to-end evidence:** [`evidence/`](./evidence/) — a **real** `gpt-4o-mini` discovery run (via OpenRouter) with its recorded `artifact.json`, deterministic replays of that artifact covering every outcome class (`recoverable_then_success`, `business_outcome` ×2 codes, `hard_failure`), and a real discovery → stuck → live-session handoff → resume bundle. The offline `scripted` pilot is a CI/no-key demo path only, not evidence.
+- **User stories / build log:** [`docs/USER_STORIES.md`](./docs/USER_STORIES.md) — 45 stories, 10 phases, each committed with tests
+- **Original design doc:** [`docs/TDD-ComputerUse-Automation-System.md`](./docs/TDD-ComputerUse-Automation-System.md)
 
 ## Layout
 
@@ -115,7 +115,7 @@ runs and the console still works minus the live view.
 ## Tests
 
 ```bash
-cd backend && pytest        # 83 tests (~55s); sandbox tests skip cleanly without Docker/image
+cd backend && pytest        # 114 tests (~50s); sandbox tests skip cleanly without Docker/image
 ruff check src tests
 cd ../frontend && npm run build
 ```
