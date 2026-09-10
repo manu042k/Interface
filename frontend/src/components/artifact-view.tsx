@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, Flag, RotateCcw, ShieldAlert } from "lucide-react";
+import { Crosshair, Flag, RotateCcw, ShieldAlert } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 type Condition = {
   kind?: string;
@@ -51,13 +56,18 @@ function phraseCondition(c?: Condition | null): string {
   if (!c?.kind) return "-";
   const p = c.params ?? {};
   const s = (k: string) => (p[k] === undefined ? "…" : String(p[k]));
+  const phrases = () => {
+    const any = Array.isArray(p.any) ? (p.any as unknown[]).map(String) : [];
+    if (any.length) return any.map((x) => `“${x}”`).join(" / ");
+    return p.text !== undefined ? `“${String(p.text)}”` : "“…”";
+  };
   switch (c.kind) {
     case "url_matches":
       return `URL matches ${s("pattern") !== "…" ? s("pattern") : s("url")}`;
     case "text_present":
-      return `“${s("text")}” is visible`;
+      return `${phrases()} is visible`;
     case "text_absent":
-      return `“${s("text")}” is gone`;
+      return `${phrases()} is gone`;
     case "element_present":
       return `${s("selector")} is present`;
     case "element_absent":
@@ -146,7 +156,7 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
           )}
         </ContractRow>
         <ContractRow label="Done when">
-          <span className="text-foreground">
+          <span className="text-foreground break-words">
             {phraseCondition(artifact.checkpoint)}
             {artifact.checkpoint?.params?.["_weak"] === true && (
               <span className="text-warning">
@@ -162,11 +172,96 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
       {/* Steps -------------------------------------------------------- */}
       <section>
         <SectionTitle count={artifact.steps.length}>Steps</SectionTitle>
-        <ol className="border-border/70 divide-border/60 mt-2 divide-y rounded-lg border">
+        <Accordion type="multiple" className="mt-2 gap-0">
           {artifact.steps.map((s) => (
-            <StepRow key={s.step_index} step={s} />
+            <AccordionItem key={s.step_index} value={String(s.step_index)}>
+              <AccordionTrigger className="hover:no-underline">
+                <span className="flex min-w-0 flex-1 items-start gap-2 pr-2 text-left">
+                  <span className="bg-muted text-muted-foreground mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded text-[11px]">
+                    {s.step_index}
+                  </span>
+                  <code className="bg-muted text-foreground mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                    {s.action_type}
+                  </code>
+                  <span className="text-muted-foreground min-w-0 flex-1 break-words text-sm font-normal">
+                    {s.description}
+                  </span>
+                  {!s.idempotent && (
+                    <span className="bg-warning/12 text-warning ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium">
+                      mutates state
+                    </span>
+                  )}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2 pl-7 text-xs">
+                  <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+                    {s.value_binding?.param && (
+                      <span>
+                        input{" "}
+                        <code className="text-foreground">
+                          ← {s.value_binding.param}
+                        </code>
+                      </span>
+                    )}
+                    {s.value_binding?.literal != null && (
+                      <span>input ← “{s.value_binding.literal}”</span>
+                    )}
+                    {s.output_binding && (
+                      <span>
+                        output{" "}
+                        <code className="text-foreground">
+                          → {s.output_binding.field} ({s.output_binding.shape})
+                        </code>
+                      </span>
+                    )}
+                    <span>{s.idempotent ? "idempotent" : "NON-idempotent"}</span>
+                    {s.step_checkpoint?.kind && (
+                      <span>verify {phraseCondition(s.step_checkpoint)}</span>
+                    )}
+                  </div>
+
+                  {s.locator_spec.length > 0 ? (
+                    <div>
+                      <div className="text-muted-foreground mb-1 flex items-center gap-1 uppercase">
+                        <Crosshair className="h-3 w-3" /> finds the element by
+                      </div>
+                      <ol className="space-y-1">
+                        {s.locator_spec.map((l, li) => (
+                          <li
+                            key={li}
+                            className={li === 0 ? "" : "text-muted-foreground"}
+                          >
+                            <span className="tabular-nums">{l.rank}.</span>{" "}
+                            <span className={li === 0 ? "font-medium" : ""}>
+                              {l.kind}
+                            </span>
+                            {locatorParams(l.params) && (
+                              <code className="ml-1 break-all">
+                                {locatorParams(l.params)}
+                              </code>
+                            )}
+                            {l.rationale && (
+                              <span className="text-muted-foreground/80 block pl-4">
+                                ↳ {l.rationale}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      {s.step_checkpoint
+                        ? `checkpoint: ${phraseCondition(s.step_checkpoint)}`
+                        : "no element - control / assertion step"}
+                    </p>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           ))}
-        </ol>
+        </Accordion>
       </section>
 
       {/* Handles ---------------------------------------------------------- */}
@@ -215,96 +310,6 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
         </section>
       )}
     </div>
-  );
-}
-
-/* ---- step row ------------------------------------------------------------ */
-
-function StepRow({ step: s }: { step: Step }) {
-  const [open, setOpen] = useState(false);
-  const primary = s.locator_spec[0];
-  const rest = s.locator_spec.slice(1);
-
-  return (
-    <li className="px-3 py-2.5">
-      <div className="flex items-baseline gap-2.5">
-        <span className="text-muted-foreground/70 w-4 shrink-0 text-right text-xs tabular-nums">
-          {s.step_index}
-        </span>
-        <span className="bg-muted text-foreground/70 mt-px shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-          {s.action_type}
-        </span>
-        <span className="flex-1 text-sm">{s.description}</span>
-        {!s.idempotent && (
-          <span className="bg-warning/12 text-warning shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium">
-            mutates state
-          </span>
-        )}
-      </div>
-
-      <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 pl-[26px] text-xs">
-        {s.value_binding?.param && (
-          <span>
-            input <code className="text-foreground">← {s.value_binding.param}</code>
-          </span>
-        )}
-        {s.value_binding?.literal != null && (
-          <span>input ← “{s.value_binding.literal}”</span>
-        )}
-        {s.output_binding && (
-          <span>
-            output{" "}
-            <code className="text-foreground">
-              → {s.output_binding.field} ({s.output_binding.shape})
-            </code>
-          </span>
-        )}
-        {s.step_checkpoint?.kind && (
-          <span>verify {phraseCondition(s.step_checkpoint)}</span>
-        )}
-        {primary && (
-          <span>
-            via <span className="text-foreground">{primary.kind}</span>
-            {locatorParams(primary.params) && (
-              <code className="ml-1">{locatorParams(primary.params)}</code>
-            )}
-          </span>
-        )}
-        {rest.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="hover:text-foreground inline-flex items-center gap-0.5"
-          >
-            {open ? "hide" : `+${rest.length} fallback${rest.length > 1 ? "s" : ""}`}
-            <ChevronDown
-              className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
-            />
-          </button>
-        )}
-      </div>
-
-      {open && (
-        <ol className="mt-1.5 space-y-1 pl-[26px] text-xs">
-          {s.locator_spec.map((l, i) => (
-            <li key={i} className="text-muted-foreground">
-              <span className="tabular-nums">{l.rank}.</span>{" "}
-              <span className={i === 0 ? "text-foreground font-medium" : ""}>
-                {l.kind}
-              </span>
-              {locatorParams(l.params) && (
-                <code className="ml-1">{locatorParams(l.params)}</code>
-              )}
-              {l.rationale && (
-                <span className="text-muted-foreground/80 block pl-4">
-                  {l.rationale}
-                </span>
-              )}
-            </li>
-          ))}
-        </ol>
-      )}
-    </li>
   );
 }
 

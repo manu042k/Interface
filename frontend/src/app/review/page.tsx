@@ -63,14 +63,13 @@ export default function ReviewPage() {
       </header>
 
       <div className="bg-card overflow-x-auto rounded-lg border">
-        <Table className="min-w-[720px]">
+        <Table className="min-w-[640px]">
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Goal</TableHead>
               <TableHead>Risk</TableHead>
-              <TableHead>Steps</TableHead>
-              <TableHead>Known outcomes</TableHead>
+              <TableHead className="text-right">Steps</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -97,18 +96,14 @@ export default function ReviewPage() {
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-muted-foreground max-w-[280px] truncate align-top">
+                <TableCell className="text-muted-foreground max-w-[420px] truncate align-top">
                   {a.goal}
                 </TableCell>
                 <TableCell className="align-top whitespace-nowrap">
                   <RiskBadge risk={a.risk_class} />
                 </TableCell>
-                <TableCell className="align-top">{a.steps}</TableCell>
-                <TableCell
-                  className="text-muted-foreground max-w-[220px] truncate align-top text-xs"
-                  title={a.known_outcomes.join(", ")}
-                >
-                  {a.known_outcomes.join(", ") || "-"}
+                <TableCell className="text-muted-foreground align-top text-right tabular-nums">
+                  {a.steps}
                 </TableCell>
                 <TableCell className="align-top text-right">
                   <Button size="sm" variant="outline" onClick={() => setOpen(a)}>
@@ -120,7 +115,7 @@ export default function ReviewPage() {
             {rows.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={5}
                   className="text-muted-foreground py-8 text-center"
                 >
                   No drafts pending.
@@ -138,12 +133,9 @@ export default function ReviewPage() {
       </div>
 
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
-        <DialogContent
-          showCloseButton={false}
-          className="flex max-h-[88vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl"
-        >
-          <DialogHeader className="border-b px-5 py-4 text-left">
-            <div className="flex flex-wrap items-center gap-2">
+        <DialogContent className="flex h-[85vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+          <DialogHeader className="space-y-0 border-b px-5 py-4 text-left">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pr-6">
               <DialogTitle className="font-mono text-sm">
                 {open?.name}
               </DialogTitle>
@@ -152,18 +144,18 @@ export default function ReviewPage() {
               </span>
               <RiskBadge risk={open?.risk_class} />
             </div>
+          </DialogHeader>
+
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
             {open?.goal && (
-              <p className="text-muted-foreground mt-1 text-sm">{open.goal}</p>
+              <p className="text-sm leading-relaxed">{open.goal}</p>
             )}
             {open?.review_notes &&
               (open.record_outcome === "drift_patch" || open.duplicate_of) && (
-                <p className="border-warning/30 bg-warning/10 text-warning mt-2 rounded border px-3 py-2 text-xs">
+                <p className="border-border bg-muted/40 text-muted-foreground rounded-md border border-l-2 border-l-primary/60 px-3 py-2 text-xs leading-relaxed">
                   {open.review_notes}
                 </p>
               )}
-          </DialogHeader>
-
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
             {full.isLoading && (
               <p className="text-muted-foreground text-sm">loading artifact…</p>
             )}
