@@ -99,14 +99,14 @@ function Thumb({
     <button
       type="button"
       onClick={() => onOpen(src)}
-      className="block w-full max-w-[220px] overflow-hidden rounded border transition hover:opacity-80 hover:ring-2 hover:ring-primary/40"
+      className="bg-muted/40 block w-full max-w-[280px] overflow-hidden rounded border transition hover:opacity-80 hover:ring-2 hover:ring-primary/40"
       title="Click to enlarge"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={API_BASE + src}
         alt={src}
-        className="h-24 w-full object-cover object-top"
+        className="h-40 w-full object-contain"
       />
     </button>
   );
