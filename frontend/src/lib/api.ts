@@ -126,6 +126,16 @@ export type ArtifactSummary = {
   risk_class: string;
   steps: number;
   known_outcomes: string[];
+  record_outcome:
+    | "new"
+    | "new_version"
+    | "reused"
+    | "updated_draft"
+    | "duplicate"
+    | "drift_patch"
+    | null;
+  supersedes: number | null;
+  review_notes: string | null;
 };
 
 export type Intervention = {

@@ -33,6 +33,7 @@ from ..models import (
     ActionType,
     CapabilityArtifact,
     Condition,
+    DriftCandidate,
     FailureDetail,
     ReplayOutcome,
     ReplayResult,
@@ -188,6 +189,7 @@ class ReplayExecutor:
                     session, log, step_index=len(artifact.steps) - 1,
                     expected=f"final checkpoint: {artifact.checkpoint.description or artifact.checkpoint.kind}",
                     observed=f"url={final_state.url}", started=started, recovered=recovered,
+                    propose_drift=True,
                 )
 
             out_errs = self._validate_outputs(artifact, outputs)
@@ -234,10 +236,16 @@ class ReplayExecutor:
             )
             log.event(step.step_index, "locator_resolution", **res.as_event())
             if not res.ok:
+                # A recorded control that won't resolve is often drift: the page
+                # changed under us (a session-expiry redirect, a new error
+                # screen). Propose a patch only when the page actually looks
+                # exceptional — a transient miss on a normal page shouldn't file
+                # a rule.
                 return await self._hard_failure(
                     session, log, step_index=step.step_index,
                     expected=f"resolve a control for: {step.description}",
-                    observed=res.error or "unresolvable", started=0.0, recovered=recovered, no_duration=True,
+                    observed=res.error or "unresolvable", started=0.0, recovered=recovered,
+                    no_duration=True, propose_drift=True, require_exceptional=True,
                 )
             concrete_target = res.concrete
             matched_strategy = res.matched_strategy
@@ -314,7 +322,7 @@ class ReplayExecutor:
                 return await self._hard_failure(
                     session, log, step_index=step.step_index,
                     expected=_expected_str(step), observed=_observed_str(result, post_state),
-                    started=0.0, recovered=recovered, no_duration=True,
+                    started=0.0, recovered=recovered, no_duration=True, propose_drift=True,
                 )
 
             # idempotent step: bounded retry with backoff
@@ -325,7 +333,7 @@ class ReplayExecutor:
             return await self._hard_failure(
                 session, log, step_index=step.step_index,
                 expected=_expected_str(step), observed=_observed_str(result, post_state),
-                started=0.0, recovered=recovered, no_duration=True,
+                started=0.0, recovered=recovered, no_duration=True, propose_drift=True,
             )
 
     # -- exceptional-state matching ---------------------------------
@@ -554,9 +562,11 @@ class ReplayExecutor:
         return False
 
     async def _hard_failure(
-        self, session, log, *, step_index, expected, observed, started, recovered, no_duration=False
+        self, session, log, *, step_index, expected, observed, started, recovered,
+        no_duration=False, propose_drift=False, require_exceptional=False,
     ) -> ReplayResult:
         refs: list[str] = []
+        snap = None
         try:
             snap = await self.adapter.snapshot(session)
             if snap.screenshot_png:
@@ -566,6 +576,28 @@ class ReplayExecutor:
         except Exception:  # noqa: BLE001
             pass
         log.event(step_index, "hard_failure", expected=expected, observed=observed, evidence=refs)
+
+        # An unrecognised screen state that broke a checkpoint — neither a known
+        # business outcome nor a recoverable rule. Record what we saw so drift
+        # self-healing can propose a v+1 DRAFT rule for review. (No diagnosis
+        # here — ADR-07 keeps the replay loop LLM-free.)
+        drift = None
+        if propose_drift and snap is not None:
+            html = getattr(snap, "html", "") or ""
+            text = getattr(snap, "visible_text", "") or ""
+            exceptional = _looks_exceptional(html, text)
+            phrases = _distinctive_phrases(html, text) if (exceptional or not require_exceptional) else []
+            if phrases:
+                drift = DriftCandidate(
+                    from_step=max(step_index, 0),
+                    observed_url=getattr(snap, "url", "") or "",
+                    observed_phrases=phrases,
+                    failed_checkpoint=expected,
+                    evidence_refs=refs,
+                )
+                log.event(step_index, "drift_signal", observed=phrases[0],
+                          detail="unrecognised state — drift patch will be proposed for review")
+
         log.run_finished("hard_failure", step_index=step_index)
         return ReplayResult(
             outcome=ReplayOutcome.HARD_FAILURE,
@@ -574,7 +606,62 @@ class ReplayExecutor:
             recovered_conditions=recovered,
             steps_executed=step_index,
             duration_seconds=0.0 if no_duration else time.time() - started,
+            drift_candidate=drift,
         )
+
+
+_HEADING_RE = re.compile(
+    r"<(?:h1|h2|h3|font[^>]*class=[\"']?err|[a-z]+[^>]*class=[\"'][^\"']*\berror\b)[^>]*>(.*?)<",
+    re.I | re.S,
+)
+_ERR_LI_RE = re.compile(r"<li[^>]*>(.*?)</li>", re.I | re.S)
+_TAG_STRIP_RE = re.compile(r"<[^>]+>")
+_WS = re.compile(r"\s+")
+_EXCEPTIONAL_RE = re.compile(
+    r"class=[\"']?err|\berror\b|could not|not authorized|unauthori[sz]ed|invalid|"
+    r"denied|forbidden|expired|session (has )?ended|timed? ?out|unavailable|"
+    r"try again|no longer|maintenance|dormant|suspended|locked|on hold",
+    re.I,
+)
+
+
+def _looks_exceptional(html: str, visible_text: str) -> bool:
+    """Does this page read like an error / rejection / session-loss screen (vs
+    an ordinary page where a control was just briefly missed)?"""
+    return bool(_EXCEPTIONAL_RE.search(html) or _EXCEPTIONAL_RE.search(visible_text))
+
+
+def _distinctive_phrases(html: str, visible_text: str, *, limit: int = 4) -> list[str]:
+    """Short, human-meaningful strings off a page we didn't expect, ranked so the
+    *actionable* text leads: sentences that read like an error/rejection, then
+    error-list items, then exceptional-looking headings, then the rest. These
+    become the `any` list of a candidate `text_present` rule, so the lead phrase
+    matters — "session has ended" is a rule; "Home Member Search" is noise."""
+    seen: set[str] = set()
+    lead: list[str] = []   # matches _EXCEPTIONAL_RE — the useful stuff
+    rest: list[str] = []
+
+    def _add(s: str) -> None:
+        s = _WS.sub(" ", _TAG_STRIP_RE.sub("", s)).strip()
+        m = _EXCEPTIONAL_RE.search(s)
+        # a long chunk with nav/heading text glued in front of the real message
+        # ("Home Member Search Your session has ended…") — re-anchor at the match
+        if m and m.start() > 24:
+            s = s[m.start():].strip()
+        if not (8 <= len(s) <= 140) or s.lower() in seen:
+            return
+        seen.add(s.lower())
+        (lead if m else rest).append(s)
+
+    for sent in re.split(r"(?<=[.!?])\s+|\n+|\s{2,}|\s*[|•·]\s*", visible_text):
+        _add(sent)
+    if _EXCEPTIONAL_RE.search(html):
+        for m in _ERR_LI_RE.finditer(html):
+            _add(m.group(1))
+    for m in _HEADING_RE.finditer(html):
+        _add(m.group(1))
+
+    return (lead + rest)[:limit]
 
 
 def _expected_str(step: Step) -> str:

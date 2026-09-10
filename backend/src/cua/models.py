@@ -382,6 +382,21 @@ class FailureDetail(BaseModel):
     evidence_refs: list[str] = Field(default_factory=list)
 
 
+class DriftCandidate(BaseModel):
+    """A replay landed on a screen that matched NO known_outcome and NO
+    recoverable_rule, and the step/checkpoint broke. Replay itself just records
+    what it saw (no LLM in the loop — ADR-07); `cua.drift.propose_patch` turns
+    this into a v+1 DRAFT with a candidate rule for a human to review."""
+
+    from_step: int
+    observed_url: str = ""
+    # short distinctive strings off the failing page (headings, error text) —
+    # the raw material for a `text_present` rule
+    observed_phrases: list[str] = Field(default_factory=list)
+    failed_checkpoint: str = ""
+    evidence_refs: list[str] = Field(default_factory=list)
+
+
 class ReplayResult(BaseModel):
     outcome: ReplayOutcome
     outputs: dict[str, Any] | None = None
@@ -394,6 +409,9 @@ class ReplayResult(BaseModel):
     evidence_refs: list[str] = Field(default_factory=list)
     steps_executed: int = 0
     duration_seconds: float = 0.0
+    # Set on a HARD_FAILURE that broke on an unrecognised screen state — feeds
+    # drift self-healing (a v+1 DRAFT rule proposal), never auto-applied.
+    drift_candidate: DriftCandidate | None = None
 
 
 class InterventionRequest(BaseModel):

@@ -190,3 +190,113 @@ async def test_stuck_replay_escalates_and_resumes_after_handback(sys_with_capabi
     assert "human_intervention" in result.recovered_conditions
     assert result.outputs["savings_balance"]["amount"] == 4182.55
     assert system.escalation.get(iv.intervention_id).status == InterventionStatus.RESOLVED
+
+
+# --- (c) drift self-healing: unrecognised state -> v+1 DRAFT rule ---
+async def test_hard_failure_on_unrecognised_state_carries_a_drift_candidate(
+    sys_with_capability, monkeypatch
+):
+    system, art, mockbank = sys_with_capability
+    monkeypatch.setenv("MOCKBANK_INTERSTITIAL", "0")
+    broken = art.model_copy(deep=True)
+    broken.checkpoint = broken.checkpoint.model_copy(
+        update={"kind": "text_present", "params": {"text": "TOTALLY UNEXPECTED SCREEN xyzzy"}}
+    )
+    result = await system.replay.execute(
+        broken, {"member_id": "12345"}, target=f"{mockbank}/search", run_id="inv_drift1"
+    )
+    assert result.outcome == ReplayOutcome.HARD_FAILURE
+    cand = result.drift_candidate
+    assert cand is not None
+    assert cand.observed_phrases  # harvested real text off the page
+    assert cand.observed_url
+    assert cand.failed_checkpoint  # what we expected but didn't get
+
+
+async def test_propose_patch_saves_a_review_draft_with_a_candidate_rule(sys_with_capability):
+    from cua import drift
+    from cua.models import ArtifactStatus, DriftCandidate
+
+    system, art, _ = sys_with_capability
+    before = system.store.latest(art.name, art.vendor_app_id).version
+
+    cand = DriftCandidate(
+        from_step=2,
+        observed_url="http://x/member/12345",
+        observed_phrases=["Account dormant — visit a branch", "Service unavailable for this member"],
+        failed_checkpoint="after click: balance row is visible",
+    )
+    draft = drift.propose_patch(art, cand, store=system.store, run_id="inv_drift2")
+
+    assert draft is not None
+    assert draft.status == ArtifactStatus.DRAFT
+    assert draft.version == before + 1
+    assert draft.supersedes == art.version
+    assert draft.record_outcome == "drift_patch"
+    assert draft.created_from_run_id == "inv_drift2"
+    new_rule = draft.known_outcomes[-1]
+    assert new_rule.code.startswith("unclassified_")
+    assert new_rule.observed is True
+    assert "Account dormant — visit a branch" in new_rule.when.params["any"]
+    # nothing was auto-approved
+    assert system.store.latest_approved(art.name, art.vendor_app_id).version == art.version
+
+
+async def test_propose_patch_skips_a_state_an_existing_rule_already_covers(sys_with_capability):
+    from cua import drift
+    from cua.models import DriftCandidate
+
+    system, art, _ = sys_with_capability
+    known_phrase = art.known_outcomes[0].when.params.get("any", ["no such member"])[0]
+    cand = DriftCandidate(from_step=1, observed_phrases=[known_phrase, "and some more text"])
+    assert drift.propose_patch(art, cand, store=system.store, run_id="inv_drift3") is None
+
+
+async def test_propose_patch_reuses_an_open_drift_draft_instead_of_stacking(sys_with_capability):
+    from cua import drift
+    from cua.models import DriftCandidate
+
+    system, art, _ = sys_with_capability
+    base = system.store.latest(art.name, art.vendor_app_id).version
+
+    d1 = drift.propose_patch(
+        art, DriftCandidate(from_step=2, observed_phrases=["First weird page"]),
+        store=system.store, run_id="r1",
+    )
+    d2 = drift.propose_patch(
+        art, DriftCandidate(from_step=3, observed_phrases=["A different weird page"]),
+        store=system.store, run_id="r2",
+    )
+    assert d1 is not None and d2 is not None
+    assert d1.version == base + 1
+    assert d2.version == base + 1  # same draft version, not base+2
+    codes = [r.code for r in d2.known_outcomes]
+    assert any("first_weird_page" in c for c in codes)
+    assert any("a_different_weird_page" in c for c in codes)
+
+
+# --- (c) phrase extraction gates: actionable text leads, chrome is noise ---
+def test_distinctive_phrases_leads_with_the_exceptional_sentence():
+    from cua.replay.executor import _distinctive_phrases, _looks_exceptional
+
+    html = (
+        "<table><tr><td><b>CoreServ Back-Office</b> | <a href='/'>Home</a> "
+        "<a href='/search'>Member Search</a></td></tr></table>"
+        "<table bgcolor='#fff3cd'><tr><td>Your CoreServ session has ended "
+        "(idle timeout). Return to Member Search and start again.</td></tr></table>"
+    )
+    text = ("CoreServ Back-Office | Home Member Search\n"
+            "Your CoreServ session has ended (idle timeout). Return to Member Search and start again.")
+
+    assert _looks_exceptional(html, text) is True
+    phrases = _distinctive_phrases(html, text)
+    assert phrases and "session has ended" in phrases[0].lower()  # not the nav chrome
+
+
+def test_looks_exceptional_is_false_for_an_ordinary_page():
+    from cua.replay.executor import _looks_exceptional
+
+    assert _looks_exceptional(
+        "<h1>Member 12345</h1><table><tr><td>Savings</td><td>$4,182.55</td></tr></table>",
+        "Member 12345 Savings $4,182.55",
+    ) is False

@@ -79,6 +79,11 @@ export default function ReviewPage() {
               <TableRow key={a.artifact_id + a.version}>
                 <TableCell className="font-mono text-xs">
                   {a.name} v{a.version}
+                  {a.record_outcome === "drift_patch" && (
+                    <span className="bg-warning/12 text-warning border-warning/30 ml-2 rounded border px-1.5 py-0.5 text-[10px] font-medium">
+                      drift patch
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell className="text-muted-foreground max-w-sm truncate">
                   {a.goal}
@@ -134,6 +139,11 @@ export default function ReviewPage() {
             </div>
             {open?.goal && (
               <p className="text-muted-foreground mt-1 text-sm">{open.goal}</p>
+            )}
+            {open?.record_outcome === "drift_patch" && open?.review_notes && (
+              <p className="border-warning/30 bg-warning/10 text-warning mt-2 rounded border px-3 py-2 text-xs">
+                {open.review_notes}
+              </p>
             )}
           </DialogHeader>
 

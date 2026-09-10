@@ -98,3 +98,49 @@ async def test_target_probe_reports_reachability(client):
     assert bad.json()["ok"] is False and bad.json()["reason"] == "unreachable"
     invalid = await client.get("/targets/probe", params={"url": "banana"})
     assert invalid.json()["ok"] is False and invalid.json()["reason"] == "invalid"
+
+
+async def test_replay_hard_failure_proposes_a_drift_patch_draft(client):
+    """A replay that breaks on an unrecognised screen -> the gateway files a
+    v+1 DRAFT rule proposal and says so on the run, without failing louder."""
+    from cua.models import RunStatus
+
+    app = client._transport.app  # type: ignore[attr-defined]
+    system = app.state.system
+
+    # record + approve a real capability
+    run, transcript = await system.orchestrator.run_discovery(
+        goal="look up member 12345 and read their current savings balance",
+        target=f"{client._mockbank}/search",
+        params={"member_id": "12345"},
+    )
+    assert run.status == RunStatus.COMPLETED, run.detail
+    art = system.record(transcript, name="drift_gw_cap", vendor_app_id="mockbank")
+    system.store.promote(art.artifact_id, art.version, "approve", reviewer="alice")
+
+    # corrupt its final checkpoint so replay reaches the end and can't verify
+    broken = system.store.get(art.artifact_id, art.version)
+    broken.checkpoint = broken.checkpoint.model_copy(
+        update={"kind": "text_present", "params": {"text": "xyzzy never on this page"}}
+    )
+    system.store._connect().execute(  # noqa: SLF001 - test-only surgical edit
+        "UPDATE artifacts SET body = ? WHERE artifact_id = ? AND version = ?",
+        (broken.model_dump_json(), art.artifact_id, art.version),
+    ).connection.commit()
+
+    r = await client.post(
+        f"/replays/{art.artifact_id}/invoke",
+        json={"params": {"member_id": "12345"}, "version": art.version, "wait_seconds": 30},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["outcome"] == "hard_failure"
+
+    # a new DRAFT version was filed
+    latest = system.store.latest("drift_gw_cap", "mockbank")
+    assert latest.version == art.version + 1
+    assert latest.status.value == "draft"
+    assert latest.record_outcome == "drift_patch"
+    assert latest.known_outcomes and latest.known_outcomes[-1].code.startswith("unclassified_")
+    # the approved version is untouched
+    assert system.store.latest_approved("drift_gw_cap", "mockbank").version == art.version

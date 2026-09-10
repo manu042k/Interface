@@ -444,6 +444,31 @@ def create_app(config: Config | None = None) -> FastAPI:
             app.state.replays[invocation_id] = result
             run.status = RunStatus.COMPLETED if result.outcome.value in {"success", "recoverable_then_success", "business_outcome"} else RunStatus.FAILED
             run.detail = result.outcome.value
+
+            # Drift self-healing: a hard failure on an unrecognised screen ->
+            # propose a v+1 DRAFT rule for review (never auto-applied).
+            if result.outcome.value == "hard_failure" and result.drift_candidate is not None:
+                try:
+                    from .. import drift as _drift
+
+                    draft = _drift.propose_patch(
+                        artifact, result.drift_candidate,
+                        store=sys.store, run_id=invocation_id, router=sys.router,
+                    )
+                    if draft is not None:
+                        run.detail = (
+                            f"{run.detail} — drift patch proposed: {draft.name} v{draft.version} "
+                            "(draft, needs review)"
+                        )
+                        sys.sink.log_event(invocation_id, None, {
+                            "event": "drift_patch_proposed",
+                            "artifact_id": draft.artifact_id, "version": draft.version,
+                            "code": draft.known_outcomes[-1].code if draft.known_outcomes else None,
+                        })
+                except Exception as exc:  # noqa: BLE001 - a failed proposal never fails the run
+                    sys.sink.log_event(invocation_id, None,
+                                       {"event": "drift_patch_error", "detail": str(exc)})
+
             run.ended_at = time.time()
             app.state.persist_runs()
 
@@ -867,6 +892,9 @@ def _artifact_summary(a: Any) -> dict[str, Any]:
         "goal": a.goal_description, "vendor_app_id": a.vendor_app_id, "app_version": a.app_version,
         "tenant_scope": a.tenant_scope.model_dump(), "risk_class": a.risk_class,
         "steps": len(a.steps), "known_outcomes": [r.code for r in a.known_outcomes],
+        "record_outcome": getattr(a, "record_outcome", None),
+        "supersedes": getattr(a, "supersedes", None),
+        "review_notes": getattr(a, "review_notes", None),
     }
 
 

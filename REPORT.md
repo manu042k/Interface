@@ -90,6 +90,16 @@ declared rules:
 | **Recoverable** | a `recoverable_rule.when` matches (interstitial, transient slow load) | `dismiss` / `wait` / `reload`, log `recoverable_condition`, retry the step (bounded). Any recovery → final outcome `recoverable_then_success` |
 | **Hard failure** | anything else that breaks a checkpoint or can't resolve | STOP, `{outcome: hard_failure, failure_detail: {step_index, expected, observed}}` + screenshot + DOM snapshot |
 
+**Drift self-healing (unrecognised states).** A hard failure that broke a
+checkpoint on a screen matching *no* declared rule also emits a `drift_signal`
+event and a `DriftCandidate` (the failing step, the page's own error text, the
+evidence refs). Out of the replay loop — still no LLM — `cua/drift.py`
+`propose_patch` turns that into a **v+1 DRAFT** capability with a candidate
+`text_present` `known_outcome` (`record_outcome="drift_patch"`, `supersedes`
+set), filed into the normal `/review` queue. Never auto-applied: a reviewer sets
+the real code, decides business-outcome vs recoverable, or rejects it. Repeated
+failures patch the same open draft rather than stacking new versions.
+
 The result contract (`ReplayResult.outcome`) is an enum — a caller never
 string-matches an error message to tell success, a known outcome, and a failure
 apart. **Idempotency-aware retry (ST-035):** a non-idempotent step that fails
@@ -233,10 +243,15 @@ Deliberately thin-but-real, or stubbed at a clean seam:
   is a real `gpt-4o-mini` discovery run; `evidence/02-05` are its deterministic
   replays, one per outcome class.
 - **Artifact governance** — a single `draft → approved` gate with a reviewer
-  name; no multi-reviewer workflow, RBAC, or re-approval-on-drift policy.
+  name; no multi-reviewer workflow or RBAC. Re-review *is* auto-triggered for a
+  replay that lands on an unrecognised state (drift self-healing files a v+1
+  draft, §3); the locator `drift_signal` trend does not yet do the same.
 
-**What I'd build next:** re-approval triggered automatically by a `drift_signal`
-trend; the bounded single-step assisted-fallback on replay hard failure
+**What I'd build next:** aggregate the per-resolution `drift_signal` into a
+per-`(artifact, step)` trend that files a re-review the same way unrecognised
+states already do; post-run LLM classification of a `DriftCandidate`
+(business-outcome vs recoverable vs genuine defect) to pre-fill the draft;
+the bounded single-step assisted-fallback on replay hard failure
 (policy-checked, logged as distinct evidence, never chained); a real desktop
 adapter to prove the surface seam; canonicalisation of routes/values into
 parameterised patterns across two MockBank "tenant" variants.

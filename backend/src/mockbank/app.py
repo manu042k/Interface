@@ -197,9 +197,11 @@ def member_detail(mid: str):
         return _expired_page(), 440
     _sleep_from(request)
 
-    # EDGE: ?expire=1 - this request "logs you out". Everything member-related
-    # returns the session-ended page from here on (until cookie cleared).
-    if request.args.get("expire") == "1":
+    # EDGE: ?expire=1 (or MOCKBANK_EXPIRE=1) - this request "logs you out".
+    # Everything member-related returns the session-ended page from here on
+    # (until the cookie is cleared). The session-ended screen is deliberately
+    # NOT a shape any recorded artifact knows -> exercises drift self-healing.
+    if request.args.get("expire") == "1" or os.environ.get("MOCKBANK_EXPIRE") == "1":
         resp = make_response("", 302)
         resp.headers["Location"] = "/expired"
         resp.set_cookie("coreserv_dead", "1")
