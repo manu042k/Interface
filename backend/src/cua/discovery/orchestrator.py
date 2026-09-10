@@ -433,7 +433,7 @@ class Orchestrator:
                     and call.tool in ("click", "navigate", "press_key")
                     and str(result.url_after or "") != state.url
                 ):
-                    bo = await self._discovery_business_outcome(session)
+                    bo = await self._discovery_business_outcome(session, log=log, step=step)
                     if bo is not None:
                         code, msg, phrases = bo
                         run.status = RunStatus.BUSINESS_OUTCOME
@@ -644,11 +644,17 @@ class Orchestrator:
                     surface=surface, run=run, logger=log,
                 )
 
-    async def _discovery_business_outcome(self, session: str) -> tuple[str, str, list[str]] | None:
+    async def _discovery_business_outcome(
+        self, session: str, *, log: Any | None = None, step: int | None = None
+    ) -> tuple[str, str, list[str]] | None:
         """The current screen against the same business-outcome patterns replay
         uses (per-host library + generic not-found / permission phrasings). A
         match means the goal has a legitimate non-happy answer — end the run
-        with it, don't route a human. Returns (code, message, matched_phrases)."""
+        with it, don't route a human. Returns (code, message, matched_phrases).
+
+        When `log`/`step` are given, a screenshot of the outcome screen is
+        attached to that step so the report shows *why* the run ended, not the
+        pre-navigation form."""
         from ..conditions import evaluate as eval_condition
         from ..models import Condition
         from ..outcomes import business_outcomes_for
@@ -662,7 +668,12 @@ class Orchestrator:
                                    "access denied"]),
         ]  # generic fallbacks appended as (code, phrases) tuples
         try:
-            state = await self.perception.observe(self.adapter, session)
+            obs_kw = (
+                {"sink": log.sink, "run_id": log.run_id, "step": step}
+                if log is not None
+                else {}
+            )
+            state = await self.perception.observe(self.adapter, session, **obs_kw)
         except Exception:  # noqa: BLE001
             return None
         haystack = f"{state.title}\n{state.ax_summary}\n{state.dom_excerpt}".lower()
@@ -694,7 +705,7 @@ class Orchestrator:
         # Before treating this as "needs a human": is the screen a recognised
         # BUSINESS OUTCOME? "no member records matched" is a legitimate answer
         # ("member 12345 doesn't exist"), not something an operator can fix.
-        bo = await self._discovery_business_outcome(session)
+        bo = await self._discovery_business_outcome(session, log=log, step=step)
         if bo is not None:
             code, msg, phrases = bo
             run.status = RunStatus.BUSINESS_OUTCOME
