@@ -203,8 +203,7 @@ function TimelineRow({ e }: { e: Record<string, unknown> }) {
 /**
  * The full run report - the event timeline + evidence, replay outcomes, and the
  * recorded capability. Rendered inline on `/runs/[id]` once the run has finished
- * (in place of the now-dead live view); the run page's header carries the
- * Print / .md actions.
+ * (in place of the now-dead live view).
  */
 export function RunReport({
   id,

@@ -16,7 +16,6 @@ import {
   Globe,
   Footprints,
   ChevronDown,
-  Printer,
 } from "lucide-react";
 import { api, type RunView } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -158,11 +157,6 @@ export default function RunPage() {
                 <Ban className="mr-1.5 h-4 w-4" />
               )}
               Cancel run
-            </Button>
-          )}
-          {ended && (
-            <Button size="sm" variant="outline" onClick={() => window.print()}>
-              <Printer className="mr-1.5 h-4 w-4" /> Print / Save PDF
             </Button>
           )}
         </div>
