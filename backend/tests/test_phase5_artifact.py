@@ -286,3 +286,30 @@ async def test_record_versions_when_approved_flow_changes(system, mockbank, monk
     assert a2.status == ArtifactStatus.DRAFT
     # the approved v1 is untouched and still resolvable
     assert system.store.get(a1.artifact_id, 1).status == ArtifactStatus.APPROVED
+
+
+def test_locator_landmark_that_equals_a_param_is_rebindable_on_replay():
+    """A 'click Select near <member_number>' landmark must not bake in the
+    member from the recording run - replay re-binds it to the caller's value."""
+    from cua.artifact.recorder import _rank_locators
+    from cua.replay.executor import _bind_locator_params
+
+    specs = _rank_locators(
+        {"near": "100987", "text": "Select", "role": "button"},
+        "near='100987'",
+        {"member_number": "100987", "branch": "1"},
+    )
+    lm = next(s for s in specs if s.kind == "relative_to_landmark")
+    assert lm.params["near"] == "100987"
+    assert lm.params["near_param"] == "member_number"  # tagged for re-binding
+    # branch "1" is too short to be treated as an identifier -> never tagged
+    assert all("branch" not in s.params.get("near_param", "") for s in specs)
+
+    bound = _bind_locator_params(specs, {"member_number": "101555"})
+    lm2 = next(s for s in bound if s.kind == "relative_to_landmark")
+    assert lm2.params["near"] == "101555"          # caller's value substituted
+    assert "near_param" not in lm2.params           # marker consumed
+
+    # no such param supplied -> recorded value kept, nothing crashes
+    kept = _bind_locator_params(specs, {})
+    assert next(s for s in kept if s.kind == "relative_to_landmark").params["near"] == "100987"

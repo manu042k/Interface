@@ -35,6 +35,7 @@ from ..models import (
     Condition,
     DriftCandidate,
     FailureDetail,
+    LocatorStrategy,
     ReplayOutcome,
     ReplayResult,
     Step,
@@ -230,7 +231,7 @@ class ReplayExecutor:
 
         if step.locator_spec:
             res = await self.locators.resolve(
-                step.locator_spec, self.adapter, session,
+                _bind_locator_params(step.locator_spec, params), self.adapter, session,
                 artifact_id=artifact.artifact_id, artifact_version=artifact.version,
                 surface_fingerprint=state.fingerprint, step_index=step.step_index,
             )
@@ -662,6 +663,28 @@ def _distinctive_phrases(html: str, visible_text: str, *, limit: int = 4) -> lis
         _add(m.group(1))
 
     return (lead + rest)[:limit]
+
+
+def _bind_locator_params(
+    locator_spec: list[LocatorStrategy], params: dict[str, Any]
+) -> list[LocatorStrategy]:
+    """Re-bind any locator value the recorder tagged as coming from a run param
+    (`<key>_param`) to THIS caller's value, so "the Select link in the row near
+    <member_number>" resolves for whatever member is being replayed — not the
+    member the capability was recorded against."""
+    out: list[LocatorStrategy] = []
+    for strat in locator_spec:
+        p = dict(strat.params)
+        changed = False
+        for pk in [k for k in p if k.endswith("_param")]:
+            base = pk[:-len("_param")]
+            name = p[pk]
+            if name in params and params[name] is not None:
+                p[base] = str(params[name])
+                changed = True
+            p.pop(pk, None)
+        out.append(strat.model_copy(update={"params": p}) if changed or p != strat.params else strat)
+    return out
 
 
 def _expected_str(step: Step) -> str:

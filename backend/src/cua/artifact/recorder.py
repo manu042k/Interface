@@ -183,7 +183,9 @@ class ArtifactRecorder:
         step_checkpoint: Condition | None = None
 
         if tool in {"click", "type", "select", "extract"}:
-            locator_spec = _rank_locators(args.get("target"), entry.action_result.get("matched_strategy"))
+            locator_spec = _rank_locators(
+                args.get("target"), entry.action_result.get("matched_strategy"), params
+            )
 
         if tool == "type":
             raw = str(args.get("value", ""))
@@ -408,7 +410,28 @@ class ArtifactRecorder:
 # ---------------------------------------------------------------------------
 
 
-def _rank_locators(target: Any, matched: str | None) -> list[LocatorStrategy]:
+def _locator_param_for(value: Any, params: dict[str, Any] | None) -> str | None:
+    """Return the name of the run param whose value EQUALS this locator string,
+    or None. Generic: no value is special-cased — it just asks "did the caller
+    supply exactly this string?". When yes, the recorder tags the strategy so
+    replay re-binds it per call instead of baking in this run's value (a member
+    number, an account id) and only ever working for that one record.
+
+    Guards against a coincidental match: the value must be >=3 chars and not a
+    bare number shorter than 4 digits (branch "1", a page "2")."""
+    if not params or not isinstance(value, str) or len(value) < 3:
+        return None
+    if value.isdigit() and len(value) < 4:
+        return None
+    return next(
+        (k for k, v in params.items() if v is not None and str(v) == value and len(str(v)) >= 3),
+        None,
+    )
+
+
+def _rank_locators(
+    target: Any, matched: str | None, params: dict[str, Any] | None = None
+) -> list[LocatorStrategy]:
     if target is None:
         return []
     if isinstance(target, str):
@@ -495,6 +518,13 @@ def _rank_locators(target: Any, matched: str | None) -> list[LocatorStrategy]:
             kind="text", params=target, rank=0,
             rationale="raw target description carried through — review and strengthen before approval",
         ))
+    # A strategy value that is really a run param ("Select the row near 100987")
+    # gets a `<key>_param` sibling so replay substitutes the caller's value.
+    for strat in cands:
+        for k in ("near", "text", "name", "label", "placeholder"):
+            pk = _locator_param_for(strat.params.get(k), params)
+            if pk:
+                strat.params[f"{k}_param"] = pk
     if matched:
         cands[0].params.setdefault("_discovery_matched", matched)
     return cands
