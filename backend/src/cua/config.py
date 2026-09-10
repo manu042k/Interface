@@ -77,6 +77,10 @@ class Config:
     max_steps: int
     run_timeout_seconds: int
     action_timeout_seconds: int
+    # How long a stuck run holds its live session waiting for an operator to
+    # take over before it abandons and releases the sandbox. 0 = don't wait
+    # in-loop (CLI / non-interactive).
+    handoff_wait_seconds: int
 
     # Browser
     headed: bool
@@ -192,6 +196,7 @@ def load_config(
         max_steps=_int("CUA_MAX_STEPS", 40),
         run_timeout_seconds=_int("CUA_RUN_TIMEOUT_SECONDS", 300),
         action_timeout_seconds=_int("CUA_ACTION_TIMEOUT_SECONDS", 15),
+        handoff_wait_seconds=_int("CUA_HANDOFF_WAIT_SECONDS", 240),
         headed=_bool("CUA_HEADED", False),
         use_sandbox=_bool("CUA_USE_SANDBOX", False),
         sandbox_image=_optional("CUA_SANDBOX_IMAGE", "cua-sandbox:latest"),

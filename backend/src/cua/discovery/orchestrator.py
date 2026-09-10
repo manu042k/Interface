@@ -565,6 +565,12 @@ class Orchestrator:
             return None
 
         attempting = _attempting_str(last_call, goal)
+        r = reason.lower()
+        terminal = any(m in r for m in (
+            "already exists", "no new account was created", "cannot be undone",
+            "was not found", "no such", "does not exist", "has timed out",
+            "session has expired", "not authorized",
+        ))
 
         if self.broker is not None:
             self.broker.register_session(session, session)
@@ -573,6 +579,21 @@ class Orchestrator:
             reason=reason, attempting=attempting, goal=goal, transcript_tail=history,
         )
         transcript.intervention_id = iv.intervention_id
+
+        if terminal:
+            # the goal is unreachable from here and no operator action changes
+            # that — end now and release the sandbox instead of holding it.
+            try:
+                self.escalation.abandon(iv.intervention_id, "unreachable goal — not an actionable handoff")
+            except Exception:  # noqa: BLE001
+                pass
+            run.status = RunStatus.DEAD_END
+            run.detail = f"dead end at step {step}: {reason}"
+            log.event(step, "handoff_skipped", intervention_id=iv.intervention_id,
+                      detail="stuck reason is not operator-actionable — ending run")
+            log.run_finished("dead_end", reason=run.detail)
+            return None
+
         if wait_s <= 0:
             return None  # no in-loop wait (tests / non-interactive callers)
         log.event(step, "awaiting_operator", intervention_id=iv.intervention_id, wait_s=wait_s)
@@ -601,20 +622,33 @@ class Orchestrator:
                     "continue toward the goal from here. Only call done after verifying the "
                     "success condition with assert_state / extract."
                 )
-        # The wait expired. If a human is actively on it (CLAIMED), leave the run
-        # STUCK and the session held - they're still working. If nobody ever
-        # claimed it, stop waiting: end the run and release the sandbox rather
-        # than hold a container forever for an operator who isn't coming.
+        # The wait expired. If a human claimed it, give them ONE more window to
+        # finish, then abandon regardless — a claimed-but-never-resolved
+        # intervention must not hold a sandbox forever.
         try:
             final = self.escalation.get(iv.intervention_id)
         except Exception:  # noqa: BLE001
             final = None
         if final is not None and final.status == InterventionStatus.CLAIMED:
             log.event(step, "handoff_timeout", intervention_id=iv.intervention_id,
-                      detail="operator still in control - leaving run stuck")
-            return None
+                      detail=f"operator in control — one more {wait_s:.0f}s grace window")
+            grace_end = time.time() + wait_s
+            while time.time() < grace_end:
+                await asyncio.sleep(1.5)
+                try:
+                    cur = self.escalation.get(iv.intervention_id)
+                except Exception:  # noqa: BLE001
+                    break
+                if cur.status == InterventionStatus.RESOLVED:
+                    run.status = RunStatus.RUNNING
+                    run.detail = None
+                    return (
+                        f"An operator handed control back at step {step}. Call observe "
+                        "first, then continue toward the goal; verify with assert_state / "
+                        "extract before done."
+                    )
         try:
-            self.escalation.abandon(iv.intervention_id, f"no operator in {wait_s:.0f}s")
+            self.escalation.abandon(iv.intervention_id, f"no resolution within {2 * wait_s:.0f}s")
         except Exception:  # noqa: BLE001
             pass
         run.status = RunStatus.DEAD_END

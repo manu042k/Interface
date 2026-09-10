@@ -206,7 +206,7 @@ def create_app(config: Config | None = None) -> FastAPI:
                     goal=req.goal, target=target, tenant=req.tenant,
                     params=req.params, run=run, confirm_risky=req.confirm_risky,
                     success_check=req.success_check,
-                    handoff_wait_s=900.0,  # a stuck run waits for a human, then resumes
+                    handoff_wait_s=float(app.state.config.handoff_wait_seconds),  # stuck -> wait for a human, then resume/abandon
                 )
                 app.state.transcripts[run.run_id] = transcript
                 if run.status == RunStatus.COMPLETED:
@@ -412,7 +412,7 @@ def create_app(config: Config | None = None) -> FastAPI:
                     # an unrecoverable step blocks for a human hand-back (§3.6)
                     # rather than failing outright; tests call execute() directly
                     # with the default 0.0 and stay fast.
-                    handoff_wait_s=900.0,
+                    handoff_wait_s=float(app.state.config.handoff_wait_seconds),
                 )
             except Exception as exc:  # noqa: BLE001 - surface any replay crash on the run
                 run.status = RunStatus.FAILED
