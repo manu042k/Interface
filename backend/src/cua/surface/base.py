@@ -74,6 +74,12 @@ class SurfaceAdapter(abc.ABC):
     @abc.abstractmethod
     async def snapshot(self, session_handle: str) -> RawSnapshot: ...
 
+    async def read_text(self, session_handle: str, css: str) -> str | None:
+        """Visible text of the first element matching `css`, or None. Used to
+        lift a host's actionable error detail into a business-outcome result.
+        Optional — surfaces without CSS return None."""
+        return None
+
     # Optional lifecycle hooks used by escalation / sandbox layers.
     async def cdp_endpoint(self, session_handle: str) -> str | None:
         """Return a remote-control endpoint for a human handoff, if the surface

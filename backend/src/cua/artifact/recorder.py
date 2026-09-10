@@ -302,10 +302,19 @@ class ArtifactRecorder:
         return Condition(kind="text_present", params={"text": ""}, description="no checkpoint derived — review needed")
 
     def _seed_business_outcomes(self, transcript: DiscoveryTranscript) -> list[BusinessOutcomeRule]:
+        from ..outcomes import business_outcomes_for
+
         g = transcript.goal.lower()
-        out: list[BusinessOutcomeRule] = []
+        # per-host library first — a curated entry beats a goal-keyword guess;
+        # generic flow-shape seeds fill any code the library doesn't cover.
+        out: list[BusinessOutcomeRule] = list(business_outcomes_for(transcript.target))
+        have = {r.code for r in out}
+        def _add(rule: BusinessOutcomeRule) -> None:
+            if rule.code not in have:
+                out.append(rule)
+                have.add(rule.code)
         if any(w in g for w in ("look up", "member", "search", "find")):
-            out.append(BusinessOutcomeRule(
+            _add(BusinessOutcomeRule(
                 code="member_not_found",
                 when=Condition(kind="text_present", params={"any": [
                     "No members matched", "no member records matched", "no records matched",
@@ -314,7 +323,7 @@ class ArtifactRecorder:
                 message="The requested member does not exist.",
                 from_step=1,
             ))
-            out.append(BusinessOutcomeRule(
+            _add(BusinessOutcomeRule(
                 # the ACTUAL denial wording — not an advisory banner like
                 # "RESTRICTED FUNCTION — SUPERVISOR OVERRIDE REQUIRED", which
                 # sits on the form for everyone and would false-trigger.
@@ -334,7 +343,7 @@ class ArtifactRecorder:
             "sub-account", "sub account", "transfer", "open ", "new share",
             "deposit", "account hold", "place a hold",
         )):
-            out.append(BusinessOutcomeRule(
+            _add(BusinessOutcomeRule(
                 code="validation_error",
                 when=Condition(kind="text_present", params={"any": [
                     "could not be validated", "transaction could not be validated",
@@ -348,23 +357,30 @@ class ArtifactRecorder:
         return out
 
     def _seed_recoverables(self, transcript: DiscoveryTranscript) -> list[RecoverableRule]:
+        from ..outcomes import recoverables_for
+
         # Recoverable rules describe KNOWN app behaviour, not what happened this
-        # run — in production they come from a per-vendor-app rule library curated
-        # during review. Seeded here from the flow shape + app family.
-        rules: list[RecoverableRule] = [
-            RecoverableRule(
-                name="session_notice_interstitial",
-                when=Condition(kind="text_present", params={"text": "Session Notice"}),
-                action="dismiss",
-                target=[LocatorStrategy(
-                    kind="text", params={"text": "Acknowledge and continue"}, rank=0,
-                    rationale="the interstitial's only continue affordance; stable literal label",
-                )],
-                settle=Condition(kind="text_absent", params={"text": "Session Notice"}),
-            )
-        ]
+        # run. Per-host library first (curated), then generic flow-shape seeds
+        # for any name the library doesn't already cover.
+        rules: list[RecoverableRule] = list(recoverables_for(transcript.target))
+        names = {r.name for r in rules}
+        def _add(rule: RecoverableRule) -> None:
+            if rule.name not in names:
+                rules.append(rule)
+                names.add(rule.name)
+
+        _add(RecoverableRule(
+            name="session_notice_interstitial",
+            when=Condition(kind="text_present", params={"text": "Session Notice"}),
+            action="dismiss",
+            target=[LocatorStrategy(
+                kind="text", params={"text": "Acknowledge and continue"}, rank=0,
+                rationale="the interstitial's only continue affordance; stable literal label",
+            )],
+            settle=Condition(kind="text_absent", params={"text": "Session Notice"}),
+        ))
         # transient slow load is generic
-        rules.append(RecoverableRule(
+        _add(RecoverableRule(
             name="transient_slow_load",
             when=Condition(kind="text_present", params={"any": ["Loading", "please wait"]}),
             action="wait",
@@ -372,7 +388,7 @@ class ArtifactRecorder:
             timeout_ms=8000,
         ))
         # an outright app error is usually transient - reload once and retry
-        rules.append(RecoverableRule(
+        _add(RecoverableRule(
             name="transient_server_error",
             when=Condition(kind="text_present", params={"any": [
                 "unexpected error", "please retry", "try again later",

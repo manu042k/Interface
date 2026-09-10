@@ -145,6 +145,11 @@ class BusinessOutcomeRule(BaseModel):
     message: str = ""
     # If set, this outcome is only meaningful at/after this step index.
     from_step: int = 0
+    # Optional CSS selector for the element that holds the *actionable* detail
+    # (e.g. a <ul> of the specific validation rules that failed). When present,
+    # replay lifts that text into ReplayResult.failure_detail so the caller
+    # learns WHAT failed, not just the code.
+    detail_selector: str | None = None
 
 
 class RecoverableRule(BaseModel):
@@ -363,6 +368,9 @@ class ReplayResult(BaseModel):
     outcome: ReplayOutcome
     outputs: dict[str, Any] | None = None
     business_outcome_code: str | None = None
+    # For a business outcome — the host's own actionable text (e.g. the list of
+    # validation rules that failed), lifted via the rule's `detail_selector`.
+    business_outcome_detail: str | None = None
     recovered_conditions: list[str] = Field(default_factory=list)
     failure_detail: FailureDetail | None = None
     evidence_refs: list[str] = Field(default_factory=list)

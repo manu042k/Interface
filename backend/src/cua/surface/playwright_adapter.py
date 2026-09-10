@@ -390,6 +390,16 @@ class PlaywrightAdapter(SurfaceAdapter):
         except Exception:  # noqa: BLE001
             return False
 
+    async def read_text(self, session_handle: str, css: str) -> str | None:
+        try:
+            loc = self._sess(session_handle).page.locator(css)
+            if await loc.count() == 0:
+                return None
+            txt = _WS_RE.sub(" ", (await loc.first.inner_text(timeout=2000))).strip()
+            return txt or None
+        except Exception:  # noqa: BLE001
+            return None
+
     async def try_strategy(
         self, session_handle: str, kind: str, params: dict[str, Any]
     ) -> dict[str, Any]:

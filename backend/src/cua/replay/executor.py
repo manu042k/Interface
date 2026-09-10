@@ -143,11 +143,13 @@ class ReplayExecutor:
 
                 bo = await self._match_business_outcome(artifact, state, step.step_index)
                 if bo is not None:
+                    detail = await self._outcome_detail(bo, session)
                     log.business_outcome(step.step_index, bo.code, bo.message)
                     log.run_finished("business_outcome", code=bo.code)
                     return ReplayResult(
                         outcome=ReplayOutcome.BUSINESS_OUTCOME,
                         business_outcome_code=bo.code,
+                        business_outcome_detail=detail,
                         recovered_conditions=recovered,
                         steps_executed=step.step_index,
                         duration_seconds=time.time() - started,
@@ -280,11 +282,12 @@ class ReplayExecutor:
             # a failure might actually be a declared business outcome
             bo = await self._match_business_outcome(artifact, post_state, step.step_index)
             if bo is not None:
+                detail = await self._outcome_detail(bo, session)
                 log.business_outcome(step.step_index, bo.code, bo.message)
                 log.run_finished("business_outcome", code=bo.code)
                 return ReplayResult(
                     outcome=ReplayOutcome.BUSINESS_OUTCOME, business_outcome_code=bo.code,
-                    steps_executed=step.step_index,
+                    business_outcome_detail=detail, steps_executed=step.step_index,
                 )
 
             checkpoint_ok = True
@@ -333,6 +336,17 @@ class ReplayExecutor:
             if await eval_condition(rule.when, state):
                 return rule
         return None
+
+    async def _outcome_detail(self, rule, session: str) -> str | None:
+        """The host's actionable error text for this outcome, if the rule
+        declares where to find it (e.g. the <ul> of failed validation rules)."""
+        sel = getattr(rule, "detail_selector", None)
+        if not sel:
+            return None
+        try:
+            return await self.adapter.read_text(session, sel)
+        except Exception:  # noqa: BLE001
+            return None
 
     async def _maybe_recover(self, artifact, session, state, step_index, log) -> tuple[SurfaceState, list[str]]:
         applied: list[str] = []
