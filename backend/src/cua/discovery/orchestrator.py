@@ -124,13 +124,19 @@ class Orchestrator:
 
         transcript = DiscoveryTranscript(run_id=run.run_id, goal=goal, target=target, tenant=tenant, params=params)
 
-        # A bare "log in" goal has no explicit finish line, so the model can sign
-        # on successfully and then thrash (re-click submit, sign off, retry...).
-        # Derive one: you're done when you've LEFT the auth path and there is no
-        # rejection text on screen. Conservative — needs both.
-        if success_check is None and re.search(
-            r"\b(log\s?in|log\s?on|sign\s?on|sign\s?in|authenticat)", goal, re.I
-        ):
+        # A goal that is ONLY "log in" has no explicit finish line, so the model
+        # can sign on successfully and then thrash (re-click submit, sign off,
+        # retry...). Derive one: done once you've LEFT the auth path with no
+        # rejection text. But NOT when login is just the first step of a larger
+        # task ("log in AND read the balance") — that would end the run early.
+        _is_login = bool(re.search(r"\b(log\s?in|log\s?on|sign\s?on|sign\s?in|authenticat)", goal, re.I))
+        _has_downstream = bool(re.search(
+            r"\b(read|extract|check|view|get|fetch|look ?up|find|search|open|create|add|"
+            r"transfer|update|change|edit|place|submit|post|deposit|withdraw|balance|"
+            r"amount|then|after (that|logging|signing)|navigate|go to)\b",
+            goal, re.I,
+        ))
+        if success_check is None and _is_login and not _has_downstream:
             from urllib.parse import urlparse
 
             auth_seg = (urlparse(target).path.rsplit("/", 1)[-1] or "signon").lower()
