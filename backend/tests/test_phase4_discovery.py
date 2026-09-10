@@ -157,6 +157,55 @@ def test_salvage_condition_rebuilds_a_degenerate_assert_state():
     assert sc({"condition": {}, "reasoning": "the page should be loaded now"}) == {}
 
 
+async def test_classify_stuck_screen_routes_a_terminal_denial_to_business_outcome(system):
+    """A screen the pattern library doesn't know ('this user has been locked
+    out') is classified by the model as a business outcome, not a human handoff
+    — nothing an operator taking over the session could change."""
+    orch = system.orchestrator
+    from cua.models import SurfaceState
+
+    class _Router:
+        last = None
+
+        async def call_text(self, sysmsg, user):
+            _Router.last = (sysmsg, user)
+            return "OUTCOME account_locked | Epic sadface: Sorry, this user has been locked out."
+
+    async def _observe(*a, **k):
+        return SurfaceState(
+            url="https://www.saucedemo.com/",
+            title="Swag Labs",
+            dom_excerpt="Epic sadface: Sorry, this user has been locked out.",
+        )
+
+    orch.router = _Router()
+    orch.perception.observe = _observe  # type: ignore[assignment]
+
+    out = await orch._classify_stuck_as_outcome(
+        "sess", "log in as locked_out_user", "user is locked out", "click Login"
+    )
+    assert out is not None
+    code, phrase, phrases = out
+    assert code == "account_locked"
+    assert "locked out" in phrase.lower()
+    assert phrases == [phrase]
+
+    # a HUMAN verdict, or a phrase not actually on screen, both fall through
+    class _RouterHuman:
+        async def call_text(self, s, u):
+            return "HUMAN"
+
+    orch.router = _RouterHuman()
+    assert await orch._classify_stuck_as_outcome("sess", "g", "r", "a") is None
+
+    class _RouterUngrounded:
+        async def call_text(self, s, u):
+            return "OUTCOME wat | something the page never actually said anywhere"
+
+    orch.router = _RouterUngrounded()
+    assert await orch._classify_stuck_as_outcome("sess", "g", "r", "a") is None
+
+
 def test_stuck_reason_falls_back_to_reasoning_when_the_key_was_mangled():
     from cua.discovery.orchestrator import _stuck_reason
     from cua.models import ToolCall
