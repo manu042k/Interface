@@ -71,6 +71,9 @@ class RunStatus(StrEnum):
     COMPLETED = "completed"
     FAILED = "failed"
     DEAD_END = "dead_end"
+    # discovery reached a legitimate non-happy answer (e.g. "no such member")
+    # — not a crash, not a capability, and not something a human can fix.
+    BUSINESS_OUTCOME = "business_outcome"
 
 
 class ReplayOutcome(StrEnum):

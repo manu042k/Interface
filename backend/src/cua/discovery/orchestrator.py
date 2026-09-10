@@ -420,6 +420,26 @@ class Orchestrator:
                 transcript.entries.append(entry)
 
                 desc = _describe_call(call)
+
+                # Landed on a recognised business-outcome screen (no such
+                # member, permission wall)? End with it now — don't let the
+                # model thrash on a page whose "answer" is already final. Only
+                # after a navigation, so it's one extra observe at most per hop.
+                if (
+                    ok
+                    and call.tool in ("click", "navigate", "press_key")
+                    and str(result.url_after or "") != state.url
+                ):
+                    bo = await self._discovery_business_outcome(session)
+                    if bo is not None:
+                        code, msg = bo
+                        run.status = RunStatus.BUSINESS_OUTCOME
+                        run.detail = f"{code}: {msg}"
+                        transcript.final_state = state
+                        log.event(step, "business_outcome", code=code, message=msg)
+                        log.run_finished("business_outcome", code=code)
+                        break
+
                 if ok:
                     last_ok_tool = call.tool
                     last_ok_step = step
