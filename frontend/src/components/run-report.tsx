@@ -321,7 +321,7 @@ export function RunReport({
               "grid gap-x-6 text-sm " +
               (hasEvidence
                 ? "min-w-[640px] grid-cols-[2.5rem_minmax(0,1fr)_16rem]"
-                : "grid-cols-[2.5rem_minmax(0,1fr)]")
+                : "max-w-3xl grid-cols-[2.5rem_minmax(0,1fr)]")
             }
           >
             {/* header row */}
