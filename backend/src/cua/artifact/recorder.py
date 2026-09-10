@@ -111,6 +111,7 @@ class ArtifactRecorder:
         output_props: dict[str, Any] = {}
         param_props: dict[str, Any] = {}
         forced_params: dict[str, str] = {}
+        derived_params: dict[str, str] = {}  # values the user wrote into the goal
         idx = 0
 
         actionable = [
@@ -120,14 +121,18 @@ class ArtifactRecorder:
         actionable = _dedupe_consecutive(actionable)
 
         for entry in actionable:
-            step = self._entry_to_step(entry, idx, transcript.params, param_props, forced_params)
+            step = self._entry_to_step(
+                entry, idx, transcript.params, param_props, forced_params,
+                derived_params, transcript.goal,
+            )
             if entry.tool_call.tool == "extract" and step.output_binding:
                 shape = step.output_binding.shape
                 output_props[step.output_binding.field] = {"type": _json_type(shape), "x-shape": shape}
             steps.append(step)
             idx += 1
 
-        # inputs: supplied params + any forced-to-param typed values
+        # inputs: supplied params + forced-secret typed values + values the user
+        # wrote into the goal instead of passing them
         for k, v in transcript.params.items():
             if _is_sensitive_key(k):
                 # a credential param — declare it, never echo its value as an example
@@ -136,6 +141,17 @@ class ArtifactRecorder:
                 param_props.setdefault(k, {"type": "string", "example": redact_text(str(v))[0]})
         for k in forced_params:
             param_props.setdefault(k, {"type": "string", "x-sensitive": True})
+        for k, v in derived_params.items():
+            param_props.setdefault(
+                k,
+                {"type": "string", "x-sensitive": True}
+                if _is_sensitive_key(k)
+                else {"type": "string", "example": redact_text(str(v))[0], "x-from-goal": True},
+            )
+
+        required = list(
+            dict.fromkeys([*transcript.params, *forced_params, *derived_params])
+        )
 
         checkpoint = self._derive_checkpoint(transcript, actionable)
         risk = (
@@ -150,7 +166,7 @@ class ArtifactRecorder:
             entry_url=transcript.target,
             vendor_app_id=vendor_app_id,
             app_version=app_version,
-            input_schema={"type": "object", "properties": param_props, "required": list(transcript.params)},
+            input_schema={"type": "object", "properties": param_props, "required": required},
             output_schema={"type": "object", "properties": output_props, "required": list(output_props)},
             steps=steps,
             checkpoint=checkpoint,
@@ -171,6 +187,8 @@ class ArtifactRecorder:
         params: dict[str, Any],
         param_props: dict[str, Any],
         forced_params: dict[str, str],
+        derived: dict[str, str],
+        goal: str,
     ) -> Step:
         tool = entry.tool_call.tool
         args = entry.tool_call.args
@@ -184,18 +202,33 @@ class ArtifactRecorder:
 
         if tool in {"click", "type", "select", "extract"}:
             locator_spec = _rank_locators(
-                args.get("target"), entry.action_result.get("matched_strategy"), params
+                args.get("target"),
+                entry.action_result.get("matched_strategy"),
+                {**params, **derived},  # a landmark may reference a goal-derived value
             )
 
         if tool == "type":
             raw = str(args.get("value", ""))
-            value_binding = _bind_value(raw, params, forced_params, field_hint=_target_hint(args.get("target")))
+            value_binding = _bind_value(
+                raw, params, forced_params, derived,
+                field_hint=_target_hint(args.get("target")), goal=goal,
+            )
         elif tool == "select":
             opt = str(args.get("option", ""))
             # bind to a param when the chosen option is a supplied value (a
             # share id, a branch) so the caller's input actually drives it
             bound = next((pk for pk, pv in params.items() if str(pv) == opt), None)
-            value_binding = ValueBinding(param=bound) if bound else ValueBinding(literal=opt)
+            if bound:
+                value_binding = ValueBinding(param=bound)
+            elif opt and _value_in_goal(opt, goal):
+                taken = {**{k: str(v) for k, v in params.items()}, **forced_params, **derived}
+                key, sensitive = _derive_param_name(
+                    opt, _target_hint(args.get("target")), goal, taken
+                )
+                (forced_params if sensitive else derived)[key] = opt
+                value_binding = ValueBinding(param=key)
+            else:
+                value_binding = ValueBinding(literal=opt)
         elif tool == "navigate":
             url = str(args.get("url", ""))
             value_binding = _bind_url(url, params)
@@ -567,13 +600,89 @@ def _target_hint(target: Any) -> str:
     return "value"
 
 
-def _bind_value(raw: str, params: dict[str, Any], forced: dict[str, str], *, field_hint: str) -> ValueBinding:
+_GENERIC_HINTS = {
+    "value", "q", "input", "field", "text", "search", "query", "term", "box", "name",
+}
+_SECRET_CUE_RE = re.compile(r"(pass\w*|pwd|pin|secret|passcode|otp|token|api[\s_-]?key)\W*$", re.I)
+
+
+def _value_in_goal(v: str, goal: str) -> bool:
+    """The value the model typed appears, verbatim, in what the user asked for —
+    a strong signal the user meant it as an INPUT, not a fixed literal."""
+    v = v.strip()
+    if len(v) < 2 or (v.isdigit() and len(v) < 2):
+        return False
+    return re.search(r"(?<![\w-])" + re.escape(v) + r"(?![\w-])", goal, re.I) is not None
+
+
+def _derive_param_name(
+    value: str, field_hint: str, goal: str, existing: dict[str, str]
+) -> tuple[str, bool]:
+    """Name a parameter for a value the user wrote into the goal instead of
+    passing it. Returns (name, is_sensitive). Reuses an existing name if that
+    exact value already has one (so the same value across steps is one param)."""
+    for k, v in existing.items():
+        if v == value:
+            return k, _is_sensitive_key(k)
+
+    # 1) a meaningful form-field identifier ("operator", "amount", "memo")
+    hint = re.sub(r"\W+", "_", field_hint or "").strip("_").lower()
+    name = hint if (len(hint) >= 3 and hint not in _GENERIC_HINTS and not hint.isdigit()) else ""
+
+    # 2) else the label words right before the value in the goal
+    #    "Member Number for 101555" -> member_number ; "as operator teller1" -> operator
+    lead = ""
+    if not name:
+        m = re.search(
+            r"([A-Za-z][A-Za-z /_-]{1,28}?)\s*(?:for|:|=|to|is|of|number|no\.?|#|named?)?\s*[\"'“]?"
+            + re.escape(value),
+            goal,
+            re.I,
+        )
+        if m:
+            lead = m.group(1)
+            words = re.findall(r"[A-Za-z]+", lead)[-2:]
+            name = "_".join(w.lower() for w in words if w.lower() not in {"the", "a", "an", "as"})
+
+    # 3) fallback
+    if not name:
+        i = 1
+        while f"input_{i}" in existing:
+            i += 1
+        name = f"input_{i}"
+
+    base, i = name, 2
+    while name in existing:
+        name = f"{base}_{i}"
+        i += 1
+
+    before = goal[: goal.lower().find(value.lower())] if value.lower() in goal.lower() else lead
+    sensitive = _is_sensitive_key(name) or bool(_SECRET_CUE_RE.search(before))
+    return name, sensitive
+
+
+def _bind_value(
+    raw: str,
+    params: dict[str, Any],
+    forced: dict[str, str],
+    derived: dict[str, str],
+    *,
+    field_hint: str,
+    goal: str,
+) -> ValueBinding:
     for pk, pv in params.items():
         if str(pv) == raw:
             return ValueBinding(param=pk)
     if _SECRETISH_RE.match(raw) and not raw.replace(",", "").replace(".", "").isdigit():
         key = re.sub(r"\W+", "_", field_hint).strip("_").lower() or "secret_value"
         forced[key] = raw
+        return ValueBinding(param=key)
+    # the user wrote the value into the goal rather than passing it as a param —
+    # capture it as an input so the capability is reusable, not frozen to it.
+    if _value_in_goal(raw, goal):
+        taken = {**{k: str(v) for k, v in params.items()}, **forced, **derived}
+        key, sensitive = _derive_param_name(raw, field_hint, goal, taken)
+        (forced if sensitive else derived)[key] = raw
         return ValueBinding(param=key)
     safe, _ = redact_text(raw)
     return ValueBinding(literal=safe)

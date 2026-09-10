@@ -313,3 +313,24 @@ def test_locator_landmark_that_equals_a_param_is_rebindable_on_replay():
     # no such param supplied -> recorded value kept, nothing crashes
     kept = _bind_locator_params(specs, {})
     assert next(s for s in kept if s.kind == "relative_to_landmark").params["near"] == "100987"
+
+
+async def test_recorder_captures_params_written_into_the_goal(system, mockbank):
+    """A value the user put in the goal text (not in params) is recorded as a
+    reusable input, not baked in as a literal — and a credential is masked."""
+    run, transcript = await system.orchestrator.run_discovery(
+        goal='look up member 12345 and read their current savings balance',
+        target=f"{mockbank}/search",
+        params={},  # nothing passed — the member id lives only in the goal
+    )
+    assert run.status.value == "completed", run.detail
+    art = system.recorder.build_artifact(transcript, name="read_savings_from_goal")
+
+    type_steps = [s for s in art.steps if s.action_type.value == "type"]
+    assert type_steps, "expected a type step for the member id"
+    b = type_steps[0].value_binding
+    assert b.param is not None, "the goal value must become a param, not a literal"
+    assert b.param in art.input_schema["properties"]
+    assert b.param in art.input_schema["required"]
+    prop = art.input_schema["properties"][b.param]
+    assert prop.get("x-from-goal") is True
