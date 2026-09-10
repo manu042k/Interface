@@ -355,15 +355,6 @@ function CapabilityDetail({
                       </>
                     )}
 
-                    <Separator />
-                    <p className="text-muted-foreground text-xs">
-                      Recorded from run{" "}
-                      <code>
-                        {cap.provenance.created_from_run_id?.slice(0, 8) ?? "-"}
-                      </code>
-                      {cap.provenance.reviewed_by &&
-                        ` · approved by ${cap.provenance.reviewed_by}`}
-                    </p>
                   </div>
                 </ScrollArea>
               </TabsContent>
@@ -490,6 +481,19 @@ function CapabilityDetail({
                 <InvokePanel cap={cap} />
               </TabsContent>
             </Tabs>
+
+            {/* Invoke has its own footer; Overview/Steps keep the bar with
+                provenance so the modal frame stays consistent. */}
+            {tab !== "invoke" && (
+              <div className="bg-muted/30 text-muted-foreground border-t px-5 py-3 text-xs">
+                Recorded from run{" "}
+                <code>
+                  {cap.provenance.created_from_run_id?.slice(0, 8) ?? "-"}
+                </code>
+                {cap.provenance.reviewed_by &&
+                  ` · approved by ${cap.provenance.reviewed_by}`}
+              </div>
+            )}
           </>
         )}
       </DialogContent>
