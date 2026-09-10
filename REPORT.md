@@ -116,6 +116,18 @@ apart. **Idempotency-aware retry (ST-035):** a non-idempotent step that fails
 ambiguously is *not* resubmitted — the executor re-observes and re-checks the
 checkpoint first; if it already holds, the step is treated as done.
 
+**Malformed model output on `assert_state` / `wait_for`.** Weaker models
+(observed on Gemini 2.5 Flash) send `condition: {}` or `{"kind": "text_present",
+"params": {}}` and put the phrase they meant to check in the (often mis-keyed,
+`reas1oning`) rationale field. Discovery repairs this without a model round-trip:
+a stricter tool sub-schema, a fuzzy rationale-key match, `_salvage_condition`
+(rebuild from any quoted / ALL-CAPS phrase in the args), and finally
+`_salvage_from_state` (lift a recognised confirmation marker — "CHANGES SAVED",
+"TRANSFER POSTED" … — straight off the screen just observed). A run that used to
+loop `assert_state` to the step ceiling now finishes on the first try; if
+nothing is salvageable it fails once with the exact required shape, and a
+same-tool failure streak escalates rather than grinding.
+
 **UI drift** (secondary, per the brief): the `SurfaceState.fingerprint` is a
 structural signature (tag skeleton + form field names, no text values) — stable
 across content changes, sensitive to markup drift; it keys the resolution cache

@@ -10,6 +10,7 @@ rule-based fallback so an offline discovery run still completes the goal.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -154,6 +155,19 @@ def _parse_retry_after(value: str | None) -> float | None:
         return None
 
 
+def _pop_reasoning(args: dict[str, Any]) -> str:
+    """Pull the model's rationale out of the tool args. Some models mangle the
+    key (Gemini emits `reas1oning`), so fall back to a fuzzy match on any key
+    that reduces to 'reasoning'/'reason' once non-letters are stripped."""
+    for k in ("reasoning", "reason", "rationale"):
+        if isinstance(args.get(k), str):
+            return args.pop(k)
+    for k in list(args):
+        if re.sub(r"[^a-z]", "", k.lower()) in ("reasoning", "reason") and isinstance(args[k], str):
+            return args.pop(k)
+    return ""
+
+
 def _parse_openai_tool_call(data: dict[str, Any], provider: str) -> ModelResponse:
     try:
         choice = data["choices"][0]["message"]
@@ -164,7 +178,7 @@ def _parse_openai_tool_call(data: dict[str, Any], provider: str) -> ModelRespons
         fn = calls[0]["function"]
         args = fn.get("arguments") or "{}"
         parsed = json.loads(args) if isinstance(args, str) else args
-        reasoning = parsed.pop("reasoning", "") or choice.get("content") or ""
+        reasoning = _pop_reasoning(parsed) or choice.get("content") or ""
         return ModelResponse(
             tool=fn["name"], args=parsed, reasoning=reasoning, provider=provider,
             usage=data.get("usage") or {}, raw=data,

@@ -60,6 +60,33 @@ _TARGET = {
     },
 }
 
+# A concrete sub-schema so the model fills `condition` instead of sending `{}`.
+_CONDITION = {
+    "type": "object",
+    "description": (
+        'REQUIRED shape — e.g. {"kind":"text_present","params":{"any":["CHANGES SAVED"]}}. '
+        "Never send an empty object."
+    ),
+    "properties": {
+        "kind": {
+            "type": "string",
+            "enum": [
+                "text_present", "text_absent", "url_matches",
+                "element_present", "element_absent", "all_of", "any_of",
+            ],
+        },
+        "params": {
+            "type": "object",
+            "description": (
+                'text_present/absent: {"any":["phrase", ...]}; '
+                'url_matches: {"pattern":"/members/\\\\d+$"}; '
+                'element_present/absent: {"target":{...}}'
+            ),
+        },
+    },
+    "required": ["kind", "params"],
+}
+
 TOOL_SCHEMA: list[dict[str, Any]] = [
     _tool("observe", "Re-read the current screen before deciding.", {}, []),
     _tool("click", "Click a control.", {"target": _TARGET}, ["target"]),
@@ -67,18 +94,17 @@ TOOL_SCHEMA: list[dict[str, Any]] = [
     _tool("select", "Choose an option in a dropdown/radio.", {"target": _TARGET, "option": {"type": "string"}}, ["target", "option"]),
     _tool("navigate", "Go to a URL on the allowlisted target app.", {"url": {"type": "string"}}, ["url"]),
     _tool("wait_for", "Wait (bounded) for a state condition.",
-          {"condition": {"type": "object"}, "timeout_ms": {"type": "integer"}}, ["condition"]),
+          {"condition": _CONDITION, "timeout_ms": {"type": "integer"}}, ["condition"]),
     _tool("extract", "Read a value off the screen with an expected shape.",
           {"target": _TARGET, "expected_shape": {"type": "string", "enum": ["string", "number", "currency", "integer", "boolean", "date"]},
            "as": {"type": "string", "description": "output field name"}}, ["target", "expected_shape", "as"]),
     _tool("assert_state",
           "Verify a condition holds on the CURRENT screen (a checkpoint). Cannot read an "
-          "<input> value or save a form. condition must be one of: "
-          '{"kind":"text_present","params":{"text":"CHANGES SAVED"}}, '
-          '{"kind":"text_absent","params":{"text":"..."}}, '
-          '{"kind":"url_matches","params":{"pattern":"/members/\\\\d+$"}}, '
-          '{"kind":"element_present","params":{"target":{...}}}.',
-          {"condition": {"type": "object"}}, ["condition"]),
+          "<input> value or save a form. You MUST pass a non-empty `condition` object with "
+          '`kind` and `params`, e.g. {"kind":"text_present","params":{"any":["CHANGES SAVED"]}} '
+          'or {"kind":"url_matches","params":{"pattern":"/members/\\\\d+$"}}. '
+          "Put the phrase you want to check inside params, NOT in reasoning.",
+          {"condition": _CONDITION}, ["condition"]),
     _tool("scroll", "Scroll the page when the control or content you need is off-screen.",
           {"direction": {"type": "string", "enum": ["down", "up", "top", "bottom"]},
            "to_text": {"type": "string", "description": "optional: scroll until this visible text is in view"}},
@@ -108,7 +134,10 @@ Rules:
 - assert_state checks a condition on the SCREEN (a heading/text is present, the URL matches). It does NOT save a form and it cannot read an <input> field's value - never use it to "confirm" an edit you have not submitted yet.
 
 Finishing (mandatory):
-- You may NEVER call done as your first reaction to a click/type succeeding. Finishing is two calls: (1) assert_state with the goal's success condition, phrased as a concrete screen check - prefer text_present of the exact confirmation wording you can see (e.g. {"kind":"text_present","params":{"text":"CHANGES SAVED"}}), else url_matches; then (2), only if that assert_state returned ok, done with the outputs.
+- You may NEVER call done as your first reaction to a click/type succeeding. Finishing is two calls: (1) assert_state with the goal's success condition, phrased as a concrete screen check - prefer text_present of the exact confirmation wording you can see, else url_matches; then (2), only if that assert_state returned ok, done with the outputs.
+- assert_state's `condition` MUST be a fully-populated object. The phrase you are checking for goes INSIDE params, never in reasoning. Copy this shape exactly:
+      {"kind": "text_present", "params": {"any": ["CHANGES SAVED"]}}
+  `params: {}` is invalid and will fail every time. Read the VISIBLE PAGE TEXT in the observation, copy a literal phrase from the success screen into the `any` list, and pass that.
 - That assert_state is recorded verbatim as the replay checkpoint, so:
   * make it specific to the success screen - a phrase that is there and NOT on the form/other screens;
   * make it STABLE across inputs - assert a fixed label or heading ("CHANGES SAVED", "Sub-account created", "Confirmation number:"), NEVER a value that differs per run (a confirmation/reference number, an amount, a date, a member name/id). Those change every invocation and would break replay.

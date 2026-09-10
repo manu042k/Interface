@@ -44,6 +44,98 @@ _DOWNSTREAM_RE = re.compile(
 )
 
 
+_QUOTED_RE = re.compile(r"[\"'“‘]([^\"'”’]{3,80})[\"'”’]")
+_CAPS_RUN_RE = re.compile(r"\b([A-Z][A-Z0-9 ]{4,40}[A-Z0-9])\b")
+
+
+_CONFIRM_MARKERS = (
+    "changes saved", "has been updated", "has been saved", "successfully updated",
+    "successfully saved", "information updated", "record updated", "update saved",
+    "transfer posted", "transaction posted", "posted successfully", "payment posted",
+    "share opened", "account opened", "account created", "successfully created",
+    "hold placed", "hold has been placed", "confirmation number", "reference number",
+    "was successful", "completed successfully", "operation complete",
+)
+
+
+def _salvage_from_state(state: SurfaceState | None) -> dict[str, Any] | None:
+    """The model gave assert_state nothing usable and its args carry no phrase —
+    but it just observed a screen. If that screen shows a recognised confirmation
+    marker, assert THAT (exact-cased as it appears)."""
+    if state is None:
+        return None
+    hay = f"{state.title or ''}\n{state.dom_excerpt or ''}"
+    low = hay.lower()
+    hits: list[str] = []
+    for m in _CONFIRM_MARKERS:
+        i = low.find(m)
+        if i != -1:
+            hits.append(hay[i:i + len(m)])  # preserve original casing
+    # also a prominent ALL-CAPS result heading, if present
+    for cap in _CAPS_RUN_RE.findall(hay):
+        c = cap.strip()
+        if any(w in c.lower() for w in ("updated", "saved", "posted", "opened", "created", "complete", "confirm")):
+            hits.append(c)
+    seen = list(dict.fromkeys(hits))
+    return {"kind": "text_present", "params": {"any": seen[:4]}} if seen else None
+
+
+def _condition_usable(cond: dict[str, Any]) -> bool:
+    """A condition the evaluator can actually act on — `kind` set AND the
+    params it needs are present (not `text_present` with empty params)."""
+    kind = cond.get("kind")
+    p = cond.get("params") or {}
+    if kind in ("text_present", "text_absent"):
+        return bool(p.get("any") or p.get("text"))
+    if kind == "url_matches":
+        return bool(p.get("pattern"))
+    if kind in ("element_present", "element_absent"):
+        return bool(p.get("target"))
+    if kind in ("all_of", "any_of"):
+        return bool(p.get("conditions"))
+    return bool(kind)
+
+
+def _salvage_condition(args: dict[str, Any]) -> dict[str, Any]:
+    """Models (esp. Gemini) sometimes send `assert_state`/`wait_for` with
+    `condition: {}` and put the phrase they meant to check in the reasoning
+    text (which they also mis-key, e.g. `reas1oning`). Rebuild a usable
+    `text_present` / `url_matches` condition from whatever they gave us; return
+    the original if it's already well-formed, or `{}` if nothing is salvageable
+    (the caller then fails once with a sharp schema hint)."""
+    cond = args.get("condition")
+    if isinstance(cond, dict) and _condition_usable(cond):
+        return cond
+    # a partly-formed condition (kind set, params empty) — keep its kind, try to
+    # fill the missing bit from the reasoning below
+    keep_kind = cond.get("kind") if isinstance(cond, dict) else None
+
+    # 1) a phrase the model quoted anywhere in the args (handles mis-keyed
+    #    reasoning by scanning every string value, not a fixed key)
+    phrases: list[str] = []
+    for v in args.values():
+        if isinstance(v, str):
+            phrases += _QUOTED_RE.findall(v)
+            phrases += [m.strip() for m in _CAPS_RUN_RE.findall(v)]
+    # 2) a phrase sitting at the top level under a plausible key
+    for k in ("text", "expect", "expected", "value", "phrase", "contains"):
+        if isinstance(args.get(k), str) and args[k].strip():
+            phrases.append(args[k].strip())
+    seen: list[str] = []
+    for p in phrases:
+        if p and p not in seen:
+            seen.append(p)
+    if seen:
+        kind = keep_kind if keep_kind in ("text_present", "text_absent") else "text_present"
+        return {"kind": kind, "params": {"any": seen[:4]}}
+
+    # 3) a url/pattern hint
+    for k in ("pattern", "url", "url_matches"):
+        if isinstance(args.get(k), str) and args[k].strip():
+            return {"kind": "url_matches", "params": {"pattern": args[k].strip()}}
+    return {}
+
+
 def _derive_login_success_check(goal: str, target: str) -> dict | None:
     """A goal that is ONLY "log in" has no explicit finish line, so the model can
     sign on successfully and then thrash (re-click submit, sign off, retry...).
@@ -207,6 +299,8 @@ class Orchestrator:
         click_stall = 0
         click_stall_url: str | None = None
         resolve_fails = 0  # consecutive "could not resolve target" errors
+        fail_streak = 0  # consecutive failed actions of the SAME tool (any error)
+        fail_streak_tool: str | None = None
         try:
             step = 0
             while True:
@@ -375,6 +469,18 @@ class Orchestrator:
 
                 # actionable tool -> build Action, guardrail, execute
                 action, extract_as = self._to_action(call, params)
+                # last-ditch: the model gave assert_state/wait_for a condition it
+                # cannot act on (kind but empty params, or {}) AND nothing in the
+                # args to rebuild from — lift a confirmation phrase straight off
+                # the screen it just observed, so a "done" edit isn't wedged by
+                # a formatting slip.
+                if action.type in (ActionType.ASSERT_STATE, ActionType.WAIT_FOR) and not _condition_usable(
+                    action.condition if isinstance(action.condition, dict) else {}
+                ):
+                    salvaged = _salvage_from_state(state)
+                    if salvaged:
+                        action.condition = salvaged
+                        log.event(step, "condition_salvaged", **{"from": "screen"}, condition=salvaged)
                 target_url = call.args.get("url") if call.tool == "navigate" else state.url
                 decision = self.policy.check(
                     ActionContext(
@@ -471,6 +577,7 @@ class Orchestrator:
                     last_ok_step = step
                     policy_blocks = 0  # progress - forget earlier guardrail rejections
                     resolve_fails = 0
+                    fail_streak, fail_streak_tool = 0, None
                     if call.tool in ("type", "select"):
                         entered = str(call.args.get("value") or call.args.get("option") or "")
                         for pk, pv in params.items():
@@ -479,6 +586,45 @@ class Orchestrator:
                 if not ok:
                     history.append(f"{desc} -> FAILED: {result.error}")
                     note = f"The last action failed: {result.error}. Re-observe and adapt, or call stuck."
+
+                    # Same tool failing over and over (a malformed assert_state
+                    # condition, a wait_for that never settles) sails past the
+                    # no-progress guard, which only counts *successful* repeats.
+                    if call.tool == fail_streak_tool:
+                        fail_streak += 1
+                    else:
+                        fail_streak, fail_streak_tool = 1, call.tool
+                    if fail_streak >= 4:
+                        reason = (
+                            f"repeated {call.tool} failed {fail_streak}x in a row "
+                            f"(last error: {result.error})"
+                        )
+                        resumed_note = await self._escalate_and_wait(
+                            run, transcript, session, step, reason, goal, history, log,
+                            handoff_wait_s, last_call,
+                        )
+                        if resumed_note is None:
+                            break
+                        note, last_sig, repeats = resumed_note, None, 0
+                        fail_streak, fail_streak_tool = 0, None
+                        deadline = time.time() + self.cfg.run_timeout_seconds
+                        continue
+                    if call.tool in ("assert_state", "wait_for") and not (
+                        isinstance(call.args.get("condition"), dict)
+                        and _condition_usable(call.args["condition"])
+                    ):
+                        # the failure is a bad ARGUMENT, not a bad screen — say so
+                        # on the FIRST miss, don't wait for a streak
+                        note = (
+                            f"Your {call.tool} `condition` was empty or malformed — that is why it "
+                            'failed, not the page. Send a real object: '
+                            '{"kind": "text_present", "params": {"any": ["<a phrase visible on the '
+                            'screen right now>"]}} or {"kind": "url_matches", "params": {"pattern": '
+                            '"/member/\\\\d+"}}. The phrase goes in params, not in your reasoning. '
+                            "If you cannot find a phrase, call done with your outputs (the save "
+                            "already went through) or call stuck."
+                        )
+
                     if "could not resolve target" in (result.error or ""):
                         resolve_fails += 1
                         if resolve_fails >= 2:
@@ -936,14 +1082,14 @@ class Orchestrator:
         if t == "navigate":
             return Action(type=ActionType.NAVIGATE, value=a["url"]), None
         if t == "wait_for":
-            return Action(type=ActionType.WAIT_FOR, condition=a.get("condition", {}), timeout_ms=int(a.get("timeout_ms", 15000))), None
+            return Action(type=ActionType.WAIT_FOR, condition=_salvage_condition(a), timeout_ms=int(a.get("timeout_ms", 15000))), None
         if t == "extract":
             return (
                 Action(type=ActionType.EXTRACT, target_description=a["target"], expected_shape=a.get("expected_shape", "string")),
                 a.get("as"),
             )
         if t == "assert_state":
-            return Action(type=ActionType.ASSERT_STATE, condition=a.get("condition", {})), None
+            return Action(type=ActionType.ASSERT_STATE, condition=_salvage_condition(a)), None
         if t == "scroll":
             tgt = {"text": a["to_text"]} if a.get("to_text") else None
             return Action(type=ActionType.SCROLL, target_description=tgt, value=str(a.get("direction", "down"))), None
