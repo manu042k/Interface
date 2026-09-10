@@ -32,14 +32,11 @@ export default function InterventionsPage() {
       />
 
       <div className="bg-card overflow-x-auto rounded-lg border">
-        <Table className="min-w-[860px]">
+        <Table className="min-w-[520px]">
           <TableHeader>
             <TableRow>
               <TableHead>Goal</TableHead>
-              <TableHead className="text-right">Step</TableHead>
-              <TableHead>Agent was attempting</TableHead>
               <TableHead>Why it stopped</TableHead>
-              <TableHead>Tenant</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -47,28 +44,16 @@ export default function InterventionsPage() {
             {pageRows.map((i) => (
               <TableRow key={i.intervention_id}>
                 <TableCell
-                  className="text-muted-foreground max-w-[260px] truncate align-top"
+                  className="max-w-[420px] truncate align-top"
                   title={i.goal ?? undefined}
                 >
                   {i.goal}
                 </TableCell>
-                <TableCell className="align-top text-right tabular-nums">
-                  {i.step_index}
-                </TableCell>
                 <TableCell
-                  className="max-w-[340px] truncate align-top text-sm"
-                  title={i.attempting ?? undefined}
-                >
-                  {i.attempting ?? "-"}
-                </TableCell>
-                <TableCell
-                  className="text-muted-foreground max-w-[160px] truncate align-top text-xs"
+                  className="text-muted-foreground max-w-[220px] truncate align-top text-xs"
                   title={i.reason}
                 >
                   {i.reason}
-                </TableCell>
-                <TableCell className="align-top whitespace-nowrap">
-                  {i.tenant}
                 </TableCell>
                 <TableCell className="align-top text-right">
                   <Button asChild size="sm" variant="outline">
@@ -80,7 +65,7 @@ export default function InterventionsPage() {
             {rows.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={3}
                   className="text-muted-foreground py-8 text-center"
                 >
                   Nothing stuck. Start a run with an unrecognizable goal to see
