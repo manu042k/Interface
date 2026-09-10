@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Check, ChevronDown, Maximize2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api, API_BASE, type RunReport as RunReportData } from "@/lib/api";
@@ -460,6 +460,13 @@ export function RunReport({
     queryFn: () => api.report(id),
   });
 
+  // an un-reviewed draft is the point of the run — don't leave it collapsed
+  useEffect(() => {
+    if ((rep?.artifact as { status?: string } | null)?.status === "draft") {
+      setArtifactOpen(true);
+    }
+  }, [rep]);
+
   if (!rep)
     return (
       <p className="text-muted-foreground text-sm">Assembling report…</p>
@@ -490,6 +497,12 @@ export function RunReport({
     replays.length === 1 && replays[0]?.invocation_id === id
       ? replays[0]
       : null;
+
+  const art = rep.artifact as
+    | { status?: string; duplicate_of?: string | null }
+    | null;
+  const needsReview = art?.status === "draft";
+  const dupOf = art?.duplicate_of ?? null;
 
   const banner =
     run.status === "business_outcome"
@@ -642,6 +655,16 @@ export function RunReport({
                 {run.artifact_version ? ` v${run.artifact_version}` : ""} ·{" "}
                 {run.step_count} steps
               </span>
+              {needsReview && (
+                <span className="border-warning/40 bg-warning/10 text-warning rounded border px-1.5 py-0.5 text-[11px] font-medium">
+                  Needs review
+                </span>
+              )}
+              {dupOf && (
+                <span className="text-muted-foreground text-xs font-normal">
+                  · possible duplicate of {dupOf}
+                </span>
+              )}
             </CardTitle>
             <ChevronDown
               className={`text-muted-foreground h-4 w-4 shrink-0 transition-transform ${
