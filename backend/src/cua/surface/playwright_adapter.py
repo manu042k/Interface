@@ -370,6 +370,21 @@ class PlaywrightAdapter(SurfaceAdapter):
                 loc = page.get_by_role(r, name=text, exact=False)
                 if await loc.count():
                     return loc.first, f"{r}={text!r}"
+            # an actionable element (button/link/submit) whose OWN text contains it
+            act = page.locator(
+                "a, button, input[type=submit], input[type=button], "
+                "[role=button], [role=link], [onclick]"
+            ).filter(has_text=text)
+            if await act.count():
+                return act.first, f"actionable text={text!r}"
+            # The model asked for a button/link by text and there is no
+            # actionable element with it — do NOT fall back to a heading/label
+            # match. Raising here triggers the "control is not on this page,
+            # re-read the screen" feedback instead of a silent no-op click.
+            if role in ("button", "link", "menuitem", "tab"):
+                raise SurfaceError(
+                    f"could not resolve target: no {role} with text {text!r} on this page"
+                )
             loc = page.get_by_text(text, exact=False)
             if await loc.count():
                 return loc.first, f"text={text!r}"

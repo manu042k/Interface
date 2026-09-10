@@ -190,3 +190,19 @@ def test_salvage_from_state_lifts_a_confirmation_phrase_off_the_screen():
     )
     assert _salvage_from_state(plain) is None
     assert _salvage_from_state(None) is None
+
+
+def test_visible_controls_lists_the_real_button_labels():
+    from cua.discovery.orchestrator import _visible_controls
+    from cua.models import SurfaceState
+
+    dom = (
+        "VISIBLE PAGE TEXT:\nFUNDS TRANSFER\n\nDOM OUTLINE:\n"
+        '<input type="submit" value="Continue">\n'
+        '<a href="/cancel">\n  Cancel\n'
+        "<button>\n  Post Transfer\n"
+    )
+    s = SurfaceState(url="x", title="t", ax_summary="", dom_excerpt=dom, fingerprint="f")
+    out = _visible_controls(s)
+    assert "[Continue]" in out and "[Cancel]" in out and "[Post Transfer]" in out
+    assert _visible_controls(None) == ""

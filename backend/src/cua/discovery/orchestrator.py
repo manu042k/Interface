@@ -80,6 +80,26 @@ def _salvage_from_state(state: SurfaceState | None) -> dict[str, Any] | None:
     return {"kind": "text_present", "params": {"any": seen[:4]}} if seen else None
 
 
+_SUBMIT_VAL_RE = re.compile(r'<input\b[^>]*\btype="(?:submit|button)"[^>]*\bvalue="([^"]+)"', re.I)
+_SUBMIT_VAL_RE2 = re.compile(r'<input\b[^>]*\bvalue="([^"]+)"[^>]*\btype="(?:submit|button)"', re.I)
+_TAG_THEN_TEXT_RE = re.compile(r"<(?:button|a)\b[^>]*>\s*\n\s*([^\n<][^\n]{0,40})", re.I)
+
+
+def _visible_controls(state: SurfaceState | None) -> str:
+    """The literal labels of the buttons / links on the screen right now, for
+    feeding back when the model names a control that isn't there."""
+    if state is None:
+        return ""
+    src = state.dom_excerpt or ""
+    labels: list[str] = []
+    for rx in (_SUBMIT_VAL_RE, _SUBMIT_VAL_RE2, _TAG_THEN_TEXT_RE):
+        for m in rx.finditer(src):
+            t = m.group(1).strip()
+            if 1 < len(t) < 40 and t not in labels:
+                labels.append(t)
+    return ", ".join(f"[{x}]" for x in labels[:12])
+
+
 def _condition_usable(cond: dict[str, Any]) -> bool:
     """A condition the evaluator can actually act on — `kind` set AND the
     params it needs are present (not `text_present` with empty params)."""
@@ -627,6 +647,12 @@ class Orchestrator:
 
                     if "could not resolve target" in (result.error or ""):
                         resolve_fails += 1
+                        ctrls = _visible_controls(state)
+                        ctrl_hint = (
+                            f" The clickable controls actually on this screen are: {ctrls}. "
+                            "Use one of those EXACT labels."
+                            if ctrls else ""
+                        )
                         if resolve_fails >= 2:
                             # Retrying the same control with new identifiers is
                             # the classic thrash — the control is very likely
@@ -636,19 +662,15 @@ class Orchestrator:
                                 f"The last action failed: {result.error}. You have now failed "
                                 f"to find this control {resolve_fails} times — it is most likely "
                                 "NOT on this page. STOP trying new identifiers for it and STOP "
-                                "scrolling. Re-read the observation above and list what is "
-                                "ACTUALLY on the current screen: its heading, its buttons/links, "
-                                "its fields. Then either act on one of THOSE toward the goal, or "
+                                f"scrolling.{ctrl_hint} Act on one of THOSE toward the goal, or "
                                 "call stuck. Do not name a control the observation does not show."
                             )
                         else:
                             note = (
                                 f"The last action failed: {result.error}. The control could NOT be "
-                                "located - it may be on screen under a different identifier. Do NOT "
-                                "scroll. Try its form field name (e.g. name='address'), its "
-                                "placeholder, or the visible label text next to it. If that fails "
-                                "too, the control is probably not here — re-read the screen and "
-                                "act on what IS shown, or call stuck."
+                                f"located.{ctrl_hint} Do NOT scroll. If none of those fit, try the "
+                                "field's form name / placeholder, else re-read the screen and act "
+                                "on what IS shown, or call stuck."
                             )
                     else:
                         resolve_fails = 0
