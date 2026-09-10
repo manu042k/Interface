@@ -31,12 +31,12 @@ export default function InterventionsPage() {
         description="Stuck runs waiting for a human. Open one to take control of its live session."
       />
 
-      <div className="bg-card rounded-lg border">
-        <Table>
+      <div className="bg-card overflow-x-auto rounded-lg border">
+        <Table className="min-w-[860px]">
           <TableHeader>
             <TableRow>
               <TableHead>Goal</TableHead>
-              <TableHead>Step</TableHead>
+              <TableHead className="text-right">Step</TableHead>
               <TableHead>Agent was attempting</TableHead>
               <TableHead>Why it stopped</TableHead>
               <TableHead>Tenant</TableHead>
@@ -46,18 +46,31 @@ export default function InterventionsPage() {
           <TableBody>
             {pageRows.map((i) => (
               <TableRow key={i.intervention_id}>
-                <TableCell className="text-muted-foreground max-w-xs truncate">
+                <TableCell
+                  className="text-muted-foreground max-w-[260px] truncate align-top"
+                  title={i.goal ?? undefined}
+                >
                   {i.goal}
                 </TableCell>
-                <TableCell>{i.step_index}</TableCell>
-                <TableCell className="max-w-sm truncate">
+                <TableCell className="align-top text-right tabular-nums">
+                  {i.step_index}
+                </TableCell>
+                <TableCell
+                  className="max-w-[340px] truncate align-top text-sm"
+                  title={i.attempting ?? undefined}
+                >
                   {i.attempting ?? "-"}
                 </TableCell>
-                <TableCell className="text-muted-foreground max-w-xs truncate text-xs">
+                <TableCell
+                  className="text-muted-foreground max-w-[160px] truncate align-top text-xs"
+                  title={i.reason}
+                >
                   {i.reason}
                 </TableCell>
-                <TableCell>{i.tenant}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="align-top whitespace-nowrap">
+                  {i.tenant}
+                </TableCell>
+                <TableCell className="align-top text-right">
                   <Button asChild size="sm" variant="outline">
                     <Link href={`/runs/${i.run_id}`}>Open run</Link>
                   </Button>
@@ -67,7 +80,7 @@ export default function InterventionsPage() {
             {rows.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-muted-foreground py-8 text-center"
                 >
                   Nothing stuck. Start a run with an unrecognizable goal to see
