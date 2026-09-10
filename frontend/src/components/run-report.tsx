@@ -308,61 +308,69 @@ export function RunReport({
         </Card>
       )}
 
-      {/* one table row per step: step no · action(s) · evidence */}
+      {/* vertical timeline: a rail of numbered steps, each holding its events
+          and (when captured) its screenshot */}
       <Card className="print-card min-w-0">
         <CardHeader>
           <CardTitle className="text-base">
             Timeline{hasEvidence ? " & evidence" : ""}
           </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          {hasEvidence ? (
-            <div className="grid min-w-[640px] grid-cols-[2.5rem_minmax(0,1fr)_16rem] gap-x-6 text-sm">
-              {["Step", "Action", "Evidence"].map((h) => (
-                <div
-                  key={h}
-                  className="text-muted-foreground pb-2 text-xs font-medium uppercase tracking-wide"
-                >
-                  {h}
-                </div>
-              ))}
-              {blocks.map((b, i) => (
-                <Fragment key={i}>
-                  <div className="border-border/60 text-muted-foreground border-t py-3 font-mono text-xs tabular-nums">
-                    {b.step != null ? `s${b.step}` : "·"}
-                  </div>
-                  <div className="border-border/60 min-w-0 space-y-0.5 border-t py-3">
-                    {b.events.map((e, j) => (
-                      <TimelineRow key={j} e={e} />
-                    ))}
-                  </div>
-                  <div className="border-border/60 space-y-2 border-t py-3">
-                    {b.shots.map((s) => (
-                      <Thumb key={s} src={s} onOpen={setLightbox} />
-                    ))}
-                  </div>
-                </Fragment>
-              ))}
-            </div>
-          ) : (
-            <ol className="divide-border/60 max-w-2xl divide-y text-sm">
-              {blocks.map((b, i) => (
-                <li key={i} className="flex gap-4 py-3 first:pt-0 last:pb-0">
-                  <span className="text-muted-foreground w-6 shrink-0 pt-0.5 font-mono text-xs tabular-nums">
-                    {b.step != null ? `s${b.step}` : "·"}
+        <CardContent>
+          <ol className="relative max-w-4xl">
+            {/* the rail */}
+            <span
+              aria-hidden
+              className="bg-border absolute top-3 bottom-3 left-[15px] w-px"
+            />
+            {blocks.map((b, i) => {
+              const pre = b.step == null;
+              return (
+                <li key={i} className="relative pb-5 pl-11 last:pb-0">
+                  <span
+                    className={
+                      "bg-card absolute left-0 top-0 grid place-items-center rounded-full border text-[11px] font-medium " +
+                      (pre
+                        ? "text-muted-foreground size-8"
+                        : "text-foreground size-8 font-mono tabular-nums")
+                    }
+                  >
+                    {pre ? "•" : b.step}
                   </span>
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    {b.events.map((e, j) => (
-                      <TimelineRow key={j} e={e} />
-                    ))}
+
+                  <div
+                    className={
+                      b.shots.length > 0
+                        ? "flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4"
+                        : ""
+                    }
+                  >
+                    <div
+                      className={
+                        "border-border/70 min-w-0 space-y-0.5 rounded-lg border px-3 py-2.5 text-sm " +
+                        (b.shots.length > 0 ? "flex-1" : "max-w-2xl")
+                      }
+                    >
+                      {b.events.map((e, j) => (
+                        <TimelineRow key={j} e={e} />
+                      ))}
+                    </div>
+
+                    {b.shots.length > 0 && (
+                      <div className="w-full shrink-0 space-y-2 sm:w-56">
+                        {b.shots.map((s) => (
+                          <Thumb key={s} src={s} onOpen={setLightbox} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </li>
-              ))}
-            </ol>
-          )}
+              );
+            })}
+          </ol>
 
           {orphanShots.length > 0 && (
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {orphanShots.map((s) => (
                 <Thumb key={s} src={s} onOpen={setLightbox} />
               ))}
