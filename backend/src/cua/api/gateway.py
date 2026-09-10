@@ -219,6 +219,27 @@ def create_app(config: Config | None = None) -> FastAPI:
                     run.record_outcome = artifact.record_outcome
                     if artifact.record_outcome != "reused" and not artifact.agent_summary:
                         await sys.summarize_capability(artifact)  # record-time, best-effort
+                elif run.status == RunStatus.BUSINESS_OUTCOME and transcript.business_outcome:
+                    # the run LANDED on this state live — promote it to CONFIRMED
+                    # on this app's capabilities (append if none had it).
+                    code, _msg, phrases = transcript.business_outcome
+                    try:
+                        touched: list[str] = []
+                        if req.capability_name:
+                            touched = sys.store.confirm_business_outcome(
+                                req.vendor_app_id, code, phrases, run.run_id,
+                                prefer_name=req.capability_name,
+                            )
+                        if not touched:
+                            touched = sys.store.confirm_business_outcome(
+                                req.vendor_app_id, code, phrases, run.run_id,
+                            )
+                        run.detail = (run.detail or "") + (
+                            f" — confirmed on: {', '.join(touched)}" if touched
+                            else " — no existing capability to update"
+                        )
+                    except Exception:  # noqa: BLE001
+                        pass
             except Exception as exc:  # noqa: BLE001
                 run.status = RunStatus.FAILED
                 run.detail = f"orchestrator crashed: {exc}"

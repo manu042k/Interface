@@ -69,6 +69,9 @@ class DiscoveryTranscript:
     done_outputs: dict[str, Any] = field(default_factory=dict)
     final_state: SurfaceState | None = None
     stuck_reason: str | None = None
+    # set when the run ended on a recognised business-outcome screen:
+    # (code, message, the exact phrases that matched)
+    business_outcome: tuple[str, str, list[str]] | None = None
     session_id: str | None = None
     intervention_id: str | None = None
 
@@ -432,11 +435,12 @@ class Orchestrator:
                 ):
                     bo = await self._discovery_business_outcome(session)
                     if bo is not None:
-                        code, msg = bo
+                        code, msg, phrases = bo
                         run.status = RunStatus.BUSINESS_OUTCOME
                         run.detail = f"{code}: {msg}"
                         transcript.final_state = state
-                        log.event(step, "business_outcome", code=code, message=msg)
+                        transcript.business_outcome = (code, msg, phrases)
+                        log.event(step, "business_outcome", code=code, message=msg, matched=phrases)
                         log.run_finished("business_outcome", code=code)
                         break
 
@@ -640,11 +644,11 @@ class Orchestrator:
                     surface=surface, run=run, logger=log,
                 )
 
-    async def _discovery_business_outcome(self, session: str) -> tuple[str, str] | None:
+    async def _discovery_business_outcome(self, session: str) -> tuple[str, str, list[str]] | None:
         """The current screen against the same business-outcome patterns replay
         uses (per-host library + generic not-found / permission phrasings). A
         match means the goal has a legitimate non-happy answer — end the run
-        with it, don't route a human. Returns (code, message) or None."""
+        with it, don't route a human. Returns (code, message, matched_phrases)."""
         from ..conditions import evaluate as eval_condition
         from ..models import Condition
         from ..outcomes import business_outcomes_for
@@ -661,6 +665,7 @@ class Orchestrator:
             state = await self.perception.observe(self.adapter, session)
         except Exception:  # noqa: BLE001
             return None
+        haystack = f"{state.title}\n{state.ax_summary}\n{state.dom_excerpt}".lower()
         for r in rules:
             if isinstance(r, tuple):
                 code, phrases = r
@@ -668,9 +673,11 @@ class Orchestrator:
                 msg = f"the app reported: {phrases[0]}"
             else:
                 code, cond, msg = r.code, r.when, (r.message or r.code)
+                phrases = list(cond.params.get("any") or ([cond.params["text"]] if cond.params.get("text") else []))
             try:
                 if await eval_condition(cond, state):
-                    return code, msg
+                    hit = [p for p in phrases if p and p.lower() in haystack] or phrases[:1]
+                    return code, msg, hit
             except Exception:  # noqa: BLE001
                 continue
         return None
@@ -689,11 +696,12 @@ class Orchestrator:
         # ("member 12345 doesn't exist"), not something an operator can fix.
         bo = await self._discovery_business_outcome(session)
         if bo is not None:
-            code, msg = bo
+            code, msg, phrases = bo
             run.status = RunStatus.BUSINESS_OUTCOME
             run.detail = f"{code}: {msg}"
             transcript.stuck_reason = None
-            log.event(step, "business_outcome", code=code, message=msg,
+            transcript.business_outcome = (code, msg, phrases)
+            log.event(step, "business_outcome", code=code, message=msg, matched=phrases,
                       detail="recognised at discovery — ending run, no handoff")
             log.run_finished("business_outcome", code=code)
             return None

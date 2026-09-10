@@ -152,6 +152,10 @@ class BusinessOutcomeRule(BaseModel):
     message: str = ""
     # If set, this outcome is only meaningful at/after this step index.
     from_step: int = 0
+    # True once a discovery run has actually LANDED on this state live (vs a
+    # seeded guess). The run ids that saw it, most recent first.
+    observed: bool = False
+    observed_run_ids: list[str] = Field(default_factory=list)
     # Optional CSS selector for the element that holds the *actionable* detail
     # (e.g. a <ul> of the specific validation rules that failed). When present,
     # replay lifts that text into ReplayResult.failure_detail so the caller

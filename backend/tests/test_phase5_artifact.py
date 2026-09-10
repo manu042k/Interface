@@ -123,6 +123,43 @@ def test_store_versions_not_overwrites(tmp_path):
     assert store.get(a1.artifact_id, 1).version == 1  # v1 still readable
 
 
+def test_confirm_business_outcome_marks_and_merges(tmp_path):
+    from cua.models import BusinessOutcomeRule, CapabilityArtifact, Condition, Step
+
+    store = ArtifactStore(tmp_path / "s.db")
+
+    def mk(name, outcomes):
+        return CapabilityArtifact(
+            name=name, vendor_app_id="app", goal_description="g",
+            steps=[Step(step_index=0, action_type="navigate", description="go",
+                        value_binding={"literal": "http://x/"}, idempotent=True)],
+            checkpoint=Condition(kind="url_matches", params={"pattern": ".*"}),
+            known_outcomes=outcomes,
+        )
+
+    a = store.save_draft(mk("cap_a", [BusinessOutcomeRule(
+        code="member_not_found",
+        when=Condition(kind="text_present", params={"any": ["No members matched"]}))]))
+    b = store.save_draft(mk("cap_b", []))  # no rule for this code yet
+
+    touched = store.confirm_business_outcome(
+        "app", "member_not_found", ["No member records matched", "record not found"], "run-1",
+    )
+    assert set(touched) == {"cap_a", "cap_b"}
+
+    ra = next(r for r in store.get(a.artifact_id, 1).known_outcomes if r.code == "member_not_found")
+    assert ra.observed is True and "run-1" in ra.observed_run_ids
+    # the newly-seen phrases were merged into the existing when-clause
+    assert set(ra.when.params["any"]) >= {"No members matched", "No member records matched", "record not found"}
+
+    rb = next(r for r in store.get(b.artifact_id, 1).known_outcomes if r.code == "member_not_found")
+    assert rb.observed is True  # appended fresh onto cap_b
+
+    # prefer_name scopes it
+    t2 = store.confirm_business_outcome("app", "member_not_found", ["x"], "run-2", prefer_name="cap_a")
+    assert t2 == ["cap_a"]
+
+
 def test_retire_and_default_rollback(tmp_path):
     from cua.artifact.store import PromotionDecision
     from cua.models import CapabilityArtifact, Condition, Step

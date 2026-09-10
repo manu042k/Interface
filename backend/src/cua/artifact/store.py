@@ -288,6 +288,53 @@ class ArtifactStore:
             )
         return a
 
+    def confirm_business_outcome(
+        self, vendor_app_id: str, code: str, phrases: list[str], run_id: str,
+        *, prefer_name: str | None = None,
+    ) -> list[str]:
+        """A discovery run LANDED on this business-outcome state live — promote
+        it from a seeded guess to CONFIRMED on the affected capabilities.
+
+        For each capability of `vendor_app_id` (or just `prefer_name` if given
+        and it exists): mark its `known_outcome` for `code` observed, record the
+        run id, and merge any newly-seen matched phrases into its when-clause.
+        If a capability has no rule for `code`, append one (observed). Body is
+        patched in place — this is additive confirmed knowledge, not a new
+        version. Returns the capability names touched."""
+        from ..models import BusinessOutcomeRule, Condition
+
+        touched: list[str] = []
+        with self._lock, self._connect() as con:
+            q = "SELECT artifact_id, version, name, body FROM artifacts WHERE vendor_app_id = ? AND scope_kind = 'base'"
+            args: list[object] = [vendor_app_id]
+            if prefer_name:
+                q += " AND name = ?"
+                args.append(prefer_name)
+            for row in con.execute(q, args).fetchall():
+                a = CapabilityArtifact.model_validate_json(row["body"])
+                rule = next((r for r in a.known_outcomes if r.code == code), None)
+                if rule is None:
+                    rule = BusinessOutcomeRule(
+                        code=code,
+                        when=Condition(kind="text_present", params={"any": list(phrases)}),
+                        message=f"observed live: {phrases[0] if phrases else code}",
+                    )
+                    a.known_outcomes.append(rule)
+                else:
+                    seen = set(rule.when.params.get("any") or ([rule.when.params["text"]] if rule.when.params.get("text") else []))
+                    merged = sorted(seen | {p for p in phrases if p})
+                    rule.when = Condition(kind="text_present", params={**rule.when.params, "any": merged}, description=rule.when.description)
+                rule.observed = True
+                if run_id not in rule.observed_run_ids:
+                    rule.observed_run_ids.insert(0, run_id)
+                    rule.observed_run_ids[:] = rule.observed_run_ids[:10]
+                con.execute(
+                    "UPDATE artifacts SET body = ? WHERE artifact_id = ? AND version = ?",
+                    (a.model_dump_json(), row["artifact_id"], row["version"]),
+                )
+                touched.append(row["name"])
+        return touched
+
     def replace_draft(self, artifact: CapabilityArtifact, *, artifact_id: str, version: int) -> CapabilityArtifact:
         """Overwrite an un-reviewed draft's body in place (keeps its id + version)."""
         with self._lock, self._connect() as con:
