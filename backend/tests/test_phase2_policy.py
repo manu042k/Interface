@@ -93,9 +93,9 @@ def test_safe_action_stays_fast():
 
 # -- built-in banking-mutation risk (tenant-independent) ---------------------
 
-def test_money_movement_control_needs_approval_even_without_tenant_config():
-    """A 'Transfer' button trips require_confirmation on a bare auto-admitted
-    host that has no hand-written risky_route_patterns."""
+def test_commit_on_a_transfer_form_needs_approval_without_tenant_config():
+    """Clicking Transfer while ON the transfer form trips require_confirmation on
+    a bare auto-admitted host with no hand-written risky_route_patterns."""
     eng = _engine()
     tgt = "https://parabank.parasoft.com/parabank/transfer.htm"
     eng.allow_target("default", tgt)
@@ -104,10 +104,30 @@ def test_money_movement_control_needs_approval_even_without_tenant_config():
         extra={"target": "Transfer", "value": "999999"},
     ))
     assert d.verdict == PolicyVerdict.REQUIRE_CONFIRMATION
-    assert "money-movement" in d.reason
+    assert "irreversible" in d.reason
 
 
-def test_mutation_route_is_risky_by_route_alone():
+def test_navigating_to_the_transfer_form_is_NOT_gated():
+    """The gate is at the commit, not before it: opening the transfer area from
+    a menu link on the overview page passes straight through."""
+    eng = _engine()
+    eng.allow_target("default", "https://parabank.parasoft.com/parabank/index.htm")
+    # click the "Transfer Funds" menu link while still on the overview page
+    d = eng.check(ActionContext(
+        "default", ActionType.CLICK,
+        "https://parabank.parasoft.com/parabank/overview.htm",
+        extra={"target": "Transfer Funds"},
+    ))
+    assert d.verdict == PolicyVerdict.ALLOW
+    # and navigating to the form URL itself
+    d2 = eng.check(ActionContext(
+        "default", ActionType.NAVIGATE,
+        "https://parabank.parasoft.com/parabank/transfer.htm",
+    ))
+    assert d2.verdict == PolicyVerdict.ALLOW
+
+
+def test_send_payment_on_the_billpay_form_is_gated():
     eng = _engine()
     tgt = "https://parabank.parasoft.com/parabank/billpay.htm"
     eng.allow_target("default", tgt)
@@ -115,19 +135,11 @@ def test_mutation_route_is_risky_by_route_alone():
     assert d.verdict == PolicyVerdict.REQUIRE_CONFIRMATION
 
 
-def test_plain_submit_on_a_search_form_is_not_risky():
-    eng = _engine()
-    tgt = "https://shop.example/search"
-    eng.allow_target("default", tgt)
-    d = eng.check(ActionContext("default", ActionType.CLICK, tgt, extra={"target": "Search"}))
-    assert d.verdict == PolicyVerdict.ALLOW
-    d2 = eng.check(ActionContext("default", ActionType.CLICK, tgt, extra={"target": "Submit"}))
-    assert d2.verdict == PolicyVerdict.ALLOW  # generic verb, non-mutation route
-
-
-def test_typing_into_an_amount_field_is_not_a_commit():
+def test_typing_the_amount_then_cancelling_are_not_commits():
     eng = _engine()
     tgt = "https://parabank.parasoft.com/parabank/transfer.htm"
     eng.allow_target("default", tgt)
-    d = eng.check(ActionContext("default", ActionType.TYPE, tgt, extra={"target": "amount", "value": "999999"}))
-    assert d.verdict == PolicyVerdict.ALLOW  # only click/press_key/navigate commit
+    typing = eng.check(ActionContext("default", ActionType.TYPE, tgt, extra={"target": "amount", "value": "999999"}))
+    assert typing.verdict == PolicyVerdict.ALLOW  # filling a field is not a commit
+    cancel = eng.check(ActionContext("default", ActionType.CLICK, tgt, extra={"target": "Cancel"}))
+    assert cancel.verdict == PolicyVerdict.ALLOW  # no money-move / commit verb

@@ -65,18 +65,23 @@ _MUTATION_ROUTE_RE = re.compile(
 
 
 def _mutation_signal(action_type: str, path_q: str, signal: str) -> str | None:
-    """A built-in banking-mutation reason, or None. `signal` is the control's
-    visible text / name / value flattened to one lowercase string."""
-    if action_type not in ("click", "press_key", "navigate"):
+    """A built-in banking-mutation reason, or None.
+
+    The gate is deliberately at the COMMIT, not before it: it fires only when the
+    agent CLICKS a submit / Transfer / Pay / Confirm control WHILE ALREADY ON a
+    mutation form (`/transfer`, `/billpay`, `/payment`, `/openaccount`, ...).
+    Navigating to that form, clicking a "Transfer Funds" menu link, and typing
+    the amount all pass through untouched — the human is asked to sign off at the
+    moment money would actually move.
+
+    `signal` is the control's text / name / role / value flattened to lowercase.
+    """
+    if action_type not in ("click", "press_key"):
         return None
-    if _MONEY_MOVE_RE.search(signal):
-        return "money-movement action (transfer / payment / withdrawal)"
-    if _LIFECYCLE_RE.search(signal):
-        return "account-lifecycle action (open / close / hold / reset)"
-    if _MUTATION_ROUTE_RE.search(path_q):
-        return f"mutation route ({path_q})"
-    if _COMMIT_VERB_RE.search(signal) and _MUTATION_ROUTE_RE.search(path_q):
-        return "commit action on a mutation route"
+    if not _MUTATION_ROUTE_RE.search(path_q):
+        return None  # not on a mutation form yet — opening / navigating, no commit
+    if _MONEY_MOVE_RE.search(signal) or _LIFECYCLE_RE.search(signal) or _COMMIT_VERB_RE.search(signal):
+        return f"committing an irreversible action on {path_q}"
     return None
 
 

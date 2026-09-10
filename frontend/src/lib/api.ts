@@ -256,6 +256,9 @@ export const api = {
       status: string;
       claimed_by: string | null;
       step_index: number;
+      kind?: "handoff" | "risk_approval";
+      proposed_action?: string | null;
+      decision?: string | null;
       reason: string;
       attempting: string | null;
     } | null>(`/runs/${runId}/intervention`),
@@ -266,6 +269,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ operator }),
     }),
+  decideIntervention: (
+    id: string,
+    approved: boolean,
+    operator: string,
+    note?: string,
+  ) =>
+    j<{ status: string; decision: string; resolution: string }>(
+      `/interventions/${id}/decision`,
+      {
+        method: "POST",
+        body: JSON.stringify({ approved, operator, note }),
+      },
+    ),
   takeControl: (id: string, operator: string) =>
     j<{ session_id: string; live_handle: string; remote_display: string }>(
       `/interventions/${id}/take-control`,

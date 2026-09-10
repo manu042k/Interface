@@ -102,6 +102,86 @@ class EscalationService:
         )
         return iv
 
+    async def open_risk_approval(
+        self,
+        *,
+        run: RunRecord,
+        session_id: str,
+        step_index: int,
+        proposed_action: str,
+        reason: str,
+        goal: str | None = None,
+        capability_name: str | None = None,
+        transcript_tail: list[str] | None = None,
+    ) -> InterventionRequest:
+        """A risk-approval gate: the run is NOT stuck, but the next action is
+        risky/irreversible and must be signed off (Approve / Reject) BEFORE it
+        runs. Automation pauses; no takeover. Captures a screenshot for context."""
+        log: RunLogger = self._logger_factory(run.run_id)
+        try:
+            lease = self.broker.acquire(session_id, Holder.AUTOMATION)
+            self._auto_leases[session_id] = lease
+        except Exception as exc:  # noqa: BLE001
+            log.event(step_index, "escalation_lock_warning", detail=str(exc))
+
+        screenshot_ref = None
+        current_url = ""
+        try:
+            snap = await self.adapter.snapshot(session_id)
+            current_url = snap.url
+            if snap.screenshot_png:
+                screenshot_ref = log.evidence_screenshot(step_index, snap.screenshot_png, {"url": snap.url})
+        except Exception as exc:  # noqa: BLE001
+            log.event(step_index, "escalation_snapshot_warning", detail=str(exc))
+
+        iv = InterventionRequest(
+            run_id=run.run_id,
+            tenant_id=run.tenant_id,
+            capability_name=capability_name,
+            goal=goal or run.goal,
+            step_index=step_index,
+            kind="risk_approval",
+            proposed_action=proposed_action,
+            reason=reason,
+            attempting=proposed_action,
+            context={
+                "screenshot_ref": screenshot_ref,
+                "transcript_tail": (transcript_tail or [])[-8:],
+                "current_url": current_url,
+                "session_id": session_id,
+            },
+        )
+        self._interventions[iv.intervention_id] = iv
+        log.event(step_index, "risk_approval_requested", intervention_id=iv.intervention_id,
+                  proposed_action=proposed_action, reason=reason)
+        return iv
+
+    def decide(self, intervention_id: str, *, approved: bool, operator: str, note: str = "") -> InterventionRequest:
+        """Resolve a risk_approval gate. Releases automation's lease so the run
+        can proceed (approved) or wind down (rejected)."""
+        iv = self.get(intervention_id)
+        if iv.kind != "risk_approval":
+            raise ValueError(f"intervention {intervention_id} is a {iv.kind}, not a risk_approval")
+        if iv.status == InterventionStatus.RESOLVED:
+            raise ValueError(f"intervention {intervention_id} is already resolved")
+        session_id = iv.context.get("session_id")
+        auto = self._auto_leases.pop(session_id, None) if session_id else None
+        if auto is not None:
+            try:
+                self.broker.release(auto)
+            except Exception:  # noqa: BLE001
+                pass
+        iv.decision = "approved" if approved else "rejected"
+        iv.claimed_by = operator
+        iv.status = InterventionStatus.RESOLVED
+        iv.resolved_at = time.time()
+        iv.resolution = f"{iv.decision} by {operator}" + (f": {note}" if note else "")
+        self._logger_factory(iv.run_id).event(
+            iv.step_index, "risk_approval_decided", intervention_id=intervention_id,
+            decision=iv.decision, by=operator, note=note or None,
+        )
+        return iv
+
     # -- queries --------------------------------------------------
     def list_interventions(self, status: str | None = None) -> list[InterventionRequest]:
         items = list(self._interventions.values())

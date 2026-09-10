@@ -109,3 +109,35 @@ async def test_operator_claims_takes_control_acts_and_hands_back(system):
     assert sys.escalation.get(iv_id).status == InterventionStatus.RESOLVED
     # control returned to automation
     assert sys.broker.holder(transcript.session_id) == Holder.AUTOMATION
+
+
+async def test_risk_approval_gate_open_and_decide(system):
+    """A risk_approval intervention: no takeover — Approve / Reject only."""
+    sys, mockbank = system
+    from cua.models import RunRecord
+
+    run = RunRecord(run_id="r-risk", mode="discovery", goal="transfer 500",
+                    tenant_id="default", app_target=f"{mockbank}/search")
+    sess = await sys.adapter.open_session(f"{mockbank}/search", "default")
+    sys.broker.register_session(sess, sess)
+
+    iv = await sys.escalation.open_risk_approval(
+        run=run, session_id=sess, step_index=7,
+        proposed_action="click 'Transfer' (value: 500) — goal: transfer 500 from A to B",
+        reason="committing an irreversible action on /transfer.htm",
+    )
+    assert iv.kind == "risk_approval"
+    assert iv.proposed_action.startswith("click 'Transfer'")
+    row = next(i for i in sys.console.inbox("open") if i["intervention_id"] == iv.intervention_id)
+    assert row["kind"] == "risk_approval" and row["proposed_action"]
+
+    # reject
+    out = sys.console.decide(iv.intervention_id, approved=False, operator="op_kim", note="too large")
+    assert out["decision"] == "rejected"
+    assert sys.escalation.get(iv.intervention_id).status == InterventionStatus.RESOLVED
+    # a resolved gate can't be decided again
+    import pytest
+    with pytest.raises(ValueError):
+        sys.console.decide(iv.intervention_id, approved=True, operator="op_kim")
+
+    await sys.adapter.close_session(sess)

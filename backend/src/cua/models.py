@@ -422,6 +422,16 @@ class InterventionRequest(BaseModel):
     goal: str | None = None
     step_index: int
     reason: str
+    # "handoff": the run is stuck and a human must take over the live session.
+    # "risk_approval": the run is fine, but the next action is risky/irreversible
+    # (a funds transfer, an account close) and a human must say yes/no BEFORE it
+    # runs — no takeover, just Approve / Reject.
+    kind: Literal["handoff", "risk_approval"] = "handoff"
+    # For risk_approval: a plain-language description of the exact action awaiting
+    # sign-off, e.g. "transfer 500 from the first account to the second account".
+    proposed_action: str | None = None
+    # For risk_approval once decided: "approved" | "rejected".
+    decision: str | None = None
     # What the automation was trying to do when it gave up - the model's stated
     # intent plus the concrete control/value it was going for, so the operator
     # knows what to finish rather than reverse-engineering it from a screenshot.

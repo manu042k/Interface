@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HandMetal, Loader2 } from "lucide-react";
+import { HandMetal, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,9 @@ type Iv = {
   status: string;
   claimed_by: string | null;
   step_index: number;
+  kind?: "handoff" | "risk_approval";
+  proposed_action?: string | null;
+  decision?: string | null;
   reason: string;
   attempting: string | null;
 };
@@ -50,6 +53,68 @@ export function HandoffPanel({
   if (!iv) return null;
   const step = (m: string) => setLog((l) => [...l, m]);
   const inControl = iv.status === "claimed";
+
+  async function decide(approved: boolean) {
+    if (!iv) return;
+    setBusy(true);
+    releasing.current = true;
+    try {
+      await api.decideIntervention(iv.intervention_id, approved, OPERATOR);
+      if (approved) toast.success("Approved — the agent will proceed");
+      else toast("Rejected — the agent will not run this action");
+      setIv(null);
+      onResolved();
+    } catch (e) {
+      releasing.current = false;
+      toast.error(String((e as Error).message));
+    }
+    setBusy(false);
+  }
+
+  // A risk-approval gate: the run is fine, but the next action is
+  // irreversible (a funds transfer, an account close) and needs a yes/no
+  // BEFORE it runs. No takeover — just Approve / Reject.
+  if (iv.kind === "risk_approval") {
+    return (
+      <div className="border-warning/50 bg-warning/10 rounded-lg border p-4">
+        <div className="flex items-start gap-3">
+          <ShieldAlert className="text-warning mt-0.5 h-5 w-5 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">
+              The agent is about to run an irreversible action — approve it?
+            </p>
+            {iv.proposed_action && (
+              <p className="mt-1 text-sm">
+                <span className="text-muted-foreground">Proposed action: </span>
+                {iv.proposed_action}
+              </p>
+            )}
+            <p className="text-muted-foreground mt-1 text-xs">
+              Flagged because: {iv.reason} · step {iv.step_index}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button size="sm" onClick={() => decide(true)} disabled={busy}>
+                {busy && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => decide(false)}
+                disabled={busy}
+              >
+                Reject
+              </Button>
+              <span className="text-muted-foreground text-xs">
+                Approve lets the agent perform this one action; Reject makes it
+                pick a safe alternative or stop.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   async function claimAndTake() {
     if (!iv) return;

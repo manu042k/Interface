@@ -555,6 +555,9 @@ def create_app(config: Config | None = None) -> FastAPI:
             "status": iv.status,
             "claimed_by": iv.claimed_by,
             "step_index": iv.step_index,
+            "kind": iv.kind,
+            "proposed_action": iv.proposed_action,
+            "decision": iv.decision,
             "reason": iv.reason,
             "attempting": iv.attempting,
             "goal": iv.goal,
@@ -566,6 +569,22 @@ def create_app(config: Config | None = None) -> FastAPI:
             return app.state.system.console.context(intervention_id)
         except KeyError as exc:
             raise HTTPException(404, str(exc)) from exc
+
+    @app.post("/interventions/{intervention_id}/decision")
+    async def decide_intervention(intervention_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Approve or reject a risk_approval gate (no takeover). Body:
+        {approved: bool, operator?: str, note?: str}."""
+        try:
+            return app.state.system.console.decide(
+                intervention_id,
+                approved=bool(body.get("approved")),
+                operator=body.get("operator", "operator"),
+                note=body.get("note", ""),
+            )
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
 
     @app.post("/interventions/{intervention_id}/claim")
     async def claim_intervention(intervention_id: str, body: dict[str, str]) -> dict[str, Any]:

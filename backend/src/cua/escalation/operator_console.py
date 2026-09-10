@@ -32,6 +32,9 @@ class OperatorConsole:
                 "goal": iv.goal,
                 "run_id": iv.run_id,
                 "step_index": iv.step_index,
+                "kind": iv.kind,
+                "proposed_action": iv.proposed_action,
+                "decision": iv.decision,
                 "reason": iv.reason,
                 "attempting": iv.attempting,
                 "opened_at": iv.opened_at,
@@ -45,6 +48,9 @@ class OperatorConsole:
         return {
             "intervention_id": iv.intervention_id,
             "goal": iv.goal,
+            "kind": iv.kind,
+            "proposed_action": iv.proposed_action,
+            "decision": iv.decision,
             "reason": iv.reason,
             "attempting": iv.attempting,
             "step_index": iv.step_index,
@@ -56,6 +62,15 @@ class OperatorConsole:
     def claim(self, intervention_id: str, operator: str) -> dict[str, Any]:
         iv = self._esc.claim(intervention_id, operator)
         return {"intervention_id": iv.intervention_id, "status": iv.status, "claimed_by": operator}
+
+    def decide(self, intervention_id: str, *, approved: bool, operator: str, note: str = "") -> dict[str, Any]:
+        iv = self._esc.decide(intervention_id, approved=approved, operator=operator, note=note)
+        return {
+            "intervention_id": iv.intervention_id,
+            "status": iv.status,
+            "decision": iv.decision,
+            "resolution": iv.resolution,
+        }
 
     # -- ST-039: take control of the SAME session -----------------
     def take_control(self, intervention_id: str, operator: str) -> dict[str, Any]:

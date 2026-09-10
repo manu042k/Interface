@@ -597,22 +597,14 @@ class Orchestrator:
                 )
                 log.guardrail(step, decision.verdict, decision.reason)
 
-                if decision.verdict in (
-                    PolicyVerdict.BLOCK,
-                    *(() if confirm_risky else (PolicyVerdict.REQUIRE_CONFIRMATION,)),
-                ):
+                if decision.verdict == PolicyVerdict.BLOCK:
                     policy_blocks += 1
-                    kind = (
-                        "blocked" if decision.verdict == PolicyVerdict.BLOCK
-                        else "require_confirmation"
-                    )
-                    history.append(f"{call.tool} {kind} by guardrail: {decision.reason}")
+                    history.append(f"{call.tool} blocked by guardrail: {decision.reason}")
                     transcript.entries.append(
-                        TranscriptEntry(step, state, call, action, False, {kind: decision.reason}, decision.verdict)
+                        TranscriptEntry(step, state, call, action, False, {"blocked": decision.reason}, decision.verdict)
                     )
-                    # This is not something the model can fix by retrying - the
-                    # route/action is off-policy or needs a human. Nudge once,
-                    # then force the escalation rather than let it burn steps.
+                    # Not something the model can fix by retrying — the route/action
+                    # is off-policy. Nudge once, then escalate rather than burn steps.
                     if policy_blocks >= 2:
                         reason = f"guardrail keeps rejecting this action: {decision.reason}"
                         resumed_note = await self._escalate_and_wait(
@@ -633,8 +625,49 @@ class Orchestrator:
                     step += 1
                     continue
 
-                if decision.verdict == PolicyVerdict.REQUIRE_CONFIRMATION and confirm_risky:
-                    log.event(step, "risk_preauthorized", reason=decision.reason)
+                if decision.verdict == PolicyVerdict.REQUIRE_CONFIRMATION:
+                    if confirm_risky:
+                        log.event(step, "risk_preauthorized", reason=decision.reason)
+                    elif self.escalation is None:
+                        # no approver wired (offline / tests) — refuse and nudge.
+                        note = (
+                            f"That action needs human approval ({decision.reason}) and no "
+                            f"approver is available here. Do what the goal allows without it, "
+                            f"or call stuck."
+                        )
+                        history.append(f"{call.tool} needs approval: {decision.reason}")
+                        transcript.entries.append(TranscriptEntry(
+                            step, state, call, action, False,
+                            {"require_confirmation": decision.reason}, decision.verdict,
+                        ))
+                        step += 1
+                        continue
+                    else:
+                        # Risk-approval gate: pause and ask a human to APPROVE or
+                        # REJECT this exact action before it runs. No takeover.
+                        phrase = _risk_action_phrase(call, goal)
+                        granted = await self._await_risk_approval(
+                            run, transcript, session, step, phrase, decision.reason,
+                            goal, history, log, handoff_wait_s,
+                        )
+                        if granted is None:
+                            run.status = RunStatus.DEAD_END
+                            run.detail = f"risk approval not granted at step {step}: {phrase}"
+                            log.run_finished("dead_end", reason=run.detail)
+                            break
+                        if granted is False:
+                            note = (
+                                f"A human REJECTED this action: {phrase}. Do NOT attempt it "
+                                f"again. Either do something else the goal allows, or call stuck."
+                            )
+                            history.append(f"{call.tool} rejected by approver")
+                            transcript.entries.append(TranscriptEntry(
+                                step, state, call, action, False, {"rejected": phrase}, decision.verdict,
+                            ))
+                            step += 1
+                            continue
+                        log.event(step, "risk_approved", proposed_action=phrase)
+                        deadline = time.time() + self.cfg.run_timeout_seconds  # fresh budget
 
                 result = await self.adapter.execute(session, action)
                 ok = result.ok
@@ -1122,6 +1155,52 @@ class Orchestrator:
             return None
         return kind, code, phrase, [phrase]
 
+    async def _await_risk_approval(
+        self, run, transcript, session, step, phrase, reason, goal, history, log, wait_s,
+    ) -> bool | None:
+        """Pause the run and ask a human to APPROVE / REJECT `phrase` before it
+        runs. No takeover — just a yes/no. Returns True (approved) / False
+        (rejected) / None (no approver / timed out)."""
+        from ..models import InterventionStatus
+
+        if self.escalation is None or not wait_s or wait_s <= 0:
+            return None
+        if self.broker is not None:
+            self.broker.register_session(session, session)
+        run.status = RunStatus.STUCK
+        run.detail = f"awaiting approval — {phrase}"
+        iv = await self.escalation.open_risk_approval(
+            run=run, session_id=session, step_index=step,
+            proposed_action=phrase, reason=reason, goal=goal, transcript_tail=history,
+        )
+        transcript.intervention_id = iv.intervention_id
+        log.event(step, "awaiting_risk_approval", intervention_id=iv.intervention_id,
+                  proposed_action=phrase, wait_s=wait_s)
+
+        end = time.time() + wait_s
+        while time.time() < end:
+            await asyncio.sleep(1.5)
+            try:
+                cur = self.escalation.get(iv.intervention_id)
+            except Exception:  # noqa: BLE001
+                break
+            if cur.status == InterventionStatus.RESOLVED:
+                run.status = RunStatus.RUNNING
+                run.detail = None
+                log.event(step, "risk_approval_decided", decision=cur.decision,
+                          by=cur.claimed_by, resolution=cur.resolution)
+                return cur.decision == "approved"
+        # nobody answered — treat as a reject-by-timeout and end the run
+        try:
+            self.escalation.decide(
+                iv.intervention_id, approved=False, operator="system",
+                note=f"no approver responded within {wait_s:.0f}s",
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        log.event(step, "risk_approval_timeout", intervention_id=iv.intervention_id)
+        return None
+
     async def _escalate_and_wait(
         self, run, transcript, session, step, reason, goal, history, log, wait_s,
         last_call: ToolCall | None = None,
@@ -1365,6 +1444,26 @@ def _commit_sig(call: ToolCall) -> str:
     """Identity of a commit action, to catch a verbatim re-submit."""
     a = call.args
     return f"{call.tool}|{json.dumps(a.get('target'), sort_keys=True)}|{a.get('value') or a.get('option') or ''}|{a.get('url') or ''}"
+
+
+def _risk_action_phrase(call: ToolCall, goal: str | None) -> str:
+    """Plain-language description of the risky action awaiting sign-off, e.g.
+    "click 'Transfer' (value: 500) — goal: transfer 500 from the first ...""."""
+    a = call.args
+    t = a.get("target")
+    label = ""
+    if isinstance(t, dict):
+        label = t.get("text") or t.get("name") or t.get("label") or t.get("near") or ""
+    elif t:
+        label = str(t)
+    val = a.get("value") or a.get("option") or ""
+    piece = f"{call.tool} '{label or _call_intent_text(call)[:60]}'"
+    if val:
+        piece += f" (value: {val})"
+    g = (goal or "").strip()
+    if g:
+        piece += f" — goal: {g[:160]}"
+    return piece
 
 
 def _stuck_reason(call: ToolCall) -> str:
