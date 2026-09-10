@@ -27,7 +27,7 @@ import { HandoffPanel } from "@/components/handoff-panel";
 import { RunReport } from "@/components/run-report";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
-const TERMINAL = new Set(["completed", "failed", "dead_end"]);
+const TERMINAL = new Set(["completed", "failed", "dead_end", "business_outcome"]);
 
 function hostOf(url: string): string {
   try {

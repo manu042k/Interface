@@ -228,8 +228,30 @@ export function RunReport({
   const { blocks, orphanShots, docs } = buildBlocks(rep.timeline, rep.evidence);
   const hasEvidence = rep.evidence.some((e) => e.endsWith(".png"));
 
+  const banner =
+    run.status === "business_outcome"
+      ? {
+          cls: "border-warning/40 bg-warning/10 text-warning",
+          title: "Business outcome — a legitimate answer, not a failure",
+        }
+      : run.status === "dead_end" || run.status === "failed"
+        ? {
+            cls: "border-destructive/40 bg-destructive/10 text-destructive",
+            title:
+              run.status === "dead_end" ? "Dead end" : "Run failed",
+          }
+        : null;
+
   return (
     <div className="space-y-4">
+      {banner && (
+        <div className={`rounded-lg border p-3 text-sm ${banner.cls}`}>
+          <p className="font-medium">{banner.title}</p>
+          {run.detail && (
+            <p className="mt-0.5 opacity-90">{run.detail}</p>
+          )}
+        </div>
+      )}
       {showSummary && (
         <Card className="print-card">
           <CardHeader>

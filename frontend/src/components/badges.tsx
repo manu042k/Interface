@@ -13,6 +13,7 @@ const RUN_STYLE: Record<string, string> = {
   running: "bg-primary/12 text-primary border-primary/30",
   pending: "bg-muted text-muted-foreground",
   stuck: "bg-warning/12 text-warning border-warning/30",
+  business_outcome: "bg-warning/12 text-warning border-warning/30",
   failed: "bg-destructive/12 text-destructive border-destructive/30",
   dead_end: "bg-destructive/12 text-destructive border-destructive/30",
 };
