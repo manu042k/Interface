@@ -44,11 +44,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <nav className="flex flex-col gap-1">
           {NAV.map(({ href, label, icon: Icon, exact }) => {
             const activeNav = exact ? path === href : path.startsWith(href);
+            // a pulse dot flags that a run is in progress, but the link always
+            // goes to the list page — not straight into the live run view.
             const showLive = href === "/runs" && !!active;
             return (
               <Link
                 key={href}
-                href={showLive && active ? `/runs/${active.run_id}` : href}
+                href={href}
                 className={cn(
                   "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
                   activeNav
