@@ -13,7 +13,10 @@ from ..redaction import redact_text
 
 _SYSTEM = (
     "You write terse reference blurbs for a catalog of automation capabilities "
-    "that AI agents invoke by name. No preamble, no markdown headers."
+    "that AI agents invoke by name. Present tense, third person, no preamble, no "
+    "markdown headers. Describe ONLY what the given goal / inputs / outputs / "
+    "outcomes state — never invent parameters, return values, or behaviour that "
+    "is not listed."
 )
 
 

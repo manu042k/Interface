@@ -512,10 +512,34 @@ class Orchestrator:
                 if action.type in (ActionType.ASSERT_STATE, ActionType.WAIT_FOR) and not _condition_usable(
                     action.condition if isinstance(action.condition, dict) else {}
                 ):
-                    salvaged = _salvage_from_state(state)
-                    if salvaged:
-                        action.condition = salvaged
-                        log.event(step, "condition_salvaged", **{"from": "screen"}, condition=salvaged)
+                    # what the model *guessed* it wanted (from its reasoning)
+                    guessed = action.condition.get("params", {}).get("any", []) \
+                        if isinstance(action.condition, dict) else []
+                    # what the screen it just observed actually shows
+                    from_screen = _salvage_from_state(state)
+                    scr = from_screen["params"]["any"] if from_screen else []
+                    # union, screen phrases first — a guessed phrase that isn't
+                    # literally on the page must not be the sole assertion (it
+                    # breaks replay). text_present/any passes if ANY match.
+                    merged = list(dict.fromkeys([*scr, *guessed]))
+                    if merged:
+                        action.condition = {"kind": "text_present", "params": {"any": merged[:6]}}
+                        log.event(step, "condition_salvaged",
+                                  **{"from": "screen+reasoning" if scr and guessed else ("screen" if scr else "reasoning")},
+                                  condition=action.condition)
+                    elif state.url:
+                        # no confirmation phrase anywhere (a "navigate to a page"
+                        # goal has no SAVED/POSTED banner) — assert we are on the
+                        # page the model reached. digits -> \d+ so it replays for
+                        # other ids. Always valid, always replayable.
+                        pat = re.sub(r"\d+", r"\\d+", re.escape(state.url.split("?")[0]))
+                        action.condition = {"kind": "url_matches", "params": {"pattern": pat}}
+                        log.event(step, "condition_salvaged", **{"from": "url"}, condition=action.condition)
+                # Whatever condition we actually acted on (repaired or not) is
+                # what must be RECORDED — otherwise the artifact keeps the
+                # model's broken `params:{}` and every replay hard-fails on it.
+                if action.type in (ActionType.ASSERT_STATE, ActionType.WAIT_FOR) and isinstance(action.condition, dict):
+                    call.args["condition"] = action.condition
                 target_url = call.args.get("url") if call.tool == "navigate" else state.url
                 decision = self.policy.check(
                     ActionContext(
