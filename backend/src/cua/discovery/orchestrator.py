@@ -419,11 +419,15 @@ class Orchestrator:
                 # but the run still goes nowhere. Count total repeats of this
                 # (tool|target) and intervene once it's clearly stuck.
                 tsig = f"{call.tool}|{json.dumps(call.args.get('target') or '', sort_keys=True)}"
-                if ok and call.tool in ("type", "select", "click"):
+                # `extract`/`scroll` loops (extract -> scroll -> extract -> ...)
+                # dodge the consecutive guard the same way an A/B type cycle does.
+                if ok and call.tool in ("type", "select", "click", "extract", "scroll", "wait_for"):
                     sig_counts[tsig] = sig_counts.get(tsig, 0) + 1
+                    # scroll churns fast — cap it low regardless of target
+                    scroll_n = sum(v for k, v in sig_counts.items() if k.startswith("scroll|"))
                     n = sig_counts[tsig]
-                    if n >= 6:
-                        reason = f"cyclic thrash: {call.tool} on the same target {n}x across the run"
+                    if n >= 6 or scroll_n >= 6:
+                        reason = f"cyclic thrash: repeated {call.tool} with no progress ({n}x this target, {scroll_n} scrolls)"
                         resumed_note = await self._escalate_and_wait(
                             run, transcript, session, step, reason, goal, history, log,
                             handoff_wait_s, last_call,
@@ -433,14 +437,28 @@ class Orchestrator:
                         note, last_sig, repeats, sig_counts, cycle_nudged = resumed_note, None, 0, {}, False
                         deadline = time.time() + self.cfg.run_timeout_seconds
                         continue
-                    if n >= 3 and call.tool in ("type", "select") and not cycle_nudged:
+                    if n >= 3 and not cycle_nudged:
                         cycle_nudged = True
-                        note = (
-                            f"You have typed into this same field {n} times. It already holds "
-                            "the value you set. STOP repeating it. Look at the goal's remaining "
-                            "sub-tasks and do the ONE you have not done yet (a different field, "
-                            "or the submit button), then done."
-                        )
+                        if call.tool == "extract":
+                            note = (
+                                f"You have run extract on the same target {n} times and keep "
+                                "re-reading it. If the value you got looks wrong (a decoy / a "
+                                "different row), try a MORE SPECIFIC target for the cell you "
+                                "want — e.g. a css/xpath, or a landmark that is unique to the "
+                                "REAL row. Do not scroll-and-retry. If you truly cannot pick "
+                                "the right cell, call stuck with that reason."
+                            )
+                        elif call.tool in ("type", "select"):
+                            note = (
+                                f"You have set this same field {n} times. It already holds your "
+                                "value. Do the goal's NEXT sub-task (a different field, or submit), "
+                                "then done."
+                            )
+                        else:
+                            note = (
+                                f"You have repeated {call.tool} {n} times with no progress. Try a "
+                                "genuinely different action toward the goal, or call stuck."
+                            )
 
                 # The model sometimes re-asserts the same passing success check
                 # instead of calling done. It has verified the goal twice —
