@@ -86,31 +86,19 @@ export function HandoffPanel({
     setBusy(false);
   }
 
-  // Once the operator is driving, collapse to a slim bar so the live page
-  // underneath stays usable.
-  if (inControl) {
-    return (
-      <div className="border-warning/40 bg-warning/8 flex items-center gap-3 rounded-lg border px-3 py-2.5">
-        <HandMetal className="text-warning h-4 w-4 shrink-0" />
-        <span className="min-w-0 flex-1 truncate text-sm">
-          <span className="text-muted-foreground">{iv.claimed_by} in control</span>{" "}
-          - drive the live page above
-        </span>
-        <Button size="sm" onClick={handBack} disabled={busy}>
-          {busy && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-          Hand control back
-        </Button>
-      </div>
-    );
-  }
-
+  // Taking control does not hide what the agent was doing - the operator still
+  // needs to know what it was reaching for. Only the headline and the action
+  // button change; the "agent was trying to" / "why it stopped" block is
+  // identical in both states.
   return (
     <div className="border-warning/40 bg-warning/8 rounded-lg border p-4">
       <div className="flex items-start gap-3">
         <HandMetal className="text-warning mt-0.5 h-5 w-5 shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="font-medium">
-            The run is stuck at step {iv.step_index} - a human is needed.
+            {inControl
+              ? `${iv.claimed_by} is in control - step ${iv.step_index}`
+              : `The run is stuck at step ${iv.step_index} - a human is needed.`}
           </p>
           {iv.attempting && (
             <p className="mt-1 text-sm">
@@ -123,10 +111,22 @@ export function HandoffPanel({
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button size="sm" onClick={claimAndTake} disabled={busy}>
-              {busy && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-              Claim &amp; take control
-            </Button>
+            {inControl ? (
+              <>
+                <Button size="sm" onClick={handBack} disabled={busy}>
+                  {busy && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                  Hand control back
+                </Button>
+                <span className="text-muted-foreground text-xs">
+                  Drive the live page above, then hand back to resume automation.
+                </span>
+              </>
+            ) : (
+              <Button size="sm" onClick={claimAndTake} disabled={busy}>
+                {busy && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                Claim &amp; take control
+              </Button>
+            )}
           </div>
 
           {log.length > 0 && (
