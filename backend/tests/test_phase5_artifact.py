@@ -123,6 +123,45 @@ def test_store_versions_not_overwrites(tmp_path):
     assert store.get(a1.artifact_id, 1).version == 1  # v1 still readable
 
 
+def test_retire_and_default_rollback(tmp_path):
+    from cua.artifact.store import PromotionDecision
+    from cua.models import CapabilityArtifact, Condition, Step
+
+    store = ArtifactStore(tmp_path / "s.db")
+
+    def mk():
+        return CapabilityArtifact(
+            name="cap", vendor_app_id="v", goal_description="g",
+            steps=[Step(step_index=0, action_type="navigate", description="go",
+                        value_binding={"literal": "http://x/"}, idempotent=True)],
+            checkpoint=Condition(kind="url_matches", params={"pattern": ".*"}),
+        )
+
+    v1 = store.save_draft(mk())
+    store.promote(v1.artifact_id, 1, PromotionDecision.APPROVE, reviewer="a")
+    v2 = store.save_draft(mk())
+    store.promote(v2.artifact_id, 2, PromotionDecision.APPROVE, reviewer="a")
+
+    # newest approval is the default; v1 was demoted
+    assert store.latest_approved("cap", "v").version == 2
+    assert store.get(v1.artifact_id, 1).is_default is False
+
+    # v2 turns out bad -> retire it and pin v1 back as the default (rollback)
+    store.retire(v2.artifact_id, 2, reviewer="a")
+    store.set_default(v1.artifact_id, 1)
+    assert store.latest_approved("cap", "v").version == 1
+    assert store.get(v2.artifact_id, 2).status == "retired"
+
+    # a rejected version can never be re-approved; a retired one can
+    v3 = store.save_draft(mk())
+    store.promote(v3.artifact_id, 3, PromotionDecision.REJECT, reviewer="a")
+    import pytest
+    with pytest.raises(ValueError):
+        store.promote(v3.artifact_id, 3, PromotionDecision.APPROVE, reviewer="a")
+    store.promote(v2.artifact_id, 2, PromotionDecision.APPROVE, reviewer="a")  # retired -> approved OK
+    assert store.get(v2.artifact_id, 2).status == "approved"
+
+
 # --- ST-025: review gate ------------------------------------------
 async def test_promotion_gate(system, mockbank):
     transcript = await _discover_balance(system, mockbank)

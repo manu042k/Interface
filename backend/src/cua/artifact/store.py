@@ -102,23 +102,91 @@ class ArtifactStore:
         new_status = ArtifactStatus.APPROVED if decision == PromotionDecision.APPROVE else ArtifactStatus.REJECTED
         with self._lock, self._connect() as con:
             cur = con.execute(
-                "SELECT body, status FROM artifacts WHERE artifact_id = ? AND version = ?",
+                "SELECT body, status, name, vendor_app_id, scope_kind, tenant_id "
+                "FROM artifacts WHERE artifact_id = ? AND version = ?",
                 (artifact_id, version),
             ).fetchone()
             if cur is None:
                 raise KeyError(f"no artifact {artifact_id} v{version}")
-            if cur["status"] != ArtifactStatus.DRAFT:
-                raise ValueError(f"artifact {artifact_id} v{version} is {cur['status']}, not draft")
+            # a draft can be approved/rejected; a RETIRED version can be
+            # re-approved (rollback) but never re-rejected.
+            allowed = {ArtifactStatus.DRAFT}
+            if decision == PromotionDecision.APPROVE:
+                allowed.add(ArtifactStatus.RETIRED)
+            if cur["status"] not in allowed:
+                raise ValueError(f"artifact {artifact_id} v{version} is {cur['status']} — cannot {decision}")
             art = CapabilityArtifact.model_validate_json(cur["body"])
             art.status = new_status
             art.reviewed_by = reviewer
             art.reviewed_at = time.time()
             art.review_notes = notes
+            if new_status == ArtifactStatus.APPROVED:
+                # newest approval becomes the default; demote its siblings.
+                art.is_default = True
+                self._clear_default(con, cur["name"], cur["vendor_app_id"],
+                                    cur["scope_kind"], cur["tenant_id"], except_version=version)
             con.execute(
                 """UPDATE artifacts SET status = ?, reviewed_by = ?, reviewed_at = ?, review_notes = ?, body = ?
                    WHERE artifact_id = ? AND version = ?""",
                 (new_status, reviewer, art.reviewed_at, notes, art.model_dump_json(), artifact_id, version),
             )
+        return art
+
+    def _clear_default(self, con, name, vendor_app_id, scope_kind, tenant_id, *, except_version):
+        rows = con.execute(
+            """SELECT version, body FROM artifacts
+               WHERE name = ? AND vendor_app_id = ? AND scope_kind = ? AND IFNULL(tenant_id,'') = IFNULL(?,'')
+               AND version != ?""",
+            (name, vendor_app_id, scope_kind, tenant_id, except_version),
+        ).fetchall()
+        for r in rows:
+            a = CapabilityArtifact.model_validate_json(r["body"])
+            if a.is_default:
+                a.is_default = False
+                con.execute("UPDATE artifacts SET body = ? WHERE artifact_id = ? AND version = ?",
+                            (a.model_dump_json(), a.artifact_id, r["version"]))
+
+    def retire(self, artifact_id: str, version: int, *, reviewer: str, notes: str | None = None) -> CapabilityArtifact:
+        """Withdraw a live (approved) version. Keeps it re-approvable for rollback."""
+        with self._lock, self._connect() as con:
+            row = con.execute(
+                "SELECT body, status FROM artifacts WHERE artifact_id = ? AND version = ?",
+                (artifact_id, version),
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"no artifact {artifact_id} v{version}")
+            if row["status"] != ArtifactStatus.APPROVED:
+                raise ValueError(f"only an approved version can be retired (is {row['status']})")
+            art = CapabilityArtifact.model_validate_json(row["body"])
+            art.status = ArtifactStatus.RETIRED
+            art.is_default = False
+            art.reviewed_by = reviewer
+            art.reviewed_at = time.time()
+            art.review_notes = notes
+            con.execute("UPDATE artifacts SET status = ?, reviewed_by = ?, reviewed_at = ?, review_notes = ?, body = ? "
+                        "WHERE artifact_id = ? AND version = ?",
+                        (ArtifactStatus.RETIRED, reviewer, art.reviewed_at, notes, art.model_dump_json(),
+                         artifact_id, version))
+        return art
+
+    def set_default(self, artifact_id: str, version: int) -> CapabilityArtifact:
+        """Pin which approved version an unpinned invoke resolves to."""
+        with self._lock, self._connect() as con:
+            row = con.execute(
+                "SELECT body, status, name, vendor_app_id, scope_kind, tenant_id "
+                "FROM artifacts WHERE artifact_id = ? AND version = ?",
+                (artifact_id, version),
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"no artifact {artifact_id} v{version}")
+            if row["status"] != ArtifactStatus.APPROVED:
+                raise ValueError(f"only an approved version can be the default (is {row['status']})")
+            self._clear_default(con, row["name"], row["vendor_app_id"], row["scope_kind"],
+                                row["tenant_id"], except_version=version)
+            art = CapabilityArtifact.model_validate_json(row["body"])
+            art.is_default = True
+            con.execute("UPDATE artifacts SET body = ? WHERE artifact_id = ? AND version = ?",
+                        (art.model_dump_json(), artifact_id, version))
         return art
 
     def set_summary(self, artifact_id: str, version: int, summary: str) -> None:
@@ -171,14 +239,16 @@ class ArtifactStore:
         return [CapabilityArtifact.model_validate_json(r["body"]) for r in rows]
 
     def latest_approved(self, name: str, vendor_app_id: str = "generic") -> CapabilityArtifact | None:
+        """The default approved base version if one is pinned, else the highest."""
         with self._connect() as con:
-            row = con.execute(
+            rows = con.execute(
                 """SELECT body FROM artifacts
                    WHERE name = ? AND vendor_app_id = ? AND status = ? AND scope_kind = 'base'
-                   ORDER BY version DESC LIMIT 1""",
+                   ORDER BY version DESC""",
                 (name, vendor_app_id, ArtifactStatus.APPROVED),
-            ).fetchone()
-        return CapabilityArtifact.model_validate_json(row["body"]) if row else None
+            ).fetchall()
+        arts = [CapabilityArtifact.model_validate_json(r["body"]) for r in rows]
+        return next((a for a in arts if a.is_default), arts[0] if arts else None)
 
     # -- de-dup on record ------------------------------------------
     def latest(self, name: str, vendor_app_id: str, *, scope_kind: str = "base") -> CapabilityArtifact | None:

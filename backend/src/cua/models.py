@@ -52,6 +52,10 @@ class ArtifactStatus(StrEnum):
     DRAFT = "draft"
     APPROVED = "approved"
     REJECTED = "rejected"
+    # RETIRED != REJECTED: a rejected draft was never fit for use; a retired
+    # version WAS live and was deliberately withdrawn (e.g. superseded after a
+    # site change). Retired can be re-approved for rollback; rejected cannot.
+    RETIRED = "retired"
     DEPRECATED = "deprecated"
 
 
@@ -258,6 +262,9 @@ class CapabilityArtifact(BaseModel):
     artifact_id: str = Field(default_factory=_uuid)
     version: int = Field(default=1, ge=1)
     status: ArtifactStatus = ArtifactStatus.DRAFT
+    # Which approved version an unpinned invoke resolves to. At most one version
+    # of a given (name, scope) is default at a time — enforced by the store.
+    is_default: bool = False
 
     # Stable, human-meaningful name an agent invokes by (catalog key).
     name: str

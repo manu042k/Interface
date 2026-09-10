@@ -119,8 +119,9 @@ class RunView(BaseModel):
 
 
 class PromoteRequest(BaseModel):
-    decision: Literal["approve", "reject"]
     reviewer: str
+    # required for /promote, ignored by /retire
+    decision: Literal["approve", "reject"] | None = None
     notes: str | None = None
 
 
@@ -332,6 +333,8 @@ def create_app(config: Config | None = None) -> FastAPI:
 
     @app.post("/artifacts/{artifact_id}/versions/{version}/promote")
     async def promote(artifact_id: str, version: int, req: PromoteRequest) -> dict[str, Any]:
+        if req.decision is None:
+            raise HTTPException(422, "decision is required (approve|reject)")
         try:
             art = app.state.system.store.promote(
                 artifact_id, version, PromotionDecision(req.decision), reviewer=req.reviewer, notes=req.notes
@@ -340,7 +343,30 @@ def create_app(config: Config | None = None) -> FastAPI:
             raise HTTPException(404, str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
+        return {"artifact_id": art.artifact_id, "version": art.version,
+                "status": art.status, "is_default": art.is_default}
+
+    @app.post("/artifacts/{artifact_id}/versions/{version}/retire")
+    async def retire_version(artifact_id: str, version: int, req: PromoteRequest) -> dict[str, Any]:
+        try:
+            art = app.state.system.store.retire(
+                artifact_id, version, reviewer=req.reviewer, notes=req.notes
+            )
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
         return {"artifact_id": art.artifact_id, "version": art.version, "status": art.status}
+
+    @app.post("/artifacts/{artifact_id}/versions/{version}/set-default")
+    async def set_default_version(artifact_id: str, version: int) -> dict[str, Any]:
+        try:
+            art = app.state.system.store.set_default(artifact_id, version)
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        return {"artifact_id": art.artifact_id, "version": art.version, "is_default": True}
 
     # -- ST-030: deterministic replay ------------------------------
     @app.post("/replays/{artifact_id}/invoke")
