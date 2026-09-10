@@ -412,9 +412,11 @@ def create_app(config: Config | None = None) -> FastAPI:
             raise HTTPException(422, "no target: artifact has no recorded entry_url, pass one explicitly")
         target = _validate_target_or_400(sys, req.tenant, want_target)
 
-        errs = sys.replay.validate_params(artifact, req.params)
+        errs = sys.replay.validate_params(
+            artifact, sys.replay.apply_defaults(artifact, req.params)
+        )
         if errs:
-            raise HTTPException(422, {"error": "params do not match input_schema", "detail": errs})
+            raise HTTPException(422, {"error": "; ".join(errs), "detail": errs})
 
         invocation_id = "inv_" + uuid.uuid4().hex[:12]
         run = RunRecord(

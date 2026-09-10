@@ -330,7 +330,14 @@ async def test_recorder_captures_params_written_into_the_goal(system, mockbank):
     assert type_steps, "expected a type step for the member id"
     b = type_steps[0].value_binding
     assert b.param is not None, "the goal value must become a param, not a literal"
-    assert b.param in art.input_schema["properties"]
-    assert b.param in art.input_schema["required"]
     prop = art.input_schema["properties"][b.param]
     assert prop.get("x-from-goal") is True
+    # a non-secret goal value keeps its recorded value as a default, so the
+    # capability still replays with no params — it is NOT force-required
+    assert prop.get("default") == "12345"
+    assert b.param not in art.input_schema["required"]
+
+    # and it replays as-is with an empty params dict
+    from cua.replay.executor import ReplayExecutor
+
+    assert ReplayExecutor.validate_params(art, ReplayExecutor.apply_defaults(art, {})) == []

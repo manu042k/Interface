@@ -141,16 +141,27 @@ class ArtifactRecorder:
                 param_props.setdefault(k, {"type": "string", "example": redact_text(str(v))[0]})
         for k in forced_params:
             param_props.setdefault(k, {"type": "string", "x-sensitive": True})
+        # a goal-derived value is recorded as its own `default`, so the
+        # capability replays as-is; a caller can still override it. A
+        # credential-cued one has no plaintext default and stays required.
+        derived_required: list[str] = []
         for k, v in derived_params.items():
-            param_props.setdefault(
-                k,
-                {"type": "string", "x-sensitive": True}
-                if _is_sensitive_key(k)
-                else {"type": "string", "example": redact_text(str(v))[0], "x-from-goal": True},
-            )
+            if _is_sensitive_key(k):
+                param_props.setdefault(k, {"type": "string", "x-sensitive": True})
+                derived_required.append(k)
+            else:
+                param_props.setdefault(
+                    k,
+                    {
+                        "type": "string",
+                        "default": redact_text(str(v))[0],
+                        "example": redact_text(str(v))[0],
+                        "x-from-goal": True,
+                    },
+                )
 
         required = list(
-            dict.fromkeys([*transcript.params, *forced_params, *derived_params])
+            dict.fromkeys([*transcript.params, *forced_params, *derived_required])
         )
 
         checkpoint = self._derive_checkpoint(transcript, actionable)

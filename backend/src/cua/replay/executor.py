@@ -49,6 +49,37 @@ from .locator import LocatorResolutionEngine
 _RETRYABLE_CEILING = 3
 
 
+def _humanise_schema_errors(errors: Any, *, noun: str = "parameter") -> list[str]:
+    """Turn jsonschema's `<root>: 'x' is a required property` into a plain
+    sentence a caller can act on."""
+    missing: list[str] = []
+    other: list[str] = []
+    for e in errors:
+        loc = "/".join(str(p) for p in e.path)
+        if e.validator == "required":
+            m = re.search(r"'([^']+)'", e.message)
+            if m:
+                missing.append(m.group(1))
+                continue
+        where = f"{noun} '{loc}'" if loc else f"{noun}s"
+        if e.validator == "type":
+            got = type(e.instance).__name__
+            other.append(f"{where}: expected {e.validator_value}, got {got}")
+        elif e.validator == "enum":
+            opts = ", ".join(map(str, e.validator_value))
+            other.append(f"{where}: must be one of {opts}")
+        else:
+            other.append(f"{where}: {e.message}")
+    out: list[str] = []
+    if missing:
+        uniq = list(dict.fromkeys(missing))
+        out.append(
+            f"missing required {noun}{'s' if len(uniq) > 1 else ''}: " + ", ".join(uniq)
+        )
+    out.extend(other)
+    return out
+
+
 class ReplayError(RuntimeError):
     pass
 
@@ -85,9 +116,23 @@ class ReplayExecutor:
 
     # -- ST-030 boundary validation ------------------------------------
     @staticmethod
+    def apply_defaults(
+        artifact: CapabilityArtifact, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Fill in any param the caller omitted that the schema records a
+        `default` for (goal-derived inputs keep the value they were recorded
+        with), so a capability replays as-is without re-typing every value."""
+        props = (artifact.input_schema or {}).get("properties", {}) or {}
+        merged = dict(params)
+        for k, spec in props.items():
+            if k not in merged and isinstance(spec, dict) and "default" in spec:
+                merged[k] = spec["default"]
+        return merged
+
+    @staticmethod
     def validate_params(artifact: CapabilityArtifact, params: dict[str, Any]) -> list[str]:
         validator = Draft202012Validator(artifact.input_schema)
-        return [f"{'/'.join(map(str, e.path)) or '<root>'}: {e.message}" for e in validator.iter_errors(params)]
+        return _humanise_schema_errors(validator.iter_errors(params))
 
     async def execute(
         self,
@@ -107,12 +152,13 @@ class ReplayExecutor:
         log.event(None, "replay_started", artifact_id=artifact.artifact_id, version=artifact.version,
                   idempotency_key=idempotency_key)
 
+        params = self.apply_defaults(artifact, params)
         errs = self.validate_params(artifact, params)
         if errs:
             log.run_finished("failed", reason="param_schema", errors=errs)
             return ReplayResult(
                 outcome=ReplayOutcome.HARD_FAILURE,
-                failure_detail=FailureDetail(step_index=-1, expected="params match input_schema", observed="; ".join(errs)),
+                failure_detail=FailureDetail(step_index=-1, expected="valid parameters", observed="; ".join(errs)),
                 duration_seconds=time.time() - started,
             )
 
@@ -401,10 +447,7 @@ class ReplayExecutor:
         errs: list[str] = []
         try:
             validator = Draft202012Validator(schema)
-            errs = [
-                f"{'/'.join(map(str, e.path)) or '<root>'}: {e.message}"
-                for e in validator.iter_errors(outputs)
-            ]
+            errs = _humanise_schema_errors(validator.iter_errors(outputs), noun="output")
         except Exception:  # noqa: BLE001
             pass
         # Draft-2020-12 ignores our `x-shape` extension, so a "$4,182.55" read
