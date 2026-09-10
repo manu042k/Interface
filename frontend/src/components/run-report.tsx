@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, API_BASE, type RunReport as RunReportData } from "@/lib/api";
 import {
@@ -98,7 +98,7 @@ function Thumb({
       <img
         src={API_BASE + src}
         alt={src}
-        className="h-24 w-full object-cover object-top"
+        className="h-32 w-full bg-white object-contain"
       />
     </button>
   );
@@ -283,29 +283,45 @@ export function RunReport({
             Timeline{hasEvidence ? " & evidence" : ""}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="divide-border/60 max-w-3xl divide-y">
+        <CardContent className="overflow-x-auto">
+          <div
+            className={
+              "grid min-w-[640px] gap-x-6 text-sm " +
+              (hasEvidence
+                ? "grid-cols-[2.5rem_minmax(0,1fr)_16rem]"
+                : "grid-cols-[2.5rem_minmax(0,1fr)]")
+            }
+          >
+            {/* header row */}
+            {["Step", "Action", ...(hasEvidence ? ["Evidence"] : [])].map(
+              (h) => (
+                <div
+                  key={h}
+                  className="text-muted-foreground pb-2 text-xs font-medium uppercase tracking-wide"
+                >
+                  {h}
+                </div>
+              ),
+            )}
+
             {blocks.map((b, i) => (
-              <div
-                key={i}
-                className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-4"
-              >
-                <span className="text-muted-foreground w-7 shrink-0 pt-0.5 font-mono text-xs tabular-nums">
+              <Fragment key={i}>
+                <div className="border-border/60 text-muted-foreground border-t py-3 font-mono text-xs tabular-nums">
                   {b.step != null ? `s${b.step}` : "·"}
-                </span>
-                <div className="min-w-0 flex-1 space-y-0.5 sm:max-w-md">
+                </div>
+                <div className="border-border/60 min-w-0 space-y-0.5 border-t py-3">
                   {b.events.map((e, j) => (
                     <TimelineRow key={j} e={e} />
                   ))}
                 </div>
                 {hasEvidence && (
-                  <div className="w-full shrink-0 space-y-2 sm:w-48">
+                  <div className="border-border/60 space-y-2 border-t py-3">
                     {b.shots.map((s) => (
                       <Thumb key={s} src={s} onOpen={setLightbox} />
                     ))}
                   </div>
                 )}
-              </div>
+              </Fragment>
             ))}
           </div>
 
