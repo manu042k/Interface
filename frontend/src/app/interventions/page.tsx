@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pager, usePaged } from "@/components/pager";
+import { PageHeader } from "@/components/page-header";
 
 export default function InterventionsPage() {
   const { data } = useQuery({
@@ -25,13 +26,10 @@ export default function InterventionsPage() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Interventions</h1>
-        <p className="text-muted-foreground mt-1">
-          Stuck runs waiting for a human. Open one to take control of its live
-          session.
-        </p>
-      </header>
+      <PageHeader
+        title="Interventions"
+        description="Stuck runs waiting for a human. Open one to take control of its live session."
+      />
 
       <div className="bg-card rounded-lg border">
         <Table>

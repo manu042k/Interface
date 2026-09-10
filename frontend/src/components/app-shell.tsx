@@ -38,7 +38,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="bg-primary text-primary-foreground grid h-7 w-7 place-items-center rounded-md">
             <Waypoints className="h-4 w-4" strokeWidth={2.5} />
           </span>
-          <span className="text-[15px] font-semibold tracking-tight">Replay</span>
+          <span className="font-heading text-sm font-semibold tracking-tight">
+            Replay
+          </span>
         </Link>
 
         <nav className="flex flex-col gap-1">

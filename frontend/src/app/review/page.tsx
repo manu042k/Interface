@@ -22,6 +22,8 @@ import {
 import { RiskBadge } from "@/components/badges";
 import { Pager, usePaged } from "@/components/pager";
 import { ArtifactView } from "@/components/artifact-view";
+import { PageHeader } from "@/components/page-header";
+import { sentenceCase } from "@/lib/text";
 
 export default function ReviewPage() {
   const qc = useQueryClient();
@@ -55,12 +57,10 @@ export default function ReviewPage() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Review</h1>
-        <p className="text-muted-foreground mt-1">
-          Draft artifacts. Unattended replay is refused until a human approves.
-        </p>
-      </header>
+      <PageHeader
+        title="Review"
+        description="Draft artifacts. Unattended replay is refused until a human approves."
+      />
 
       <div className="bg-card overflow-x-auto rounded-lg border">
         <Table className="min-w-[640px]">
@@ -76,10 +76,10 @@ export default function ReviewPage() {
           <TableBody>
             {paged.pageRows.map((a) => (
               <TableRow key={a.artifact_id + a.version}>
-                <TableCell className="align-top font-mono text-xs">
+                <TableCell className="align-top text-sm">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="whitespace-nowrap">
-                      {a.name} v{a.version}
+                    <span className="font-heading font-medium whitespace-nowrap">
+                      {sentenceCase(a.name)} v{a.version}
                     </span>
                     {a.record_outcome === "drift_patch" && (
                       <span className="bg-warning/12 text-warning border-warning/30 rounded border px-1.5 py-0.5 text-[10px] font-medium">
@@ -136,9 +136,7 @@ export default function ReviewPage() {
         <DialogContent className="flex h-[85vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
           <DialogHeader className="space-y-0 border-b px-5 py-4 text-left">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pr-6">
-              <DialogTitle className="font-mono text-sm">
-                {open?.name}
-              </DialogTitle>
+              <DialogTitle>{sentenceCase(open?.name)}</DialogTitle>
               <span className="text-muted-foreground text-xs">
                 v{open?.version} · draft
               </span>
@@ -157,7 +155,7 @@ export default function ReviewPage() {
                 </p>
               )}
             {full.isLoading && (
-              <p className="text-muted-foreground text-sm">loading artifact…</p>
+              <p className="text-muted-foreground text-sm">Loading artifact…</p>
             )}
             {full.data && <ArtifactView artifact={full.data as never} />}
           </div>

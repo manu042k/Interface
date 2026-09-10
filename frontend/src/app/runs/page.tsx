@@ -16,6 +16,8 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/badges";
 import { Pager, usePaged } from "@/components/pager";
+import { PageHeader } from "@/components/page-header";
+import { sentenceCase } from "@/lib/text";
 
 const LIVE = new Set(["pending", "running", "stuck"]);
 
@@ -39,12 +41,10 @@ export default function RunsPage() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Runs</h1>
-        <p className="text-muted-foreground mt-1">
-          Discovery and replay runs, newest first.
-        </p>
-      </header>
+      <PageHeader
+        title="Runs"
+        description="Discovery and replay runs, newest first."
+      />
 
       <Tabs defaultValue="all">
         <TabsList>
@@ -100,8 +100,10 @@ function RunsTable({
           {pageRows.map((r) => (
             <TableRow key={r.run_id}>
               <TableCell className="max-w-[20rem]">
-                <div className="truncate font-medium">
-                  {r.name || r.goal || (
+                <div className="font-heading truncate font-medium">
+                  {r.name || r.goal ? (
+                    sentenceCase(r.name || r.goal)
+                  ) : (
                     <span className="text-muted-foreground">-</span>
                   )}
                 </div>

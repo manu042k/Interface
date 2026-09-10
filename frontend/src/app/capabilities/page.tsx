@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/page-header";
+import { sentenceCase } from "@/lib/text";
 import { OutcomeBadge, RiskBadge } from "@/components/badges";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -61,13 +63,10 @@ export default function CapabilitiesPage() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Capabilities</h1>
-        <p className="text-muted-foreground mt-1">
-          Approved, agent-invocable. Invoking runs a deterministic replay - no
-          model in the loop.
-        </p>
-      </header>
+      <PageHeader
+        title="Capabilities"
+        description="Approved, agent-invocable. Invoking runs a deterministic replay - no model in the loop."
+      />
 
       {isLoading && (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -113,7 +112,9 @@ function CapabilityCard({
     >
       <CardContent className="flex h-full flex-col gap-2.5 pt-5">
         <div className="flex items-start gap-2">
-          <code className="text-sm font-semibold break-all">{cap.name}</code>
+          <span className="font-heading text-base font-semibold break-all">
+            {sentenceCase(cap.name)}
+          </span>
           <RiskBadge risk={cap.risk_class} />
         </div>
 
@@ -184,9 +185,7 @@ function CapabilityDetail({
           <>
             <DialogHeader className="space-y-2 border-b px-5 py-4 text-left">
               <div className="flex flex-wrap items-center gap-2">
-                <DialogTitle className="font-mono text-sm">
-                  {cap.name}
-                </DialogTitle>
+                <DialogTitle>{sentenceCase(cap.name)}</DialogTitle>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span>
@@ -416,8 +415,8 @@ function CapabilityDetail({
 
                               {s.locators.length > 0 ? (
                                 <div>
-                                  <div className="text-muted-foreground mb-1 flex items-center gap-1 uppercase">
-                                    <Crosshair className="h-3 w-3" /> finds the
+                                  <div className="text-muted-foreground mb-1 flex items-center gap-1 text-xs font-medium">
+                                    <Crosshair className="h-3 w-3" /> Finds the
                                     element by
                                   </div>
                                   <ol className="space-y-1">
@@ -503,7 +502,7 @@ function CapabilityDetail({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-muted-foreground mb-1.5 text-xs font-medium uppercase tracking-wide">
+    <div className="font-heading text-foreground mb-1.5 text-sm font-semibold tracking-tight">
       {children}
     </div>
   );

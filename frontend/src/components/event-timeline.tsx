@@ -122,8 +122,8 @@ export function EventTimeline({ runId }: { runId: string }) {
           <span className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
         </span>
-        <span className="flex-1 text-center font-mono text-[11px] tracking-wide text-zinc-500">
-          agent · event log
+        <span className="font-heading flex-1 text-center text-xs tracking-wide text-zinc-500">
+          Agent · event log
         </span>
         <span className="font-mono text-[10px] text-zinc-600">
           {events.length}

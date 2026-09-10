@@ -143,14 +143,14 @@ export function NoVncFrame({
           <span
             className={`h-1.5 w-1.5 rounded-full ${interactive ? "bg-success" : "bg-primary animate-pulse"}`}
           />
-          live sandbox
+          Live sandbox
           {interactive ? (
             <span className="text-success inline-flex items-center gap-1 font-medium">
-              <Hand className="h-3 w-3" /> you are in control
+              <Hand className="h-3 w-3" /> You are in control
             </span>
           ) : (
             <span className="inline-flex items-center gap-1">
-              <Lock className="h-3 w-3" /> view only · automation driving
+              <Lock className="h-3 w-3" /> View only · automation driving
             </span>
           )}
         </span>
@@ -162,7 +162,7 @@ export function NoVncFrame({
               className="text-muted-foreground hover:text-foreground flex items-center gap-1"
               title="Expand"
             >
-              <Maximize2 className="h-3 w-3" /> expand
+              <Maximize2 className="h-3 w-3" /> Expand
             </button>
           )}
           <a
@@ -171,7 +171,7 @@ export function NoVncFrame({
             rel="noreferrer"
             className="text-muted-foreground hover:text-foreground flex items-center gap-1"
           >
-            open <ExternalLink className="h-3 w-3" />
+            Open <ExternalLink className="h-3 w-3" />
           </a>
         </span>
       </div>

@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { sentenceCase } from "@/lib/text";
 import { cn } from "@/lib/utils";
 
 const OUTCOME_STYLE: Record<string, string> = {
@@ -25,7 +26,7 @@ export function OutcomeBadge({ outcome }: { outcome?: string | null }) {
       variant="outline"
       className={cn("font-medium", OUTCOME_STYLE[outcome] ?? "")}
     >
-      {outcome.replaceAll("_", " ")}
+      {sentenceCase(outcome)}
     </Badge>
   );
 }
@@ -37,7 +38,7 @@ export function StatusBadge({ status }: { status?: string | null }) {
       variant="outline"
       className={cn("font-medium", RUN_STYLE[status] ?? "")}
     >
-      {status.replaceAll("_", " ")}
+      {sentenceCase(status)}
     </Badge>
   );
 }
@@ -55,7 +56,7 @@ export function RiskBadge({ risk }: { risk?: string | null }) {
           : "bg-muted text-muted-foreground",
       )}
     >
-      {risk.replaceAll("_", " ")}
+      {sentenceCase(risk)}
     </Badge>
   );
 }

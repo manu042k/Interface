@@ -25,6 +25,9 @@ import { EventTimeline } from "@/components/event-timeline";
 import { HandoffPanel } from "@/components/handoff-panel";
 import { RunReport } from "@/components/run-report";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { PageHeader } from "@/components/page-header";
+import { Separator } from "@/components/ui/separator";
+import { isSensitiveKey, maskSecret, sentenceCase } from "@/lib/text";
 
 const TERMINAL = new Set(["completed", "failed", "dead_end", "business_outcome"]);
 
@@ -72,11 +75,11 @@ function DetailRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex gap-3 py-1.5">
-      <span className="text-muted-foreground w-32 shrink-0 text-xs">
+    <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-x-3 text-sm">
+      <dt className="text-muted-foreground font-heading text-xs font-medium tracking-wide">
         {label}
-      </span>
-      <span className="min-w-0 flex-1 break-words text-xs">{children}</span>
+      </dt>
+      <dd className="text-foreground min-w-0 break-words">{children}</dd>
     </div>
   );
 }
@@ -129,18 +132,14 @@ export default function RunPage() {
 
   return (
     <div className="flex h-full min-h-[640px] flex-col gap-3">
-      {/* Title */}
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold tracking-tight">
-            {run?.name || run?.goal || "…"}
-          </h1>
-          {run?.name && run?.goal && run.name !== run.goal && (
-            <p className="text-muted-foreground mt-0.5 line-clamp-2 text-sm">
-              {run.goal}
-            </p>
-          )}
-        </div>
+      <PageHeader
+        title={run?.name || run?.goal || "…"}
+        description={
+          run?.name && run?.goal && run.name !== run.goal
+            ? sentenceCase(run.goal)
+            : undefined
+        }
+      >
         <div className="no-print flex shrink-0 items-center gap-2">
           <StatusBadge status={run?.status} />
           {run && !ended && (
@@ -160,114 +159,142 @@ export default function RunPage() {
             </Button>
           )}
         </div>
-      </header>
+      </PageHeader>
 
-      {/* Stats bar */}
       {run && (
-        <div className="bg-card flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border px-3 py-2">
-          <code className="text-muted-foreground text-[11px]">
-            {id.slice(0, 12)}
-          </code>
-          <span className="bg-border h-3.5 w-px" />
-          <Stat icon={Footprints}>
-            <span className="text-foreground font-mono font-medium">
-              {run.step_count}
-            </span>{" "}
-            steps
-          </Stat>
-          <Stat icon={Coins}>
-            <span className="text-foreground font-mono font-medium">
-              {tokens.toLocaleString()}
-            </span>{" "}
-            tokens
-            {run.llm_calls > 0 && (
-              <span className="opacity-60"> · {run.llm_calls} calls</span>
-            )}
-          </Stat>
-          <Stat icon={Clock}>
-            <span className="text-foreground font-mono font-medium">
-              {elapsed(run)}
-            </span>
-          </Stat>
-          <span className="bg-border h-3.5 w-px" />
-          <Stat icon={Cpu}>{run.browser}</Stat>
-          <Stat icon={Globe}>
-            <span className="font-mono">{hostOf(run.app_target)}</span>
-          </Stat>
-          <button
-            type="button"
-            onClick={() => setShowDetails((v) => !v)}
-            className="no-print text-muted-foreground hover:text-foreground ml-auto flex items-center gap-1 text-xs font-medium"
-          >
-            Details
-            <ChevronDown
-              className={`h-3.5 w-3.5 transition-transform ${showDetails ? "rotate-180" : ""}`}
-            />
-          </button>
-        </div>
-      )}
-
-      {run && showDetails && (
-        <div className="bg-card shrink-0 divide-y divide-border/50 rounded-lg border px-3 py-1">
-          <DetailRow label="Goal name">{run.name || "-"}</DetailRow>
-          <DetailRow label="Description">
-            {run.goal || "-"}
-          </DetailRow>
-          <DetailRow label="Run ID">
-            <code>{id}</code>
-          </DetailRow>
-          <DetailRow label="Target">
-            <a
-              href={run.app_target}
-              target="_blank"
-              rel="noreferrer"
-              className="text-primary break-all underline underline-offset-2"
+        <div className="bg-card shrink-0 overflow-hidden rounded-xl border">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-3 py-2">
+            <code className="text-muted-foreground text-xs">
+              {id.slice(0, 12)}
+            </code>
+            <Separator orientation="vertical" className="hidden h-4 sm:block" />
+            <Stat icon={Footprints}>
+              <span className="text-foreground font-mono font-medium">
+                {run.step_count}
+              </span>{" "}
+              steps
+            </Stat>
+            <Stat icon={Coins}>
+              <span className="text-foreground font-mono font-medium">
+                {tokens.toLocaleString()}
+              </span>{" "}
+              tokens
+              {run.llm_calls > 0 && (
+                <span className="opacity-60"> · {run.llm_calls} calls</span>
+              )}
+            </Stat>
+            <Stat icon={Clock}>
+              <span className="text-foreground font-mono font-medium">
+                {elapsed(run)}
+              </span>
+            </Stat>
+            <Separator orientation="vertical" className="hidden h-4 sm:block" />
+            <Stat icon={Cpu}>{run.browser}</Stat>
+            <Stat icon={Globe}>
+              <span className="font-mono">{hostOf(run.app_target)}</span>
+            </Stat>
+            <button
+              type="button"
+              onClick={() => setShowDetails((v) => !v)}
+              aria-expanded={showDetails}
+              className="no-print text-muted-foreground hover:text-foreground ml-auto flex items-center gap-1 text-xs font-medium"
             >
-              {run.app_target}
-            </a>
-          </DetailRow>
-          <DetailRow label="Tenant">{run.tenant_id}</DetailRow>
-          <DetailRow label="Browser">{run.browser}</DetailRow>
-          <DetailRow label="Parameters">
-            {Object.keys(run.params ?? {}).length === 0 ? (
-              "-"
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(run.params).map(([k, v]) => (
-                  <code
-                    key={k}
-                    className="bg-muted rounded px-1.5 py-0.5 text-[11px]"
-                  >
-                    {k}={String(v)}
-                  </code>
-                ))}
+              Details
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform ${showDetails ? "rotate-180" : ""}`}
+              />
+            </button>
+          </div>
+
+          {showDetails && (
+            <div>
+              <Separator />
+              <div className="space-y-4 px-4 py-4">
+                <div className="relative">
+                  <Separator
+                    orientation="vertical"
+                    className="absolute top-0 bottom-0 left-1/2 hidden sm:block"
+                  />
+                  <dl className="grid gap-x-10 gap-y-2.5 sm:grid-cols-2">
+                    <DetailRow label="Goal name">
+                      {run.name ? sentenceCase(run.name) : "—"}
+                    </DetailRow>
+                    <DetailRow label="Run ID">
+                      <code className="text-xs">{id}</code>
+                    </DetailRow>
+                    {run.goal && run.goal !== run.name && (
+                      <DetailRow label="Description">{run.goal}</DetailRow>
+                    )}
+                    <DetailRow label="Target">
+                      <a
+                        href={run.app_target}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary break-all underline underline-offset-2"
+                      >
+                        {run.app_target}
+                      </a>
+                    </DetailRow>
+                    <DetailRow label="Tenant">{run.tenant_id}</DetailRow>
+                    {run.llm_calls > 0 && (
+                      <DetailRow label="LLM">
+                        {run.llm_calls} calls · {run.tokens_in.toLocaleString()}{" "}
+                        in / {run.tokens_out.toLocaleString()} out
+                      </DetailRow>
+                    )}
+                  </dl>
+                </div>
+
+                {Object.keys(run.params ?? {}).length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="font-heading mb-2.5 text-sm font-semibold tracking-tight">
+                        Parameters
+                      </p>
+                      <dl className="grid gap-x-10 gap-y-2 sm:grid-cols-2">
+                        {Object.entries(run.params).map(([k, v]) => (
+                          <DetailRow key={k} label={sentenceCase(k)}>
+                            <span className="font-mono text-xs">
+                              {isSensitiveKey(k) ? maskSecret(v) : String(v)}
+                            </span>
+                          </DetailRow>
+                        ))}
+                      </dl>
+                    </div>
+                  </>
+                )}
+
+                <Separator />
+                <div className="relative">
+                  <Separator
+                    orientation="vertical"
+                    className="absolute top-0 bottom-0 left-1/2 hidden sm:block"
+                  />
+                  <dl className="grid gap-x-10 gap-y-2.5 sm:grid-cols-2">
+                    <DetailRow label="Started">{ago(run.started_at)}</DetailRow>
+                    <DetailRow label="Ended">
+                      {run.ended_at
+                        ? `${ago(run.ended_at)} · ${elapsed(run)}`
+                        : "Running"}
+                    </DetailRow>
+                    {run.artifact_id && (
+                      <DetailRow label="Artifact">
+                        <Link
+                          href={artifactHref}
+                          className="text-primary underline underline-offset-2"
+                        >
+                          {run.artifact_id.slice(0, 8)} v{run.artifact_version}
+                        </Link>
+                        {run.record_outcome
+                          ? ` · ${sentenceCase(run.record_outcome)}`
+                          : ""}
+                      </DetailRow>
+                    )}
+                  </dl>
+                </div>
               </div>
-            )}
-          </DetailRow>
-          <DetailRow label="Steps">{run.step_count}</DetailRow>
-          <DetailRow label="LLM">
-            {run.llm_calls} calls · {run.tokens_in.toLocaleString()} in /{" "}
-            {run.tokens_out.toLocaleString()} out ({tokens.toLocaleString()}{" "}
-            total)
-          </DetailRow>
-          <DetailRow label="Started">{ago(run.started_at)}</DetailRow>
-          <DetailRow label="Ended">
-            {run.ended_at ? `${ago(run.ended_at)} · ${elapsed(run)}` : "running"}
-          </DetailRow>
-          <DetailRow label="Status">
-            {run.status}
-            {run.detail ? ` - ${run.detail}` : ""}
-          </DetailRow>
-          {run.artifact_id && (
-            <DetailRow label="Artifact">
-              <Link
-                href={artifactHref}
-                className="text-primary underline underline-offset-2"
-              >
-                {run.artifact_id.slice(0, 8)} v{run.artifact_version}
-              </Link>
-              {run.record_outcome ? ` · ${run.record_outcome}` : ""}
-            </DetailRow>
+            </div>
           )}
         </div>
       )}
@@ -285,8 +312,9 @@ export default function RunPage() {
           ) : (
             <XCircle className="text-destructive h-4 w-4" />
           )}
-          <span className="font-medium">
-            {isReplay ? "Replay" : "Run"} {run?.status}
+          <span className="font-heading font-medium">
+            {isReplay ? "Replay" : "Run"}{" "}
+            {run?.status ? sentenceCase(run.status) : ""}
           </span>
           {run?.detail && (
             <span className="text-muted-foreground">- {run.detail}</span>
@@ -376,12 +404,12 @@ export default function RunPage() {
       {run?.novnc_url && (
         <Dialog open={expanded} onOpenChange={setExpanded}>
           <DialogContent className="w-auto max-w-[96vw] gap-0 overflow-hidden p-0 sm:max-w-[96vw]">
-            <DialogTitle className="border-b px-4 py-2.5 text-sm">
+            <DialogTitle className="border-b px-4 py-2.5 text-base">
               Live sandbox
               <span className="text-muted-foreground ml-2 text-xs font-normal">
                 {inControl
-                  ? "you are in control"
-                  : "view only · automation driving"}
+                  ? "You are in control"
+                  : "View only · automation driving"}
               </span>
             </DialogTitle>
             {/* cap by BOTH viewport width and height so the 16:9 feed always fits */}

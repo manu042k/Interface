@@ -39,7 +39,7 @@ export function Breadcrumbs() {
     >
       <Link
         href="/"
-        className="text-muted-foreground hover:text-foreground shrink-0 font-medium"
+        className="font-heading text-muted-foreground hover:text-foreground shrink-0 font-medium"
       >
         Replay
       </Link>
@@ -49,7 +49,7 @@ export function Breadcrumbs() {
           <span key={c.href} className="flex min-w-0 items-center gap-1.5">
             <ChevronRight className="text-muted-foreground/40 h-3.5 w-3.5 shrink-0" />
             {last ? (
-              <span className="text-foreground truncate font-bold">
+              <span className="font-heading text-foreground truncate font-semibold">
                 {c.label}
               </span>
             ) : (

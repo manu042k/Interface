@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PageHeader } from "@/components/page-header";
 
 /* ---- client-side validation ------------------------------------------------ */
 
@@ -132,15 +133,10 @@ export default function NewRunPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Start a discovery run
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Give the agent a goal and an entry point. It drives the real UI and you
-          watch it live.
-        </p>
-      </header>
+      <PageHeader
+        title="Start a discovery run"
+        description="Give the agent a goal and an entry point. It drives the real UI and you watch it live."
+      />
 
       <Card>
         <CardContent className="space-y-5 pt-6">

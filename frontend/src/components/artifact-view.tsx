@@ -233,8 +233,8 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
 
                   {s.locator_spec.length > 0 ? (
                     <div>
-                      <div className="text-muted-foreground mb-1 flex items-center gap-1 uppercase">
-                        <Crosshair className="h-3 w-3" /> finds the element by
+                      <div className="text-muted-foreground mb-1 flex items-center gap-1 text-xs font-medium">
+                        <Crosshair className="h-3 w-3" /> Finds the element by
                       </div>
                       <ol className="space-y-1">
                         {s.locator_spec.map((l, li) => (
@@ -333,7 +333,7 @@ function SectionTitle({
   count?: number;
 }) {
   return (
-    <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+    <h3 className="font-heading text-sm font-semibold tracking-tight">
       {children}
       {count !== undefined && (
         <span className="text-muted-foreground/70"> · {count}</span>
@@ -351,7 +351,7 @@ function ContractRow({
 }) {
   return (
     <div className="flex gap-3 px-3 py-2.5">
-      <span className="text-muted-foreground w-24 shrink-0 pt-0.5 text-xs font-medium uppercase">
+      <span className="font-heading text-muted-foreground w-24 shrink-0 pt-0.5 text-xs font-medium">
         {label}
       </span>
       <div className="min-w-0 flex-1">{children}</div>

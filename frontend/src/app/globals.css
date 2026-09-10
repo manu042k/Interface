@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-heading: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -41,13 +41,13 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.3125rem;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius-4xl: var(--radius);
 }
 
 /* Palette: getdesign `zapier` — warm cream canvas, coffee ink, one orange CTA. */
@@ -77,7 +77,7 @@
   --chart-3: #b9791f;
   --chart-4: #1f7a4d;
   --chart-5: #939084;
-  --radius: 0.75rem;
+  --radius: 0.375rem;
   --sidebar: #f8f4f0;
   --sidebar-foreground: #201515;
   --sidebar-primary: #ff4f00;
@@ -126,11 +126,30 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
+  }
+  body {
+    @apply bg-background font-sans text-sm text-foreground;
+  }
+
+  /* Outfit for titles, Inter for body. Accordion items render as h3, so
+     first-letter casing is applied in JS (sentenceCase), not here. */
+  h1,
+  h2,
+  [data-slot="card-title"],
+  [data-slot="dialog-title"],
+  [data-slot="sheet-title"] {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+  }
+
+  h1::first-letter,
+  h2::first-letter,
+  [data-slot="card-title"]::first-letter,
+  [data-slot="dialog-title"]::first-letter,
+  [data-slot="sheet-title"]::first-letter {
+    text-transform: uppercase;
   }
 }
 /* Report page: clean print output */
