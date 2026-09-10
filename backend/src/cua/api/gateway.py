@@ -525,7 +525,17 @@ def create_app(config: Config | None = None) -> FastAPI:
     # -- ST-037..ST-040: escalation & operator console ---------------
     @app.get("/interventions")
     async def list_interventions(status: str | None = "open") -> list[dict[str, Any]]:
-        return app.state.system.console.inbox(status=status or "open")
+        rows = app.state.system.console.inbox(status=status or "open")
+        # Only surface handoffs whose run is still STUCK. A run that failed,
+        # completed, or was cancelled can leave an intervention open (e.g. an
+        # LLM-credits abort mid-escalation) — those are not actionable and must
+        # not clutter the console.
+        runs = app.state.runs
+        return [
+            r for r in rows
+            if (rec := runs.get(r["run_id"])) is not None
+            and rec.status == RunStatus.STUCK
+        ]
 
     @app.get("/runs/{run_id}/intervention")
     async def run_intervention(run_id: str) -> dict[str, Any] | None:

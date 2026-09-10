@@ -923,6 +923,20 @@ class Orchestrator:
                     log.event(None, "sandbox_held", container=run.sandbox_container,
                               reason="stuck — awaiting operator")
             else:
+                # A non-STUCK terminal state must not leave a handoff open — an
+                # escalation aborted mid-wait (e.g. LLM out of credits) would
+                # otherwise linger in the operator console forever.
+                if self.escalation is not None:
+                    from ..models import InterventionStatus
+
+                    for _iv in self.escalation.list_interventions():
+                        if _iv.run_id == run.run_id and _iv.status != InterventionStatus.RESOLVED:
+                            try:
+                                self.escalation.abandon(
+                                    _iv.intervention_id, f"run ended ({run.status.value})"
+                                )
+                            except Exception:  # noqa: BLE001
+                                pass
                 await close_run_surface(
                     adapter=self.adapter, sandbox_manager=self.sandbox_manager,
                     surface=surface, run=run, logger=log,
