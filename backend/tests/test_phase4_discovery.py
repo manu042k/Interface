@@ -73,3 +73,35 @@ async def test_all_providers_exhausted_pauses_then_stuck(offline_config, mockban
         assert run.detail == "all_providers_exhausted"
     finally:
         await sys.shutdown()
+
+
+def test_derived_login_success_check_only_for_pure_login_goals():
+    """The heuristic that gives a bare 'log in' goal a finish line must NOT fire
+    when login is just the first step of a larger task — that ended runs early
+    (a goal like 'sign on and pull up member 100234 record' stopped at /menu)."""
+    from cua.discovery.orchestrator import _derive_login_success_check as derive
+
+    target = "https://legacy-core.example.com/signon"
+
+    # pure login -> a success check IS derived
+    for g in (
+        "log in",
+        "sign on to the legacy_core console",
+        "log on to the system",
+        "authenticate with the portal",
+        "sign on as teller1",
+    ):
+        assert derive(g, target) is not None, g
+
+    # login + a downstream task -> NO derived check (would truncate the run)
+    for g in (
+        "sign on and pull up member 100234 record",
+        "login and read savings for member 12345",
+        "sign on and look up member 100234 record",
+        "sign on then open funds transfer",
+        "log in and check the balance",
+    ):
+        assert derive(g, target) is None, g
+
+    # not a login goal at all
+    assert derive("read the savings balance for member 12345", target) is None

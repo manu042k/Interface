@@ -33,6 +33,46 @@ from ..surface.base import Action, SurfaceAdapter
 from ..surface.perception import Perception
 from .agent import DiscoveryAgent
 
+_LOGIN_RE = re.compile(r"\b(log\s?in|log\s?on|sign\s?on|sign\s?in|authenticat)", re.I)
+_DOWNSTREAM_RE = re.compile(
+    r"\b(read|extract|check|view|get|fetch|look ?up|lookup|look ?at|find|search|"
+    r"open|create|add|transfer|update|change|edit|place|submit|post|deposit|"
+    r"withdraw|balance|amount|then|after (that|logging|signing)|navigate|go to|"
+    r"pull ?up|pull|bring ?up|show|display|review|verify|confirm|inquir|"
+    r"record|account|member|detail|history|status)\b",
+    re.I,
+)
+
+
+def _derive_login_success_check(goal: str, target: str) -> dict | None:
+    """A goal that is ONLY "log in" has no explicit finish line, so the model can
+    sign on successfully and then thrash (re-click submit, sign off, retry...).
+    Derive one: done once you've LEFT the auth path with no rejection text. But
+    NOT when login is just the first step of a larger task ("log in AND read the
+    balance", "sign on and pull up member 100234") — that would end the run
+    early. A 3+ digit number in the goal is treated as a downstream target id."""
+    from urllib.parse import urlparse
+
+    if not _LOGIN_RE.search(goal):
+        return None
+    if _DOWNSTREAM_RE.search(goal) or re.search(r"\d{3,}", goal):
+        return None
+    auth_seg = (urlparse(target).path.rsplit("/", 1)[-1] or "signon").lower()
+    return {
+        "kind": "all_of",
+        "params": {"conditions": [
+            {"kind": "url_matches", "params": {
+                "pattern": rf"^(?!.*/(?:{re.escape(auth_seg)}|signon|login|sign-?in|auth)\b).+"
+            }},
+            {"kind": "text_absent", "params": {"any": [
+                "invalid operator", "invalid credentials", "incorrect password",
+                "login failed", "sign-on failed", "not authorized", "try again",
+                "access denied",
+            ]}},
+        ]},
+    }
+
+
 _TOOL_TO_ACTION = {
     "click": ActionType.CLICK,
     "type": ActionType.TYPE,
@@ -128,36 +168,11 @@ class Orchestrator:
         transcript = DiscoveryTranscript(run_id=run.run_id, goal=goal, target=target, tenant=tenant, params=params)
         self._run_target = target  # for _discovery_business_outcome's per-host library lookup
 
-        # A goal that is ONLY "log in" has no explicit finish line, so the model
-        # can sign on successfully and then thrash (re-click submit, sign off,
-        # retry...). Derive one: done once you've LEFT the auth path with no
-        # rejection text. But NOT when login is just the first step of a larger
-        # task ("log in AND read the balance") — that would end the run early.
-        _is_login = bool(re.search(r"\b(log\s?in|log\s?on|sign\s?on|sign\s?in|authenticat)", goal, re.I))
-        _has_downstream = bool(re.search(
-            r"\b(read|extract|check|view|get|fetch|look ?up|find|search|open|create|add|"
-            r"transfer|update|change|edit|place|submit|post|deposit|withdraw|balance|"
-            r"amount|then|after (that|logging|signing)|navigate|go to)\b",
-            goal, re.I,
-        ))
-        if success_check is None and _is_login and not _has_downstream:
-            from urllib.parse import urlparse
-
-            auth_seg = (urlparse(target).path.rsplit("/", 1)[-1] or "signon").lower()
-            success_check = {
-                "kind": "all_of",
-                "params": {"conditions": [
-                    {"kind": "url_matches", "params": {
-                        "pattern": rf"^(?!.*/(?:{re.escape(auth_seg)}|signon|login|sign-?in|auth)\b).+"
-                    }},
-                    {"kind": "text_absent", "params": {"any": [
-                        "invalid operator", "invalid credentials", "incorrect password",
-                        "login failed", "sign-on failed", "not authorized", "try again",
-                        "access denied",
-                    ]}},
-                ]},
-            }
-            log.event(0, "derived_success_check", detail="login goal — done once off the auth page with no error")
+        if success_check is None:
+            success_check = _derive_login_success_check(goal, target)
+            if success_check is not None:
+                log.event(0, "derived_success_check",
+                          detail="login goal — done once off the auth page with no error")
 
         deadline = time.time() + self.cfg.run_timeout_seconds
         history: list[str] = []
@@ -185,6 +200,13 @@ class Orchestrator:
         # even when broken up by other actions (type A, type B, type A, ...).
         sig_counts: dict[str, int] = {}
         cycle_nudged = False
+        # click-stall guard: consecutive clicks on one URL that never navigate or
+        # change anything — the model "retries the same button with a different
+        # identifier" over and over (each a new target, so the (tool|target)
+        # counter above never trips). Reset by any navigation or a real edit.
+        click_stall = 0
+        click_stall_url: str | None = None
+        resolve_fails = 0  # consecutive "could not resolve target" errors
         try:
             step = 0
             while True:
@@ -448,6 +470,7 @@ class Orchestrator:
                     last_ok_tool = call.tool
                     last_ok_step = step
                     policy_blocks = 0  # progress - forget earlier guardrail rejections
+                    resolve_fails = 0
                     if call.tool in ("type", "select"):
                         entered = str(call.args.get("value") or call.args.get("option") or "")
                         for pk, pv in params.items():
@@ -457,13 +480,32 @@ class Orchestrator:
                     history.append(f"{desc} -> FAILED: {result.error}")
                     note = f"The last action failed: {result.error}. Re-observe and adapt, or call stuck."
                     if "could not resolve target" in (result.error or ""):
-                        note = (
-                            f"The last action failed: {result.error}. The control could NOT be "
-                            "located - it is almost certainly on screen already. Do NOT scroll. "
-                            "Try a DIFFERENT identifier for the same control: its form field "
-                            "name (e.g. name='address'), its placeholder text, or the visible "
-                            "label text next to it. If two more tries fail, call stuck."
-                        )
+                        resolve_fails += 1
+                        if resolve_fails >= 2:
+                            # Retrying the same control with new identifiers is
+                            # the classic thrash — the control is very likely
+                            # NOT on this page (the flow already moved past it,
+                            # or the model has the wrong page in mind).
+                            note = (
+                                f"The last action failed: {result.error}. You have now failed "
+                                f"to find this control {resolve_fails} times — it is most likely "
+                                "NOT on this page. STOP trying new identifiers for it and STOP "
+                                "scrolling. Re-read the observation above and list what is "
+                                "ACTUALLY on the current screen: its heading, its buttons/links, "
+                                "its fields. Then either act on one of THOSE toward the goal, or "
+                                "call stuck. Do not name a control the observation does not show."
+                            )
+                        else:
+                            note = (
+                                f"The last action failed: {result.error}. The control could NOT be "
+                                "located - it may be on screen under a different identifier. Do NOT "
+                                "scroll. Try its form field name (e.g. name='address'), its "
+                                "placeholder, or the visible label text next to it. If that fails "
+                                "too, the control is probably not here — re-read the screen and "
+                                "act on what IS shown, or call stuck."
+                            )
+                    else:
+                        resolve_fails = 0
                 elif call.tool == "extract" and result.extracted is not None:
                     val = str(result.extracted)
                     history.append(f"{desc} -> got {val[:80]!r}")
@@ -538,6 +580,41 @@ class Orchestrator:
                                 f"You have repeated {call.tool} {n} times with no progress. Try a "
                                 "genuinely different action toward the goal, or call stuck."
                             )
+
+                # --- click-stall guard ----------------------------------
+                # A click is only progress if it opens/navigates/changes
+                # something. When the model just keeps clicking (or trying and
+                # failing to click) on one page — a broken submit under fault
+                # injection, a dead control, or a wrong mental model ("still need
+                # to sign on" on the menu page) — each attempt with a fresh
+                # target or a fresh "could not resolve" error dodges every guard
+                # above. Count consecutive no-progress click/press attempts on
+                # one URL, successful-but-inert AND outright failed alike.
+                _navigated = str(result.url_after or "") not in ("", state.url)
+                _progress = _navigated or (ok and call.tool in ("type", "select", "extract", "assert_state"))
+                if _progress:
+                    click_stall, click_stall_url = 0, None
+                elif call.tool in ("click", "press_key"):
+                    if click_stall_url == state.url:
+                        click_stall += 1
+                    else:
+                        click_stall, click_stall_url = 1, state.url
+                    if click_stall >= 5:
+                        reason = (
+                            f"click-stall: {click_stall} click attempts on {state.url} that "
+                            "changed nothing — the control is dead, the page is broken, or the "
+                            "agent is looking for something that isn't there"
+                        )
+                        resumed_note = await self._escalate_and_wait(
+                            run, transcript, session, step, reason, goal, history, log,
+                            handoff_wait_s, last_call,
+                        )
+                        if resumed_note is None:
+                            break
+                        note, last_sig, repeats = resumed_note, None, 0
+                        click_stall, click_stall_url = 0, None
+                        deadline = time.time() + self.cfg.run_timeout_seconds
+                        continue
 
                 # The model sometimes re-asserts the same passing success check
                 # instead of calling done. It has verified the goal twice —
