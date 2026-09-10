@@ -60,7 +60,7 @@ class LocatorResolutionEngine:
         before = len(self._cache)
         keep = {}
         for k, v in self._cache.items():
-            av, fp, _ = k
+            _aid, av, fp, _step, _slot = k
             if fingerprint is not None and fp == fingerprint:
                 continue
             if artifact_version is not None and av == artifact_version:
@@ -84,11 +84,17 @@ class LocatorResolutionEngine:
         adapter: Any,
         session_handle: str,
         *,
+        artifact_id: str = "",
         artifact_version: int,
         surface_fingerprint: str,
         step_index: int,
+        slot: str = "step",
     ) -> Resolution:
-        key = (artifact_version, surface_fingerprint, step_index)
+        # `artifact_id` + `slot` MUST be in the key: two v1 capabilities on
+        # structurally-identical pages (every /member/N screen) would otherwise
+        # collide at the same step_index, and a recoverable rule's resolve would
+        # collide with the real step's resolve at that index.
+        key = (artifact_id, artifact_version, surface_fingerprint, step_index, slot)
         cached = self._cache.get(key)
         if cached is not None:
             return cached

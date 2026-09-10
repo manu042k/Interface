@@ -229,8 +229,8 @@ class ReplayExecutor:
         if step.locator_spec:
             res = await self.locators.resolve(
                 step.locator_spec, self.adapter, session,
-                artifact_version=artifact.version, surface_fingerprint=state.fingerprint,
-                step_index=step.step_index,
+                artifact_id=artifact.artifact_id, artifact_version=artifact.version,
+                surface_fingerprint=state.fingerprint, step_index=step.step_index,
             )
             log.event(step.step_index, "locator_resolution", **res.as_event())
             if not res.ok:
@@ -358,8 +358,9 @@ class ReplayExecutor:
                 if rule.action == "dismiss" and rule.target:
                     r = await self.locators.resolve(
                         rule.target, self.adapter, session,
-                        artifact_version=artifact.version, surface_fingerprint=state.fingerprint,
-                        step_index=step_index,
+                        artifact_id=artifact.artifact_id, artifact_version=artifact.version,
+                        surface_fingerprint=state.fingerprint, step_index=step_index,
+                        slot=f"recover:{rule.name}",
                     )
                     if r.ok:
                         await self.adapter.execute(session, Action(type=ActionType.CLICK, target_description=r.concrete))

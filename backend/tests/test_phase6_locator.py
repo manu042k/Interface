@@ -76,3 +76,25 @@ async def test_cache_singleflight(adapter, mockbank):
 
     dropped = eng.invalidate(fingerprint="fpX")
     assert dropped == 1
+
+
+async def test_cache_key_isolates_artifacts_and_slots(adapter, mockbank):
+    """Two v1 capabilities on the same-fingerprint page at the same step_index
+    must not share a cached resolution (real regression: mb_open_subaccount
+    replaying mb_read_savings's step-3 `near=Savings` locator)."""
+    h = await adapter.open_session(f"{mockbank}/member/12345?ack=1")
+    eng = LocatorResolutionEngine()
+    a_spec = [LocatorStrategy(kind="relative_to_landmark", params={"near": "Savings"}, rank=0, rationale="r")]
+    b_spec = [LocatorStrategy(kind="role_name", params={"role": "link", "name": "Open a new sub-account"}, rank=0, rationale="r")]
+
+    ra = await eng.resolve(a_spec, adapter, h, artifact_id="A", artifact_version=1,
+                           surface_fingerprint="fpM", step_index=3)
+    rb = await eng.resolve(b_spec, adapter, h, artifact_id="B", artifact_version=1,
+                           surface_fingerprint="fpM", step_index=3)
+    assert ra.ok and rb.ok
+    assert ra.matched_strategy != rb.matched_strategy  # not the cached A result
+
+    # same artifact+fp+step but a recover slot is also distinct
+    rc = await eng.resolve(b_spec, adapter, h, artifact_id="B", artifact_version=1,
+                           surface_fingerprint="fpM", step_index=3, slot="recover:x")
+    assert rc.ok
