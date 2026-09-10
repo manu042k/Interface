@@ -336,6 +336,7 @@ class Orchestrator:
         resolve_fails = 0  # consecutive "could not resolve target" errors
         fail_streak = 0  # consecutive failed actions of the SAME tool (any error)
         fail_streak_tool: str | None = None
+        committed: list[dict[str, str]] = []  # banking mutations that succeeded — never reverse/re-submit
         try:
             step = 0
             while True:
@@ -541,12 +542,57 @@ class Orchestrator:
                 if action.type in (ActionType.ASSERT_STATE, ActionType.WAIT_FOR) and isinstance(action.condition, dict):
                     call.args["condition"] = action.condition
                 target_url = call.args.get("url") if call.tool == "navigate" else state.url
+
+                # Post-commit lock: once a banking transaction has succeeded this
+                # run, the agent must NOT try to reverse / void / refund / undo it
+                # or re-submit it. A committed transaction is permanent — only a
+                # human decides on any correction.
+                if committed:
+                    intent = _call_intent_text(call)
+                    if call.tool in ("click", "press_key", "navigate") and _REVERSAL_RE.search(intent):
+                        log.event(step, "reversal_blocked", attempted=intent,
+                                  committed=committed[-1], detail="a committed transaction must not be reversed by automation")
+                        reason = (
+                            f"A transaction was already committed this run "
+                            f"({committed[-1]['what']}). The agent then tried to reverse/undo it "
+                            f"('{intent}'). Automation must NEVER roll back a committed banking "
+                            f"transaction — a human must decide on any correction. Do not resume "
+                            f"the agent into a reversal."
+                        )
+                        transcript.entries.append(
+                            TranscriptEntry(step, state, call, action, False, {"reversal_blocked": reason}, PolicyVerdict.BLOCK)
+                        )
+                        resumed_note = await self._escalate_and_wait(
+                            run, transcript, session, step, reason, goal, history, log,
+                            handoff_wait_s, last_call,
+                        )
+                        if resumed_note is None:
+                            break
+                        note, last_sig, repeats, committed = resumed_note, None, 0, []
+                        deadline = time.time() + self.cfg.run_timeout_seconds
+                        step += 1
+                        continue
+                    sig = _commit_sig(call)
+                    if any(c["sig"] == sig for c in committed):
+                        note = (
+                            "You already completed that transaction this run — the page confirmed "
+                            "it. Do NOT submit it again. Re-read the current screen to verify the "
+                            "result, then finish, or call stuck if something is wrong."
+                        )
+                        log.event(step, "resubmit_blocked", sig=sig)
+                        step += 1
+                        continue
+
                 decision = self.policy.check(
                     ActionContext(
                         tenant_id=tenant,
                         action_type=_TOOL_TO_ACTION[call.tool],
                         target_url=target_url,
                         declared_risk=None,
+                        extra={
+                            "target": _call_intent_text(call),
+                            "value": call.args.get("value") or call.args.get("option") or "",
+                        },
                     )
                 )
                 log.guardrail(step, decision.verdict, decision.reason)
@@ -608,6 +654,20 @@ class Orchestrator:
                     decision.verdict, extract_as,
                 )
                 transcript.entries.append(entry)
+
+                # A risky/irreversible action that SUCCEEDED is a committed
+                # banking mutation. Record it so the post-commit lock can refuse
+                # any later reversal or re-submit this run.
+                if ok and risk == RiskClass.RISKY_IRREVERSIBLE and call.tool in ("click", "press_key", "navigate"):
+                    committed.append({
+                        "sig": _commit_sig(call),
+                        "what": _call_intent_text(call) or _describe_call(call),
+                        "url": str(result.url_after or ""),
+                        "step": str(step),
+                    })
+                    log.event(step, "transaction_committed",
+                              what=committed[-1]["what"], url=committed[-1]["url"],
+                              detail="irreversible — reversal/re-submit is now locked out for this run")
 
                 desc = _describe_call(call)
 
@@ -1275,6 +1335,36 @@ def _describe_call(call: ToolCall) -> str:
     if call.tool == "extract":
         return f"extract {a.get('as')} <- {a.get('target')} as {a.get('expected_shape')}"
     return f"{call.tool} {a.get('target') or a.get('condition') or ''}".strip()
+
+
+_REVERSAL_RE = re.compile(
+    r"\b(revers\w*|refund\w*|charge\s*back|undo|roll\s*back|void\w*|"
+    r"cancel\s+(the\s+)?(transfer|payment|transaction|order|deposit|withdrawal)|"
+    r"delete\s+(the\s+)?(transfer|payment|transaction)|"
+    r"(transfer|send|move|pay)\s+(it|the\s+(money|funds|amount))?\s*back)\b",
+    re.I,
+)
+
+
+def _call_intent_text(call: ToolCall) -> str:
+    """The control's visible text / name / label plus any value, flattened to
+    one lowercase string — the semantic signal for risk + reversal matching."""
+    a = call.args
+    t = a.get("target")
+    parts: list[str] = []
+    if isinstance(t, dict):
+        parts += [str(t.get(k, "")) for k in ("text", "name", "label", "near", "role")]
+    elif t:
+        parts.append(str(t))
+    parts += [str(a.get(k, "")) for k in ("url", "value", "option")]
+    parts.append((call.reasoning or "")[:120])
+    return " ".join(p for p in parts if p).lower().strip()
+
+
+def _commit_sig(call: ToolCall) -> str:
+    """Identity of a commit action, to catch a verbatim re-submit."""
+    a = call.args
+    return f"{call.tool}|{json.dumps(a.get('target'), sort_keys=True)}|{a.get('value') or a.get('option') or ''}|{a.get('url') or ''}"
 
 
 def _stuck_reason(call: ToolCall) -> str:

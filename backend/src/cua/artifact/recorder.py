@@ -89,7 +89,12 @@ _ACTIONABLE = {
     "click", "type", "select", "navigate", "wait_for",
     "extract", "assert_state", "scroll", "press_key",
 }
-_RISKY_URL_RE = re.compile(r"/(create|submit|confirm|delete|remove|transfer|post|approve)(/|$|\?)", re.I)
+_RISKY_URL_RE = re.compile(
+    r"/(create|submit|confirm|delete|remove|transfer|post|approve|billpay|bill-?pay|"
+    r"payment|wire|withdraw\w*|deposit|disburse\w*|authoriz\w*|open-?account|close|"
+    r"hold|stop-?payment|update-?profile)(/|$|\?|\.htm|\.do|\.aspx)",
+    re.I,
+)
 _TOKEN_RE = re.compile(r"[a-z][a-z0-9_\-]{0,20}")  # looks like a name/id attr, not a label
 _SECRETISH_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{8,}$")  # mixed alnum, 8+ — conservative
 # Interstitials are runtime-variable: they belong in recoverable_rules, not the

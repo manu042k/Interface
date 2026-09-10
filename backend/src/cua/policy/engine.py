@@ -9,7 +9,11 @@ the check itself all resolve to BLOCK.
 
 Risk model (§3.4): actions are `safe_reversible` by default. An action is
 `risky_irreversible` if the step/tool says so, OR its target route matches the
-tenant's `risky_route_patterns`, OR its action type is in `risky_action_types`.
+tenant's `risky_route_patterns`, OR its action type is in `risky_action_types`,
+OR it carries a built-in banking-mutation signal (a money-movement /
+account-lifecycle verb on the control it commits, or a mutation route) — this
+last one applies on ANY tenant, including a bare auto-admitted target, so a
+funds transfer on a site with no hand-written policy still gates.
 The risky class is dispositioned by tenant policy — default `require_confirmation`
 (a human/gate must approve) rather than silent execution. We prefer
 require_confirmation over hard block as the default so a legitimate
@@ -19,6 +23,7 @@ a tenant can set `block` for a stricter posture.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
@@ -26,6 +31,53 @@ from urllib.parse import urlparse
 
 from ..models import ActionType, RiskClass
 from .allowlist import Allowlist, TenantPolicy
+
+# Built-in, tenant-independent banking-mutation signals. Conservative: they fire
+# on the COMMIT gesture (a click / Enter on the control that posts, or a
+# navigate to a mutation route), never on typing into a field or reading.
+_MONEY_MOVE_RE = re.compile(
+    r"\b(transfer|wire|remit|remittance|disburse\w*|withdraw\w*|deposit|"
+    r"bill\s*pay|bill-?pay|payment|pay\s+(bill|payee|now|from)|send\s+money|"
+    r"issue\s+(check|cheque|payment)|stop\s+payment|charge\s*back|charge|refund|"
+    r"revers\w*|void)\b",
+    re.I,
+)
+_LIFECYCLE_RE = re.compile(
+    r"\b(open\s+(a\s+|an\s+)?(new\s+)?(account|share|sub-?account|certificate)|"
+    r"close\s+(the\s+|this\s+)?account|place\s+(a\s+)?hold|release\s+(the\s+)?hold|"
+    r"freeze\s+account|unfreeze|delete\s+(account|customer|member|user|operator)|"
+    r"reset\s+(password|pin)|change\s+(beneficiary|ownership))\b",
+    re.I,
+)
+# Generic commit verbs — risky ONLY when the route is also a mutation route,
+# so a plain "Submit" on a search form does not trip.
+_COMMIT_VERB_RE = re.compile(
+    r"\b(submit|confirm|post|apply|authoriz\w*|approve|finaliz\w*|"
+    r"complete\s+(order|transfer|payment|purchase)|place\s+order)\b",
+    re.I,
+)
+_MUTATION_ROUTE_RE = re.compile(
+    r"/(transfer|billpay|bill-?pay|payment|wire|withdraw\w*|deposit|disburse\w*|"
+    r"post|confirm|authoriz\w*|approve|open-?account|close|hold|stop-?payment|"
+    r"sub-?account/(new|create)|create|update-?profile)(/|$|\?|\.htm|\.do|\.aspx)",
+    re.I,
+)
+
+
+def _mutation_signal(action_type: str, path_q: str, signal: str) -> str | None:
+    """A built-in banking-mutation reason, or None. `signal` is the control's
+    visible text / name / value flattened to one lowercase string."""
+    if action_type not in ("click", "press_key", "navigate"):
+        return None
+    if _MONEY_MOVE_RE.search(signal):
+        return "money-movement action (transfer / payment / withdrawal)"
+    if _LIFECYCLE_RE.search(signal):
+        return "account-lifecycle action (open / close / hold / reset)"
+    if _MUTATION_ROUTE_RE.search(path_q):
+        return f"mutation route ({path_q})"
+    if _COMMIT_VERB_RE.search(signal) and _MUTATION_ROUTE_RE.search(path_q):
+        return "commit action on a mutation route"
+    return None
 
 
 class PolicyVerdict(StrEnum):
@@ -119,17 +171,17 @@ class PolicyEngine:
 
         risk = self._classify(ctx, tenant, path_q)
         if risk == RiskClass.RISKY_IRREVERSIBLE:
+            why = _mutation_signal(
+                str(ctx.action_type), path_q,
+                " ".join(str((ctx.extra or {}).get(k, "")) for k in ("target", "value", "label", "option")).lower(),
+            ) or f"risky/irreversible action ({path_q})"
             disp = tenant.risk_policy.risky_irreversible
             if disp == "block":
-                return PolicyDecision(PolicyVerdict.BLOCK, f"risky/irreversible action blocked by tenant policy ({path_q})", risk)
+                return PolicyDecision(PolicyVerdict.BLOCK, f"blocked by tenant policy — {why}", risk)
             if disp == "require_confirmation":
-                return PolicyDecision(
-                    PolicyVerdict.REQUIRE_CONFIRMATION,
-                    f"risky/irreversible action requires confirmation ({path_q})",
-                    risk,
-                )
+                return PolicyDecision(PolicyVerdict.REQUIRE_CONFIRMATION, f"needs human approval — {why}", risk)
             # "flag": allow but mark
-            return PolicyDecision(PolicyVerdict.ALLOW, f"risky/irreversible action flagged, permitted ({path_q})", risk)
+            return PolicyDecision(PolicyVerdict.ALLOW, f"flagged, permitted — {why}", risk)
 
         return PolicyDecision(PolicyVerdict.ALLOW, "within allowlist; safe/reversible", risk)
 
@@ -141,4 +193,22 @@ class PolicyEngine:
             return RiskClass.RISKY_IRREVERSIBLE
         if tenant.route_is_risky(path_q):
             return RiskClass.RISKY_IRREVERSIBLE
+        # built-in banking-mutation signal — tenant-independent
+        extra = ctx.extra or {}
+        signal = " ".join(
+            str(extra.get(k, "")) for k in ("target", "value", "label", "option")
+        ).lower()
+        if _mutation_signal(str(ctx.action_type), path_q, signal):
+            return RiskClass.RISKY_IRREVERSIBLE
         return RiskClass.SAFE_REVERSIBLE
+
+    def mutation_reason(self, ctx: ActionContext) -> str | None:
+        """Public: the built-in banking-mutation reason for this action, if any
+        (used by callers that want to log *why* a step is risky)."""
+        parsed = urlparse(ctx.target_url)
+        path_q = parsed.path + (("?" + parsed.query) if parsed.query else "")
+        extra = ctx.extra or {}
+        signal = " ".join(
+            str(extra.get(k, "")) for k in ("target", "value", "label", "option")
+        ).lower()
+        return _mutation_signal(str(ctx.action_type), path_q, signal)

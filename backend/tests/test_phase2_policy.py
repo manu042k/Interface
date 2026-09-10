@@ -89,3 +89,45 @@ def test_declared_risk_promotes_to_confirmation():
 def test_safe_action_stays_fast():
     d = _engine().check(ActionContext("default", ActionType.EXTRACT, "http://127.0.0.1:8799/member/12345"))
     assert d.verdict == PolicyVerdict.ALLOW
+
+
+# -- built-in banking-mutation risk (tenant-independent) ---------------------
+
+def test_money_movement_control_needs_approval_even_without_tenant_config():
+    """A 'Transfer' button trips require_confirmation on a bare auto-admitted
+    host that has no hand-written risky_route_patterns."""
+    eng = _engine()
+    tgt = "https://parabank.parasoft.com/parabank/transfer.htm"
+    eng.allow_target("default", tgt)
+    d = eng.check(ActionContext(
+        "default", ActionType.CLICK, tgt,
+        extra={"target": "Transfer", "value": "999999"},
+    ))
+    assert d.verdict == PolicyVerdict.REQUIRE_CONFIRMATION
+    assert "money-movement" in d.reason
+
+
+def test_mutation_route_is_risky_by_route_alone():
+    eng = _engine()
+    tgt = "https://parabank.parasoft.com/parabank/billpay.htm"
+    eng.allow_target("default", tgt)
+    d = eng.check(ActionContext("default", ActionType.CLICK, tgt, extra={"target": "Send Payment"}))
+    assert d.verdict == PolicyVerdict.REQUIRE_CONFIRMATION
+
+
+def test_plain_submit_on_a_search_form_is_not_risky():
+    eng = _engine()
+    tgt = "https://shop.example/search"
+    eng.allow_target("default", tgt)
+    d = eng.check(ActionContext("default", ActionType.CLICK, tgt, extra={"target": "Search"}))
+    assert d.verdict == PolicyVerdict.ALLOW
+    d2 = eng.check(ActionContext("default", ActionType.CLICK, tgt, extra={"target": "Submit"}))
+    assert d2.verdict == PolicyVerdict.ALLOW  # generic verb, non-mutation route
+
+
+def test_typing_into_an_amount_field_is_not_a_commit():
+    eng = _engine()
+    tgt = "https://parabank.parasoft.com/parabank/transfer.htm"
+    eng.allow_target("default", tgt)
+    d = eng.check(ActionContext("default", ActionType.TYPE, tgt, extra={"target": "amount", "value": "999999"}))
+    assert d.verdict == PolicyVerdict.ALLOW  # only click/press_key/navigate commit

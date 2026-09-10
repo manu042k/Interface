@@ -234,6 +234,36 @@ async def test_classify_stuck_screen_recognises_a_success_the_agent_looped_past(
     assert "transfer complete" in phrase.lower()
 
 
+def test_reversal_regex_flags_undo_of_a_committed_transaction():
+    from cua.discovery.orchestrator import _REVERSAL_RE, _call_intent_text
+    from cua.models import ToolCall
+
+    for bad in (
+        "reverse the transfer",
+        "Reverse Transaction",
+        "transfer the money back",
+        "send it back to the original account",
+        "void the payment",
+        "cancel the transfer",
+        "refund the transaction",
+        "roll back",
+        "undo",
+    ):
+        assert _REVERSAL_RE.search(bad), bad
+    for ok in (
+        "review the transfer",
+        "return to accounts overview",
+        "continue",
+        "go back",  # navigation, not a money reversal
+        "transfer funds",
+    ):
+        assert not _REVERSAL_RE.search(ok), ok
+
+    call = ToolCall(tool="click", args={"target": {"text": "Reverse", "name": "reverseBtn"}},
+                    reasoning="undo the transfer that just posted")
+    assert "reverse" in _call_intent_text(call)
+
+
 def test_stuck_reason_falls_back_to_reasoning_when_the_key_was_mangled():
     from cua.discovery.orchestrator import _stuck_reason
     from cua.models import ToolCall
