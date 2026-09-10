@@ -316,46 +316,50 @@ export function RunReport({
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <div
-            className={
-              "grid gap-x-6 text-sm " +
-              (hasEvidence
-                ? "min-w-[640px] grid-cols-[2.5rem_minmax(0,1fr)_16rem]"
-                : "w-fit grid-cols-[2.5rem_minmax(0,42rem)]")
-            }
-          >
-            {/* header row */}
-            {["Step", "Action", ...(hasEvidence ? ["Evidence"] : [])].map(
-              (h) => (
+          {hasEvidence ? (
+            <div className="grid min-w-[640px] grid-cols-[2.5rem_minmax(0,1fr)_16rem] gap-x-6 text-sm">
+              {["Step", "Action", "Evidence"].map((h) => (
                 <div
                   key={h}
                   className="text-muted-foreground pb-2 text-xs font-medium uppercase tracking-wide"
                 >
                   {h}
                 </div>
-              ),
-            )}
-
-            {blocks.map((b, i) => (
-              <Fragment key={i}>
-                <div className="border-border/60 text-muted-foreground border-t py-3 font-mono text-xs tabular-nums">
-                  {b.step != null ? `s${b.step}` : "·"}
-                </div>
-                <div className="border-border/60 min-w-0 space-y-0.5 border-t py-3">
-                  {b.events.map((e, j) => (
-                    <TimelineRow key={j} e={e} />
-                  ))}
-                </div>
-                {hasEvidence && (
+              ))}
+              {blocks.map((b, i) => (
+                <Fragment key={i}>
+                  <div className="border-border/60 text-muted-foreground border-t py-3 font-mono text-xs tabular-nums">
+                    {b.step != null ? `s${b.step}` : "·"}
+                  </div>
+                  <div className="border-border/60 min-w-0 space-y-0.5 border-t py-3">
+                    {b.events.map((e, j) => (
+                      <TimelineRow key={j} e={e} />
+                    ))}
+                  </div>
                   <div className="border-border/60 space-y-2 border-t py-3">
                     {b.shots.map((s) => (
                       <Thumb key={s} src={s} onOpen={setLightbox} />
                     ))}
                   </div>
-                )}
-              </Fragment>
-            ))}
-          </div>
+                </Fragment>
+              ))}
+            </div>
+          ) : (
+            <ol className="divide-border/60 max-w-2xl divide-y text-sm">
+              {blocks.map((b, i) => (
+                <li key={i} className="flex gap-4 py-3 first:pt-0 last:pb-0">
+                  <span className="text-muted-foreground w-6 shrink-0 pt-0.5 font-mono text-xs tabular-nums">
+                    {b.step != null ? `s${b.step}` : "·"}
+                  </span>
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    {b.events.map((e, j) => (
+                      <TimelineRow key={j} e={e} />
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
 
           {orphanShots.length > 0 && (
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
