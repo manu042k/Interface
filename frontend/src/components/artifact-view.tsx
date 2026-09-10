@@ -106,7 +106,7 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
   const risky = artifact.risk_class === "risky_irreversible";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       {risky && (
         <div className="border-warning/40 bg-warning/10 text-warning flex items-start gap-2 rounded-lg border p-3 text-xs">
           <ShieldAlert className="mt-px h-4 w-4 shrink-0" />
@@ -119,7 +119,9 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
       )}
 
       {/* Contract ------------------------------------------------------- */}
-      <section className="border-border/70 divide-border/60 divide-y rounded-lg border text-sm">
+      <section>
+        <SectionTitle>Contract</SectionTitle>
+        <div className="border-border/70 divide-border/60 mt-2 divide-y rounded-lg border text-sm">
         <ContractRow label="Takes">
           {inputs.length === 0 ? (
             <Muted>nothing</Muted>
@@ -167,14 +169,22 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
             )}
           </span>
         </ContractRow>
+        </div>
       </section>
 
       {/* Steps -------------------------------------------------------- */}
       <section>
         <SectionTitle count={artifact.steps.length}>Steps</SectionTitle>
-        <Accordion type="multiple" className="mt-2 gap-0">
+        <Accordion
+          type="multiple"
+          className="border-border/70 mt-2 gap-0 overflow-hidden rounded-lg border"
+        >
           {artifact.steps.map((s) => (
-            <AccordionItem key={s.step_index} value={String(s.step_index)}>
+            <AccordionItem
+              key={s.step_index}
+              value={String(s.step_index)}
+              className="not-last:border-b px-3"
+            >
               <AccordionTrigger className="hover:no-underline">
                 <span className="flex min-w-0 flex-1 items-start gap-2 pr-2 text-left">
                   <span className="bg-muted text-muted-foreground mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded text-[11px]">
@@ -275,11 +285,11 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
           >
             Handles
           </SectionTitle>
-          <ul className="mt-2 space-y-1.5 text-sm">
+          <ul className="border-border/70 divide-border/60 mt-2 divide-y rounded-lg border text-sm">
             {artifact.known_outcomes.map((o) => (
-              <li key={o.code} className="flex items-start gap-2">
+              <li key={o.code} className="flex items-start gap-2 px-3 py-2.5">
                 <Flag className="text-warning mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>
+                <span className="min-w-0 break-words">
                   <code className="text-warning">{o.code}</code>
                   {o.message && (
                     <span className="text-muted-foreground"> - {o.message}</span>
@@ -294,9 +304,9 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
               </li>
             ))}
             {artifact.recoverable_rules.map((r) => (
-              <li key={r.name} className="flex items-start gap-2">
+              <li key={r.name} className="flex items-start gap-2 px-3 py-2.5">
                 <RotateCcw className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>
+                <span className="min-w-0 break-words">
                   <code>{r.name}</code>
                   <span className="text-muted-foreground">
                     {" "}
