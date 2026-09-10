@@ -219,6 +219,11 @@ def create_app(config: Config | None = None) -> FastAPI:
                     run.record_outcome = artifact.record_outcome
                     if artifact.record_outcome != "reused" and not artifact.agent_summary:
                         await sys.summarize_capability(artifact)  # record-time, best-effort
+                    if artifact.record_outcome in ("new", "new_version"):
+                        dup = await sys.check_semantic_duplicate(artifact)  # looser than fingerprint
+                        if dup:
+                            run.record_outcome = "duplicate"
+                            run.detail = (run.detail or "") + f" — possible duplicate of {dup} (flagged for review)"
                 elif run.status == RunStatus.BUSINESS_OUTCOME and transcript.business_outcome:
                     # the run LANDED on this state live — promote it to CONFIRMED
                     # on this app's capabilities (append if none had it).
@@ -895,6 +900,7 @@ def _artifact_summary(a: Any) -> dict[str, Any]:
         "record_outcome": getattr(a, "record_outcome", None),
         "supersedes": getattr(a, "supersedes", None),
         "review_notes": getattr(a, "review_notes", None),
+        "duplicate_of": getattr(a, "duplicate_of", None),
     }
 
 

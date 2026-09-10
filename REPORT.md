@@ -90,6 +90,16 @@ declared rules:
 | **Recoverable** | a `recoverable_rule.when` matches (interstitial, transient slow load) | `dismiss` / `wait` / `reload`, log `recoverable_condition`, retry the step (bounded). Any recovery → final outcome `recoverable_then_success` |
 | **Hard failure** | anything else that breaks a checkpoint or can't resolve | STOP, `{outcome: hard_failure, failure_detail: {step_index, expected, observed}}` + screenshot + DOM snapshot |
 
+**Duplicate detection (`cua/dedup.py`).** `record()` first catches a re-run that
+reproduced an existing flow byte-for-byte (`flow_fingerprint` match →
+`duplicate_of`). A differently-worded re-recording of the *same function* takes
+a structurally different path, so a looser post-record pass runs (never in a
+loop): cheap structural signals — same entry URL, same input-schema keys, same
+risk class, same checkpoint *shape*, high overlap of `(action, bound-param)`
+pairs — flag it directly; when those are only partially there and a router is
+configured, **one** `router.call_text` asks "same function? SAME / DIFFERENT /
+UNSURE". Either way it's a `duplicate_of` review signal, never an auto-delete.
+
 **Drift self-healing (unrecognised states).** A hard failure that broke a
 checkpoint on a screen matching *no* declared rule also emits a `drift_signal`
 event and a `DriftCandidate` (the failing step, the page's own error text, the

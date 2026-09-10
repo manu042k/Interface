@@ -84,6 +84,14 @@ export default function ReviewPage() {
                       drift patch
                     </span>
                   )}
+                  {a.duplicate_of && (
+                    <span
+                      className="bg-destructive/10 text-destructive border-destructive/30 ml-2 rounded border px-1.5 py-0.5 text-[10px] font-medium"
+                      title={`possible duplicate of ${a.duplicate_of}`}
+                    >
+                      dup of {a.duplicate_of}
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell className="text-muted-foreground max-w-sm truncate">
                   {a.goal}
@@ -140,11 +148,12 @@ export default function ReviewPage() {
             {open?.goal && (
               <p className="text-muted-foreground mt-1 text-sm">{open.goal}</p>
             )}
-            {open?.record_outcome === "drift_patch" && open?.review_notes && (
-              <p className="border-warning/30 bg-warning/10 text-warning mt-2 rounded border px-3 py-2 text-xs">
-                {open.review_notes}
-              </p>
-            )}
+            {open?.review_notes &&
+              (open.record_outcome === "drift_patch" || open.duplicate_of) && (
+                <p className="border-warning/30 bg-warning/10 text-warning mt-2 rounded border px-3 py-2 text-xs">
+                  {open.review_notes}
+                </p>
+              )}
           </DialogHeader>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">

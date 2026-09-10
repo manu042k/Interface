@@ -136,6 +136,7 @@ export type ArtifactSummary = {
     | null;
   supersedes: number | null;
   review_notes: string | null;
+  duplicate_of: string | null;
 };
 
 export type Intervention = {

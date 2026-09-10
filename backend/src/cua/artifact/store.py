@@ -205,6 +205,29 @@ class ArtifactStore:
                 (art.model_dump_json(), artifact_id, version),
             )
 
+    def set_duplicate_of(
+        self, artifact_id: str, version: int, duplicate_of: str, *, note: str | None = None
+    ) -> CapabilityArtifact | None:
+        """Flag an existing row as a (semantic) duplicate — a review signal, set
+        after the record-time fingerprint check by the looser `dedup` pass."""
+        with self._lock, self._connect() as con:
+            row = con.execute(
+                "SELECT body FROM artifacts WHERE artifact_id = ? AND version = ?",
+                (artifact_id, version),
+            ).fetchone()
+            if row is None:
+                return None
+            art = CapabilityArtifact.model_validate_json(row["body"])
+            art.duplicate_of = duplicate_of
+            art.record_outcome = "duplicate"
+            if note:
+                art.review_notes = f"{art.review_notes + chr(10) if art.review_notes else ''}{note}"
+            con.execute(
+                "UPDATE artifacts SET body = ? WHERE artifact_id = ? AND version = ?",
+                (art.model_dump_json(), artifact_id, version),
+            )
+        return art
+
     # -- read -------------------------------------------------------
     def get(self, artifact_id: str, version: int) -> CapabilityArtifact:
         with self._connect() as con:

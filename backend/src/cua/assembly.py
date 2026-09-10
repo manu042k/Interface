@@ -107,6 +107,29 @@ class System:
             self.store.set_summary(artifact.artifact_id, artifact.version, text)
         return text
 
+    async def check_semantic_duplicate(self, artifact: CapabilityArtifact) -> str | None:
+        """Record-time, post-fingerprint: is this new capability the same
+        FUNCTION as an existing one under a different name (a differently-worded
+        re-recording that took a different path)? Flags `duplicate_of` as a
+        review signal. Best-effort — never raises, never blocks recording.
+        Returns the "name@vN" it flagged, or None."""
+        if artifact.duplicate_of:  # exact fingerprint check already caught it
+            return artifact.duplicate_of
+        from . import dedup
+
+        try:
+            hit = await dedup.semantic_twin(artifact, self.store, router=self.router)
+        except Exception:  # noqa: BLE001
+            return None
+        if hit is None:
+            return None
+        twin, _basis, note = hit
+        ref = f"{twin.name}@v{twin.version}"
+        self.store.set_duplicate_of(artifact.artifact_id, artifact.version, ref, note=note)
+        artifact.duplicate_of = ref
+        artifact.record_outcome = "duplicate"
+        return ref
+
     async def shutdown(self) -> None:
         await self.adapter.shutdown()
         if self.sandbox_manager is not None:
