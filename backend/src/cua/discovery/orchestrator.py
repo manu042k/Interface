@@ -993,15 +993,18 @@ class Orchestrator:
 
     async def _classify_stuck_as_outcome(
         self, session: str, goal: str, reason: str, attempting: str | None
-    ) -> tuple[str, str, list[str]] | None:
+    ) -> tuple[str, str, str, list[str]] | None:
         """The pattern library didn't recognise the stuck screen. Ask the model
-        to read it and decide: a DEFINITIVE business outcome (an app-stated
-        result that is final for this goal and that no human taking over the
-        same session could change — locked/suspended/closed account, record not
-        found, action not permitted, request declined) vs. something a human
-        operator could act on. Returns (code, phrase, [phrase]) for a business
-        outcome, else None (escalate). Best-effort: offline / no router / an
-        ungrounded answer all return None."""
+        to read it and pick one of:
+          - DONE      — the goal actually succeeded; the agent just looped
+                        without calling done.
+          - OUTCOME   — a DEFINITIVE non-happy business outcome the caller must
+                        be told about (locked/suspended/closed account, record
+                        not found, action not permitted, request declined) that
+                        no human taking over the same session could change.
+          - HUMAN / UNSURE — something a human operator could act on, or unclear.
+        Returns ("done"|"outcome", code, phrase, [phrase]); None to escalate.
+        Best-effort: offline / no router / an ungrounded answer all return None."""
         if self.router is None:
             return None
         try:
@@ -1010,18 +1013,24 @@ class Orchestrator:
             return None
         haystack = f"{state.title}\n{state.ax_summary}\n{state.dom_excerpt}"
         system = (
-            "You triage a stuck UI-automation run. Decide whether the CURRENT "
-            "screen shows a DEFINITIVE business outcome the caller must be told "
-            "about — an app-stated result that is final for this goal and that "
-            "NO human taking over the same browser session could change "
-            "(e.g. account locked / suspended / closed, record not found, action "
-            "not permitted, request rejected or declined) — OR something a human "
-            "operator could plausibly resolve by driving the page (a mis-filled "
-            "form, an unexpected dialog, a control the agent could not find, a "
-            "transient error). Reply with EXACTLY ONE line, nothing else:\n"
+            "You triage a stuck UI-automation run by reading the CURRENT screen. "
+            "Reply with EXACTLY ONE line, nothing else:\n"
+            "  DONE | <the exact on-screen sentence showing the goal succeeded>\n"
             "  OUTCOME <short_snake_case_code> | <the exact on-screen sentence that states it>\n"
             "  HUMAN\n"
-            "  UNSURE"
+            "  UNSURE\n"
+            "DONE: the screen clearly shows the agent's goal was ACHIEVED — a "
+            "success or confirmation the goal was asking for (e.g. 'Transfer "
+            "Complete', 'Thank you for your order', 'Changes saved') — and the "
+            "agent merely failed to recognise it. A success confirmation is "
+            "NEVER an OUTCOME.\n"
+            "OUTCOME: a DEFINITIVE non-happy result that is final for this goal "
+            "and that NO human taking over the same browser session could change "
+            "(account locked / suspended / closed, record not found, action not "
+            "permitted, request rejected or declined).\n"
+            "HUMAN: something a human operator could plausibly resolve by driving "
+            "the page (a mis-filled form, an unexpected dialog, a control the "
+            "agent could not find, a transient error)."
         )
         user = (
             f"GOAL: {goal}\n"
@@ -1034,18 +1043,24 @@ class Orchestrator:
             out = (await self.router.call_text(system, user)).strip()
         except Exception:  # noqa: BLE001
             return None
-        if not out or not out.upper().startswith("OUTCOME"):
+        up = out.upper()
+        if up.startswith("DONE"):
+            kind, code = "done", "goal_confirmed"
+            phrase = out[4:].strip().lstrip(":").lstrip("|").strip()
+        elif up.startswith("OUTCOME"):
+            kind = "outcome"
+            body = out[len("OUTCOME"):].strip().lstrip(":").strip()
+            code_raw, _, phrase = body.partition("|")
+            code = re.sub(r"[^a-z0-9]+", "_", code_raw.strip().lower()).strip("_") or "business_outcome"
+        else:
             return None
-        body = out[len("OUTCOME"):].strip().lstrip(":").strip()
-        code_raw, _, phrase = body.partition("|")
-        code = re.sub(r"[^a-z0-9]+", "_", code_raw.strip().lower()).strip("_") or "business_outcome"
         phrase = phrase.strip().strip('"').strip()[:160]
         # the model must ground its answer in text actually on the screen
-        toks = [w for w in re.findall(r"[a-z0-9]{3,}", phrase.lower())]
+        toks = re.findall(r"[a-z0-9]{3,}", phrase.lower())
         hay = haystack.lower()
         if not phrase or len(toks) < 2 or sum(t in hay for t in toks) < max(2, len(toks) * 0.6):
             return None
-        return code, phrase, [phrase]
+        return kind, code, phrase, [phrase]
 
     async def _escalate_and_wait(
         self, run, transcript, session, step, reason, goal, history, log, wait_s,
@@ -1060,18 +1075,28 @@ class Orchestrator:
         # BUSINESS OUTCOME? "no member records matched" is a legitimate answer
         # ("member 12345 doesn't exist"), not something an operator can fix.
         bo = await self._discovery_business_outcome(session, log=log, step=step)
+        _bo_src = "recognised at discovery"
         if bo is None:
             # The pattern library didn't recognise it. Discovery already has an
-            # LLM in the loop — let it read the screen and decide whether this is
-            # a DEFINITIVE business outcome (nothing a human taking over the same
-            # session could change) or a genuine handoff. Best-effort: no router
-            # / offline / "" -> fall through and escalate as before.
-            bo = await self._classify_stuck_as_outcome(
+            # LLM in the loop — let it read the screen and decide: the goal
+            # already succeeded (DONE), a definitive non-happy business outcome
+            # (nothing a human on the same session could change), or a genuine
+            # handoff. Best-effort: no router / offline / "" -> escalate.
+            cls = await self._classify_stuck_as_outcome(
                 session, goal, reason, _attempting_str(last_call, goal)
             )
-            _bo_src = "classified at discovery (llm)"
-        else:
-            _bo_src = "recognised at discovery"
+            if cls is not None:
+                kind, code, phrase, phrases = cls
+                if kind == "done":
+                    run.status = RunStatus.COMPLETED
+                    run.detail = f"goal already satisfied — the screen shows: {phrase}"
+                    transcript.stuck_reason = None
+                    log.event(step, "goal_recognised_on_stuck", phrase=phrase,
+                              detail="agent looped without calling done; screen shows success")
+                    log.run_finished("completed")
+                    return None
+                bo = (code, phrase, phrases)
+                _bo_src = "classified at discovery (llm)"
         if bo is not None:
             code, msg, phrases = bo
             run.status = RunStatus.BUSINESS_OUTCOME

@@ -185,7 +185,8 @@ async def test_classify_stuck_screen_routes_a_terminal_denial_to_business_outcom
         "sess", "log in as locked_out_user", "user is locked out", "click Login"
     )
     assert out is not None
-    code, phrase, phrases = out
+    kind, code, phrase, phrases = out
+    assert kind == "outcome"
     assert code == "account_locked"
     assert "locked out" in phrase.lower()
     assert phrases == [phrase]
@@ -204,6 +205,33 @@ async def test_classify_stuck_screen_routes_a_terminal_denial_to_business_outcom
 
     orch.router = _RouterUngrounded()
     assert await orch._classify_stuck_as_outcome("sess", "g", "r", "a") is None
+
+
+async def test_classify_stuck_screen_recognises_a_success_the_agent_looped_past(system):
+    """A success confirmation on the stuck screen ('Transfer Complete!') is DONE,
+    not a business outcome — the agent just failed to call done."""
+    orch = system.orchestrator
+    from cua.models import SurfaceState
+
+    class _Router:
+        async def call_text(self, s, u):
+            return "DONE | Transfer Complete!"
+
+    async def _observe(*a, **k):
+        return SurfaceState(
+            url="https://parabank.parasoft.com/parabank/transfer.htm",
+            title="ParaBank | Transfer Funds",
+            dom_excerpt="Transfer Complete! $999,999.00 has been transferred from account #12345 to account #12346.",
+        )
+
+    orch.router = _Router()
+    orch.perception.observe = _observe  # type: ignore[assignment]
+
+    out = await orch._classify_stuck_as_outcome("sess", "transfer funds", "looping on extract", "extract result")
+    assert out is not None
+    kind, code, phrase, _ = out
+    assert kind == "done"
+    assert "transfer complete" in phrase.lower()
 
 
 def test_stuck_reason_falls_back_to_reasoning_when_the_key_was_mangled():
