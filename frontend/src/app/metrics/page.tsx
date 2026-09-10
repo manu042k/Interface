@@ -4,14 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { api, type Metrics, type MetricSeriesPoint } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 
@@ -124,56 +116,6 @@ function Body({ m }: { m: Metrics }) {
         <CardHeader><CardTitle>Runs per day</CardTitle></CardHeader>
         <CardContent>
           <StackedBars series={m.series} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Capabilities — {m.capabilities.approved}/{m.capabilities.total} approved
-            {m.capabilities.draft_pending_review > 0 &&
-              ` · ${m.capabilities.draft_pending_review} pending review`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-0">
-          <div className="overflow-x-auto">
-            <Table className="min-w-[520px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Capability</TableHead>
-                  <TableHead className="text-right">Invocations</TableHead>
-                  <TableHead className="text-right">Replay success</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {m.capabilities.most_invoked.map((c) => (
-                  <TableRow key={(c.artifact_id ?? "x") + c.name}>
-                    <TableCell className="font-heading">{c.name ?? c.artifact_id ?? "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{c.invocations}</TableCell>
-                    <TableCell
-                      className={cn(
-                        "text-right tabular-nums",
-                        c.success_rate >= 80
-                          ? "text-success"
-                          : c.success_rate < 50
-                            ? "text-destructive"
-                            : "text-warning",
-                      )}
-                    >
-                      {c.success_rate}%
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {m.capabilities.most_invoked.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-muted-foreground py-6 text-center">
-                      No replay invocations yet.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
         </CardContent>
       </Card>
     </>
