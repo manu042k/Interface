@@ -113,6 +113,29 @@ on `(member_id, account_type, amount)` — restart `cua serve-mock` fresh
 before regenerating, or pick a combination that hasn't been created yet in
 the running process.
 
+## `evidence/07-discovery-handoff-parabank` — the same mechanism, a real external site
+
+Same idea as `06`, against ParaBank instead of MockBank — no local target
+process needed, just network access to `parabank.parasoft.com`:
+
+```bash
+cd backend && source .venv/bin/activate
+CUA_USE_SANDBOX=0 python3 scripts/gen_handoff_evidence_parabank.py
+```
+
+[`scripts/gen_handoff_evidence_parabank.py`](./scripts/gen_handoff_evidence_parabank.py)
+is `gen_handoff_evidence.py` retargeted: it logs in as ParaBank's own public
+demo user (`john`/`demo`), opens a new account, and states the same kind of
+business-rule goal ("the account type and funding account are decisions only
+a supervisor is authorized to make"). One difference from the MockBank
+script: since it drives the discovery loop directly rather than through the
+gateway, it must call `system.policy.allow_target(tenant, target)` itself
+first — mirroring what `api/gateway.py::_validate_target_or_400` does for a
+typed Target URL in the console — or the policy engine's default-deny
+allowlist blocks the live site. The operator's `fromAccountId` pick is also
+read off the *live* page (john's real account numbers aren't known ahead of
+time), not hardcoded.
+
 ## No-key demo path (offline, not committed as evidence)
 
 The same pipeline runs fully offline with `CUA_LLM_PROVIDERS=scripted` — a

@@ -214,8 +214,14 @@ its own after being nudged back twice for calling it too early. A human
 back-to-back) takes control of the live session, decides the two fields,
 submits, and hands back; the agent resumes, re-observes, retries its own
 truncated first extract, and reports the real confirmation number MockBank
-computed. See `evidence/README.md` for the exact transcript and what remains
-simulated (the script itself) versus real (everything it drives).
+computed. `evidence/07-discovery-handoff-parabank` runs the identical
+mechanism, unmodified, against a second, real external site: ParaBank's
+public demo bank (parasoft.com), the assignment brief's own example of "a
+public proxy target." Same organic `stuck()`, same live take-control, same
+resume-and-verify; the only difference is the app underneath, which is the
+point: this isn't a MockBank-specific trick. See `evidence/README.md` for
+both bundles' exact transcripts and what remains simulated (the operator
+script) versus real (everything it drives).
 
 **Route.** `EscalationService.open_intervention()` acquires the automation lock
 via the `SessionBroker`, captures a context bundle (screenshot, DOM, transcript
@@ -287,9 +293,11 @@ decision, not guessed.
 text can slip through until a rule is added. Screenshots are not pixel-redacted:
 evidence capture is gated to failure points, and screenshots of real account
 screens would need field-level masking before production; every screenshot in
-`evidence/` is of the synthetic MockBank sandbox, no real PII. The
-allowlist is coarse (domain/route/action); it does not understand business
-semantics ("transfer under $100 is fine").
+`evidence/` is of either the synthetic MockBank sandbox or ParaBank's public
+QA-training demo site (parasoft.com's own fabricated test bank, `john`/`demo`,
+not a real customer), no real PII either way. The allowlist is coarse
+(domain/route/action); it does not understand business semantics ("transfer
+under $100 is fine").
 
 ## 7. Cuts
 

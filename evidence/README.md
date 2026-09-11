@@ -8,7 +8,10 @@ suite, not here).
 Each bundle is self-contained: the structured per-step event log
 (`events.jsonl`), per-step screenshots (`stepN-screenshot-*.png` + `.meta.json`),
 a DOM snapshot on failure (`stepN-dom-*.html`), a `summary.json`, and — for the
-discovery run — the recorded `artifact.json`.
+discovery run — the recorded `artifact.json`. `01`-`06` are against the local
+synthetic MockBank sandbox; `07` is the same handoff mechanism against
+ParaBank, a real external site (see the brief's own "public proxy target"
+example) — both are fabricated test data, no real PII either way.
 
 Regenerate with the commands in [`../backend/REPRODUCE.md`](../backend/REPRODUCE.md).
 
@@ -98,3 +101,45 @@ and resume mechanics are the thing being
 demonstrated, and they run unmodified from what a live noVNC takeover through
 the gateway would exercise (§5's "mechanism... is real and covered by tests
 for both discovery and replay").
+
+## `07-discovery-handoff-parabank` — the same mechanism against a real external site
+
+The assignment brief names *"a public proxy target"* as an accepted goal
+example. This bundle is `06`'s exact mechanism (`scripts/gen_handoff_evidence_parabank.py`,
+a near-identical copy of `scripts/gen_handoff_evidence.py`) run against
+[ParaBank](https://parabank.parasoft.com/) — Parasoft's own public demo
+banking site, real and external, not something this repo controls — to show
+the handoff isn't a MockBank-specific trick.
+
+Real login (`john` / `demo`, ParaBank's own published QA-training credentials,
+not a real customer), then **"Open a new account... the account type and
+funding account are decisions only a supervisor is authorized to make."**
+Same as `06`, the goal states a business rule, never a tool name:
+
+1. **Sign in, navigate** (steps 0-3) — real `type`/`type`/`click`/`click`
+   against the live external site: username, password, "Log In," "Open New
+   Account."
+2. **Detect & route** (`step 6`) — ParaBank's new-account form arrives with
+   both fields already showing a default (`type` defaults to CHECKING,
+   `fromAccountId` defaults to john's first account), so the model is nudged
+   back twice reasoning about the business rule directly: *"Account type and
+   funding account are not pre-selected, and I am not authorized to choose
+   them"* (step 4), then *"The account type and funding account are business
+   decisions that I cannot make... I need human intervention to proceed"*
+   (step 5), before calling `stuck()` for real at step 6. The orchestrator
+   opens a real `InterventionRequest` on ParaBank's live session, same as `06`.
+3. **Take control of the SAME live session** on the external site.
+4. **A human acts** — the operator reads the *live* `fromAccountId` dropdown's
+   actual options off the real page (its account numbers aren't known ahead
+   of time; the script does not hardcode one) and picks the first one,
+   selects `type = SAVINGS`, and clicks "Open New Account" — three real
+   actions against the live ParaBank session, 1.7-2.6s apart.
+5. **Hand back & resume** — the agent re-observes, extracts the new account
+   number ParaBank's server actually generated (`29328`), `assert_state`s the
+   confirmation, and finishes: `completed` — *"goal achieved."*
+
+**What's real here vs. simulated:** identical disclosure to `06` — the script
+stands in for a person, paced at human-scale gaps, not fired instantly. The
+site, the login, the account creation, the server-generated account number,
+and the model's own `stuck()` reasoning are all real and unscripted; this run
+was not rehearsed or edited after the fact.

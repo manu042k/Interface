@@ -22,8 +22,6 @@ Path(".data/evidence-handoff.db").unlink(missing_ok=True)
 from cua.assembly import build_system  # noqa: E402
 from cua.cli import _dump_run_evidence  # noqa: E402
 from cua.config import load_config  # noqa: E402
-from cua.models import RunStatus  # noqa: E402
-
 
 GOAL = (
     "Search for member 12345 and open their record. A new sub-account needs "
@@ -57,7 +55,6 @@ async def main() -> None:
 
     # Poll for the run to reach STUCK and open an intervention - mirrors what
     # a dashboard would do, using the real store the gateway also reads.
-    run = None
     iv = None
     deadline = time.time() + 90
     while time.time() < deadline:
@@ -65,7 +62,6 @@ async def main() -> None:
         ivs = system.escalation.list_interventions(status="open")
         if ivs:
             iv = ivs[0]
-            run = iv  # just need run_id off it below
             break
     if iv is None:
         print("No intervention opened within the wait window - goal likely completed unaided.")
