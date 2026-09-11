@@ -264,6 +264,26 @@ class PlaywrightAdapter(SurfaceAdapter):
                 best_dy, best_i = dy, i
         return best_i
 
+    async def _prefer_sole_visible(self, loc: Locator) -> Locator:
+        """A generic css/xpath match can hit BOTH sides of a toggled panel
+        (ParaBank keeps a hidden #showForm and a shown #showResult in the
+        DOM at once, both a plain 'divs then h1' shape) — `.first` then
+        silently returns whichever comes first in DOM order, regardless of
+        which one a person would actually see (ParaBank's form-side h1
+        'Transfer Funds' precedes the result-side h1 'Transfer Complete!').
+        If exactly one match is visible, use it; otherwise fall back to
+        `.first` unchanged (0 or 1 total match, or genuinely several visible
+        ones — no reason to prefer one over another)."""
+        try:
+            n = await loc.count()
+            if n > 1:
+                visible_idxs = [i for i in range(min(n, 8)) if await loc.nth(i).is_visible()]
+                if len(visible_idxs) == 1:
+                    return loc.nth(visible_idxs[0])
+        except Exception:  # noqa: BLE001
+            pass
+        return loc.first
+
     async def _resolve(self, page: Page, desc: Any, action_type: Any = None) -> tuple[Locator, str]:
         """Best-effort description -> Locator for the discovery path.
 
@@ -288,9 +308,13 @@ class PlaywrightAdapter(SurfaceAdapter):
 
         # 1. explicit css / xpath
         if desc.get("css"):
-            return page.locator(desc["css"]).first, f"css={desc['css']}"
+            loc = page.locator(desc["css"])
+            picked = await self._prefer_sole_visible(loc)
+            return picked, f"css={desc['css']}"
         if desc.get("xpath"):
-            return page.locator(f"xpath={desc['xpath']}").first, f"xpath={desc['xpath']}"
+            loc = page.locator(f"xpath={desc['xpath']}")
+            picked = await self._prefer_sole_visible(loc)
+            return picked, f"xpath={desc['xpath']}"
 
         # 1b. explicit id
         if desc.get("id"):

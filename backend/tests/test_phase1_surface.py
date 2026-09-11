@@ -212,6 +212,34 @@ async def test_extract_near_a_landmark_skips_an_anchor_to_reach_the_value_cell(a
     assert r2.ok, r2.error
 
 
+async def test_extract_by_css_prefers_the_visible_match_over_a_hidden_twin(adapter, mockbank):
+    """ParaBank's transfer.htm keeps a hidden #showForm panel and a shown
+    #showResult panel in the DOM at once — both a plain 'divs then h1'
+    shape, so a generic recorded css path (div#rightPanel > div > div > h1)
+    matches BOTH: the form's static title h1 ('Transfer Funds') AND the
+    result's dynamic message h1 ('Transfer Complete! ...'). `.first`
+    silently returned whichever comes first in DOM order (the hidden form
+    title), not the one actually on screen — found live-testing
+    parabank_overdraw_transfer: it reported outputs.transfer_result ==
+    'Transfer Funds' (a static page title) instead of the real confirmation
+    message, even though the run was reported as a clean 'success'."""
+    h = await adapter.open_session(f"{mockbank}/search")
+    page = adapter._sess(h).page
+    await page.set_content(
+        """
+        <div id="rightPanel">
+          <div id="showForm" style="display: none;"><div><h1>Transfer Funds</h1></div></div>
+          <div id="showResult"><div><h1>Transfer Complete! $10.00 was moved.</h1></div></div>
+        </div>
+        """
+    )
+    r = await adapter.execute(
+        h, Action(type=ActionType.EXTRACT, target_description={"css": "div#rightPanel > div > div > h1"}, expected_shape="string")
+    )
+    assert r.ok, r.error
+    assert "Transfer Complete" in r.extracted
+
+
 async def test_near_disambiguates_identical_role_name_buttons(adapter, mockbank):
     """Several visually-identical buttons (one 'Submit' per repeated sub-form,
     like ParaBank's four 'FIND TRANSACTIONS' buttons) — role+name alone always
