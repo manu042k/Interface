@@ -243,3 +243,45 @@ async def test_repeated_handoff_for_same_blocker_dead_ends(system):
     assert "escalated to a human" in (run.detail or "")
 
     await sys.adapter.close_session(sess)
+
+
+async def test_resume_detects_a_direct_browser_navigation_the_operator_made(system):
+    """A human driving the LIVE browser directly (noVNC) never calls the
+    recorded operator-actions API — resume() must still notice they navigated
+    somewhere, by diffing the URL against the intervention's own baseline."""
+    sys, mockbank = system
+    from cua.models import RunRecord
+
+    run = RunRecord(run_id="r-detect", mode="discovery", goal="g",
+                    tenant_id="default", app_target=f"{mockbank}/search")
+    sess = await sys.adapter.open_session(f"{mockbank}/search", "default")
+    sys.broker.register_session(sess, sess)
+
+    iv = await sys.escalation.open_intervention(
+        run=run, session_id=sess, step_index=3, reason="stuck",
+    )
+    assert iv.context["form_sig"] == "q=|go=Search"  # /search's fields at baseline
+
+    # simulate the human clicking around directly in the live browser (not
+    # through console.perform / the operator-actions API)
+    page = sys.adapter._sess(sess).page
+    await page.goto(f"{mockbank}/member/12345?ack=1")
+
+    out = await sys.escalation.resume(iv.intervention_id)
+    assert out.resumed is True
+    kinds = [a["type"] for a in iv.human_actions_log]
+    assert "navigate" in kinds
+    detected = next(a for a in iv.human_actions_log if a["type"] == "navigate")
+    assert "member/12345" in detected["detail"]
+    assert detected["by"] == "detected"
+
+    await sys.adapter.close_session(sess)
+
+
+def test_form_value_sig_changes_when_a_field_value_changes():
+    from cua.escalation.service import _form_value_sig
+
+    a = _form_value_sig('<input name="amount" value="100"><select name="acct"><option value="1">x</option></select>')
+    b = _form_value_sig('<input name="amount" value="250"><select name="acct"><option value="1">x</option></select>')
+    assert a != b
+    assert _form_value_sig("") == ""

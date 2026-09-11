@@ -1413,7 +1413,7 @@ class Orchestrator:
             if cur.status == InterventionStatus.RESOLVED:
                 acts = getattr(cur, "human_actions_log", []) or []
                 summary = "; ".join(
-                    f"{a.get('type')}({a.get('target') or a.get('value') or a.get('url') or ''})".strip("()")
+                    f"{a.get('type')}({a.get('target') or a.get('value') or a.get('url') or a.get('detail') or ''})".strip("()")
                     for a in acts
                 ) or "no explicit actions recorded"
                 run.status = RunStatus.RUNNING

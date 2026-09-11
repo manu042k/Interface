@@ -10,6 +10,7 @@ resume        -> control returns to automation; if the goal checkpoint already
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -19,6 +20,29 @@ from ..models import InterventionRequest, InterventionStatus, RunRecord
 from ..surface.base import SurfaceAdapter
 from ..surface.perception import Perception
 from .session_broker import Holder, Lease, SessionBroker
+
+_FIELD_TAG_RE = re.compile(r"<(?:input|select|textarea)\b[^>]*>", re.I)
+_NAME_ATTR_RE = re.compile(r'\bname=["\']([^"\']+)["\']', re.I)
+_VALUE_ATTR_RE = re.compile(r'\bvalue=["\']([^"\']*)["\']', re.I)
+_SELECTED_OPTION_RE = re.compile(r'<option\b(?=[^>]*\bselected\b)[^>]*?\bvalue=["\']([^"\']*)["\']', re.I)
+
+
+def _form_value_sig(html: str) -> str:
+    """A cheap, order-stable signature of every form field's current value —
+    used to notice that a human changed something DIRECTLY in the live browser
+    (clicks that never went through the recorded operator-actions API), even
+    though the individual gesture can't be itemised. Not a security signature,
+    just a diff key. Attribute order within a tag doesn't matter (name= and
+    value= are searched independently, not matched as one sequential pattern)."""
+    parts: list[str] = []
+    for tag in _FIELD_TAG_RE.findall(html or ""):
+        nm = _NAME_ATTR_RE.search(tag)
+        if not nm:
+            continue
+        vm = _VALUE_ATTR_RE.search(tag)
+        parts.append(f"{nm.group(1)}={vm.group(1) if vm else ''}")
+    parts.extend(f"selected={m}" for m in _SELECTED_OPTION_RE.findall(html or ""))
+    return "|".join(parts)
 
 
 @dataclass
@@ -69,9 +93,11 @@ class EscalationService:
         # capture the context bundle
         screenshot_ref = None
         current_url = ""
+        form_sig = ""
         try:
             snap = await self.adapter.snapshot(session_id)
             current_url = snap.url
+            form_sig = _form_value_sig(snap.html)
             if snap.screenshot_png:
                 screenshot_ref = log.evidence_screenshot(step_index, snap.screenshot_png, {"url": snap.url})
             if snap.html:
@@ -93,6 +119,11 @@ class EscalationService:
                 "current_url": current_url,
                 "session_id": session_id,
                 "attempting": attempting,
+                # baseline for resume()'s passive change-detection — a human
+                # driving the live browser directly (noVNC) never calls the
+                # recorded operator-actions API, so this is the only way to
+                # notice they actually did something before hand-back.
+                "form_sig": form_sig,
             },
         )
         self._interventions[iv.intervention_id] = iv
@@ -273,6 +304,29 @@ class EscalationService:
                 pass
         auto_lease = self.broker.acquire(session_id, Holder.AUTOMATION)
         self._auto_leases[session_id] = auto_lease
+
+        # Passively detect what the human actually did — they may have driven
+        # the live browser directly (noVNC) rather than through the recorded
+        # operator-actions API, so human_actions_log would otherwise show
+        # nothing but this release_control. Diff against the baseline snapshot
+        # taken when the intervention opened: a URL change is a navigation, a
+        # form-value change is an edit. Best-effort; a diff we can't take just
+        # means less is registered, never an error.
+        try:
+            after = await self.adapter.snapshot(session_id)
+            before_url = iv.context.get("current_url", "")
+            if after.url and before_url and after.url != before_url:
+                self.record_human_action(intervention_id, {
+                    "type": "navigate", "detail": f"{before_url} -> {after.url}", "by": "detected",
+                })
+            before_sig = iv.context.get("form_sig", "")
+            after_sig = _form_value_sig(after.html)
+            if before_sig and after_sig and before_sig != after_sig:
+                self.record_human_action(intervention_id, {
+                    "type": "edit", "detail": "form field values changed on screen", "by": "detected",
+                })
+        except Exception:  # noqa: BLE001
+            pass
 
         checkpoint_holds = False
         if goal_checkpoint is not None:
