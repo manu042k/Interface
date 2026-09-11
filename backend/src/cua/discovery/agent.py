@@ -164,7 +164,8 @@ Reading and reporting a result (important):
 - Only retry the triggering action if the EXTRACT ITSELF failed (an exception/timeout) — never because the extracted value surprised you.
 
 Progress discipline (important):
-- Check "CURRENT FORM FIELD VALUES" and the ACTION HISTORY before each step. If a field already holds the value you need, DO NOT type it again — move to the next control (e.g. click the submit/search/save button).
+- Check "CURRENT FORM FIELD VALUES" and the ACTION HISTORY before each step. If a field already holds the value you need, DO NOT type/select it again — move to the next control (e.g. click the submit/search/save button).
+- A dropdown's listed value there (e.g. `type: "SAVINGS"`) is CONFIRMATION that your `select` already worked — it is not a new clickable element. Never click the option's label text itself; if you already selected it, move straight to the next control the form actually needs.
 - Never repeat the same action twice in a row. If your last action succeeded, the next action must advance the flow (submit, navigate, open a result, extract).
 - One field per type call; after filling the inputs a form needs, click its submit control.
 - READ the submit button's real label off the screen — it is often "Continue", "Review", "Post", "Confirm", not the verb in your goal. A legacy form may take two screens: fill -> "Continue"/"Review" -> a confirmation page -> "Post"/"Confirm"/"Submit". Never invent a button label; if your click "succeeds" but the screen does not change, you clicked the wrong thing — re-observe and click a control whose label is literally shown.
