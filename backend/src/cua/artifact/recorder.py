@@ -95,7 +95,7 @@ _RISKY_URL_RE = re.compile(
     r"hold|stop-?payment|update-?profile)(/|$|\?|\.htm|\.do|\.aspx)",
     re.I,
 )
-_TOKEN_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9_\-.]{0,40}(?<![.\-_])")  # looks like a name/id attr, not a label
+_TOKEN_RE = re.compile(r"[a-z][a-zA-Z0-9_\-.]{0,40}(?<![.\-_])")  # looks like a name/id attr, not a label
 # Legacy Struts-style forms (ParaBank et al.) name fields "customer.firstName",
 # "customer.address.street" — mixed case, dotted. A plain lowercase-only token
 # regex missed these, so `name_is_token` stayed False, no dom_anchor candidate
