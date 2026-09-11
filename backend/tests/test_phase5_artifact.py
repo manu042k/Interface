@@ -315,6 +315,28 @@ def test_locator_landmark_that_equals_a_param_is_rebindable_on_replay():
     assert next(s for s in kept if s.kind == "relative_to_landmark").params["near"] == "100987"
 
 
+def test_validation_error_seed_recognizes_an_already_exists_collision():
+    """A 'register/open account' capability's validation_error seed must catch
+    a username/record-already-exists collision — the exact wording ParaBank's
+    live registration form returns when a recorded literal username collides
+    with a prior run on the shared demo. Found live-testing
+    parabank_open_checking_account: the page stayed on the registration form
+    with 'This username already exists.' and the harness reported a raw
+    locator hard_failure (couldn't find the next screen's control) instead of
+    classifying it as the known validation_error business outcome."""
+    from cua.artifact.recorder import ArtifactRecorder
+    from cua.discovery.orchestrator import DiscoveryTranscript
+
+    transcript = DiscoveryTranscript(
+        run_id="r1", goal="open a new checking account for a new customer",
+        target="https://parabank.parasoft.com/parabank/index.htm", tenant="default",
+    )
+    rules = ArtifactRecorder()._seed_business_outcomes(transcript)
+    ve = next(r for r in rules if r.code == "validation_error")
+    phrases = ve.when.params["any"]
+    assert any("already exists" in p for p in phrases)
+
+
 def test_dotted_struts_style_field_name_becomes_a_dom_anchor_not_bare_text():
     """Legacy Struts-style forms (ParaBank et al.) name fields
     'customer.firstName' - mixed case, dotted. _TOKEN_RE used to be
