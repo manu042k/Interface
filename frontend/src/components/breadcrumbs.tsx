@@ -7,6 +7,7 @@ import { ChevronRight } from "lucide-react";
 const LABELS: Record<string, string> = {
   runs: "Runs",
   capabilities: "Capabilities",
+  "prefill-runs": "Prefill runs",
   review: "Review",
   interventions: "Interventions",
   report: "Report",

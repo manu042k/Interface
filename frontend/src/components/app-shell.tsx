@@ -11,6 +11,7 @@ import {
   Activity,
   Waypoints,
   BarChart3,
+  PlayCircle,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ const NAV = [
   { href: "/", label: "New run", icon: Sparkles, exact: true },
   { href: "/runs", label: "Runs", icon: Activity },
   { href: "/capabilities", label: "Capabilities", icon: ListChecks },
+  { href: "/prefill-runs", label: "Prefill runs", icon: PlayCircle },
   { href: "/review", label: "Review", icon: ClipboardCheck },
   { href: "/interventions", label: "Interventions", icon: LifeBuoy },
   { href: "/metrics", label: "Metrics", icon: BarChart3 },
