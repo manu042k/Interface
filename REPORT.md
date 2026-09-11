@@ -308,7 +308,35 @@ Deliberately thin-but-real, or stubbed at a clean seam:
   replay that lands on an unrecognised state (drift self-healing files a v+1
   draft, §3); the locator `drift_signal` trend does not yet do the same.
 
-**What I'd build next:** aggregate the per-resolution `drift_signal` into a
+**What I'd build next:**
+
+A **navigation graph beneath the artifact layer**, so a shared prefix across
+capabilities on the same app (login → search → open record shows up in
+nearly every capability recorded against a given target) stops being
+re-discovered by the LLM every single time. It reuses infrastructure that
+already exists rather than adding a new primitive: nodes are
+`(vendor_app_id, tenant_scope, surface_fingerprint)` — `SurfaceState.fingerprint`
+is already a stable structural key per screen — and edges are
+`(from_fingerprint, locator_signature) → (to_fingerprint, action_type,
+risk_class, success_count, sample_reasoning)`, populated for free from every
+discovery run's real steps (the same `flow_fingerprint`/`cua/dedup.py`
+mechanism already does the equivalent one level up, at the whole-flow
+granularity). Before each LLM decision, check whether the current fingerprint
+has an outgoing edge worth taking toward the goal (a cheap keyword/embedding
+match against accumulated `reasoning` text); if so, take it directly — same
+policy/guardrail check as any step, just skip the LLM call for that hop —
+and fall back to full reasoning the moment the trail runs out of known
+edges, with the existing post-action checkpoint catching (and recovering
+from) a wrong turn. The one non-negotiable: a "known" edge can never
+silently skip approval — only `safe_reversible` edges fast-path; a
+`risky_irreversible` edge still goes through risk-approval every time,
+known or not, so this can never erode the "a human approved this specific
+capability" guarantee the review gate rests on. Payoff compounds: discovery
+gets cheaper and faster the more capabilities are recorded against a given
+app, converging toward a real site map, while staying genuinely LLM-driven
+at every actually-new edge — the requirement the brief is strictest about.
+
+Also: aggregate the per-resolution `drift_signal` into a
 per-`(artifact, step)` trend that files a re-review the same way unrecognised
 states already do; post-run LLM classification of a `DriftCandidate`
 (business-outcome vs recoverable vs genuine defect) to pre-fill the draft;
