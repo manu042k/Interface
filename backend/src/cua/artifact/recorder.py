@@ -568,8 +568,15 @@ def _rank_locators(
         ))
     if name_is_token:
         cands.append(LocatorStrategy(
-            kind="dom_anchor", params={"css": f'[name="{name}"]'}, rank=len(cands),
-            rationale="form-control name attribute — legacy server-rendered forms expose these and they are stable across releases",
+            # Match name OR id: the discovery-time resolver's own name/id
+            # strategy (PlaywrightAdapter._resolve, step 3) tries
+            # `[name="{k}"], [id="{k}"]` and records the match as
+            # 'name/id="{k}"' either way — some legacy/Angular-templated
+            # forms (ParaBank's transfer/loan pages) expose the token only
+            # as an id with no name attribute at all. A css selector scoped
+            # to [name=...] alone silently failed to resolve those.
+            kind="dom_anchor", params={"css": f'[name="{name}"], [id="{name}"]'}, rank=len(cands),
+            rationale="form-control name/id attribute — legacy server-rendered forms expose these and they are stable across releases",
         ))
     if role:
         cands.append(LocatorStrategy(
@@ -611,7 +618,7 @@ def _rank_locators(
         # locator whenever `name` wasn't recognised as a token upstream.
         if name:
             cands.append(LocatorStrategy(
-                kind="dom_anchor", params={"css": f'[name="{name}"]'}, rank=0,
+                kind="dom_anchor", params={"css": f'[name="{name}"], [id="{name}"]'}, rank=0,
                 rationale="raw target description carried through — review and strengthen before approval",
             ))
         else:

@@ -349,7 +349,10 @@ def test_dotted_struts_style_field_name_becomes_a_dom_anchor_not_bare_text():
     specs = _rank_locators({"name": "customer.firstName"}, 'name/id="customer.firstName"', {})
     anchor = next((s for s in specs if s.kind == "dom_anchor"), None)
     assert anchor is not None, f"no resolvable strategy produced: {specs}"
-    assert anchor.params["css"] == '[name="customer.firstName"]'
+    # matches name OR id: the discovery-time resolver's own name/id strategy
+    # tries both and records the match as 'name/id="..."' either way — some
+    # legacy/Angular-templated forms expose the token only as an id.
+    assert anchor.params["css"] == '[name="customer.firstName"], [id="customer.firstName"]'
     # every candidate must be resolvable - never a bare "text" kind without a
     # "text" param
     for s in specs:
