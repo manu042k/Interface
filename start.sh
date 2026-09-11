@@ -3,7 +3,8 @@
 # -> Console (:3000), backend and frontend together, one Ctrl-C stops all three.
 #
 # Prereqs: backend venv at backend/.venv (pip install -e ".[dev]" && playwright
-# install chromium), frontend deps (npm install).
+# install chromium). Frontend deps (npm install) are handled automatically
+# below if frontend/node_modules is missing.
 #
 # CUA_USE_SANDBOX controls the live noVNC/Docker sandbox:
 #   0 - plain headless adapter, no Docker needed, console works fully minus
@@ -22,6 +23,11 @@ cd "$(dirname "$0")"
 
 BACK=backend/.venv/bin
 [ -x "$BACK/cua" ] || { echo "backend venv missing — see backend/README.md"; exit 1; }
+
+if [ ! -d frontend/node_modules ]; then
+    echo "==> frontend/node_modules missing, running npm install"
+    ( cd frontend && npm install )
+fi
 
 if [ -n "${CUA_USE_SANDBOX+x}" ]; then
     USE_SANDBOX="$CUA_USE_SANDBOX"

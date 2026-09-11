@@ -129,8 +129,8 @@ does — an explicit value on the invocation wins, else it falls back to
 `backend/.env`'s value, else `0`:
 
 ```bash
-cd frontend && npm install && cd ..              # once
 ./start.sh                                       # no Docker: plain headless adapter
+                                                  #   (runs npm install itself, first time only)
 CUA_USE_SANDBOX=1 ./start.sh                     # live noVNC sandbox (needs Docker running;
                                                   #   builds cua-sandbox:latest on first use)
 ```
