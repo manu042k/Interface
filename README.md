@@ -175,3 +175,7 @@ boundary, kernel CPU/memory ceilings, a warm pool, and orchestration beyond a
 single Docker host are design-only; Postgres (SQLite behind the same interface);
 desktop/legacy-web surface adapters (one `SurfaceAdapter` seam, Playwright impl);
 the offline `scripted` discovery pilot for CI / the no-key demo.
+
+## Author
+
+**Manoj Manjunatha** — [manu042k.tech](https://manu042k.tech/)
