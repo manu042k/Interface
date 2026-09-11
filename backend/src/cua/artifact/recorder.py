@@ -375,9 +375,9 @@ class ArtifactRecorder:
                 from_step=1,
             ))
             _add(BusinessOutcomeRule(
-                # the ACTUAL denial wording — not an advisory banner like
-                # "RESTRICTED FUNCTION — SUPERVISOR OVERRIDE REQUIRED", which
-                # sits on the form for everyone and would false-trigger.
+                # the ACTUAL denial wording — not an advisory "restricted /
+                # override required" banner that sits on the form for everyone
+                # and would false-trigger.
                 code="permission_denied",
                 when=Condition(kind="text_present", params={"any": [
                     "do not have permission", "member record is restricted",

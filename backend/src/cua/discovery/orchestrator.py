@@ -840,7 +840,7 @@ class Orchestrator:
 
                 # A passing assert_state is the finish line. Nudge hard toward
                 # `done` so the model doesn't wander off and redo work it has
-                # already completed (observed on a real the legacy console edit run).
+                # already completed (observed on a real legacy-console edit run).
                 if ok and call.tool == "assert_state":
                     note = (
                         "That check PASSED. If it is the goal's success condition, your "

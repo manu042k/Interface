@@ -203,9 +203,7 @@ With `CUA_USE_SANDBOX=1` the operator takes over by clicking directly in the liv
 **noVNC** canvas of the same container; without it, the console's scripted action
 buttons drive the shared session. Either way the **mechanism** (pause / cede /
 resume on one session, lock ownership model, action recording) is real and
-covered by tests for both discovery and replay, and by a real run in
-`evidence/06-discovery-escalation` (stuck → context bundle → take control of the
-same session → recorded human actions → hand back → resume).
+covered by tests for both discovery and replay.
 
 ## 6. Safety
 
@@ -238,7 +236,7 @@ decision, not guessed.
 text can slip through until a rule is added. Screenshots are not pixel-redacted —
 evidence capture is gated to failure points, and screenshots of real account
 screens would need field-level masking before production; every screenshot in
-`evidence/` is of the synthetic MockBank / the legacy console sandbox, no real PII. The
+`evidence/` is of the synthetic MockBank sandbox, no real PII. The
 allowlist is coarse (domain/route/action) — it does not understand business
 semantics ("transfer under $100 is fine").
 
@@ -268,9 +266,7 @@ Deliberately thin-but-real, or stubbed at a clean seam:
   tool-callers (Gemini 2.5 Flash was the stress case for the `assert_state`
   repair in §3) are handled without a model round-trip.
   `evidence/01-discovery-real-llm` is a real `gpt-4o-mini` discovery run;
-  `evidence/02-05` are its deterministic replays, one per outcome class;
-  `evidence/06-discovery-escalation` is a real discovery run driven to a
-  human handoff and back.
+  `evidence/02-05` are its deterministic replays, one per outcome class.
 - **Artifact governance** — a single `draft → approved` gate with a reviewer
   name; no multi-reviewer workflow or RBAC. Re-review *is* auto-triggered for a
   replay that lands on an unrecognised state (drift self-healing files a v+1

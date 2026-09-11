@@ -25,11 +25,10 @@ no model in the loop** — one bundle per outcome class.
 | `03-replay-member-not-found` | replay | `member_id=00000` | `business_outcome` · `member_not_found` | A "no such member" result is a **legitimate answer**, not a crash — `failure_detail` is null, nothing logged as an error. Stops at step 1. |
 | `04-replay-permission-denied` | replay | `member_id=99999` | `business_outcome` · `permission_denied` | The second declared business outcome — a permission wall the caller must be told about. |
 | `05-replay-hard-failure` | replay | corrupted entry URL | `hard_failure` | The first control can't be resolved. Stops with a structured `failure_detail {step_index, expected, observed}` **plus** a screenshot and a DOM snapshot (`step0-dom-*.html`) — the richer signal for debugging. |
-| `06-discovery-escalation` | discovery → human handoff | the legacy console Funds Transfer with `?inject=server` | `stuck` → operator takes control of the **same** session → hand back → `resumed` | The full HITL seam on a real run (brief §3.6): **detect** (`stuck` at step 20, then the fail-streak guard on re-escalation), **route** (an `InterventionRequest` carrying the goal, step, `attempting`, current URL, a screenshot and a DOM snapshot — `context-*` files), **take control** (`SessionBroker` swaps the lease to the operator on `session_id sess_0832…`), **recorded human actions** (`human_action` events → `human_actions_log`), **hand back** (`intervention_resolved` → automation resumes with a re-observe instruction). The server-side fault can't be cleared by an operator click, so the resumed run re-escalates — intended, and left visible. |
 
 Every `ReplayOutcome` in the contract is represented:
 `recoverable_then_success` (`02`), `business_outcome` with both codes (`03`, `04`),
-`hard_failure` (`05`). `06` is a real discovery → escalation → live-session
-handoff → resume. A pure `success` with zero recoveries, and the replay-side
-`_escalate_replay` path, are additionally covered by the test suite
-(`backend/tests/test_phase7_replay.py`, `test_phase8_escalation.py`).
+`hard_failure` (`05`). A pure `success` with zero recoveries, and the
+discovery/replay escalation → live-session handoff → resume path, are covered by
+the test suite (`backend/tests/test_phase7_replay.py`,
+`test_phase8_escalation.py`).

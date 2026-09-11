@@ -86,7 +86,7 @@ def test_derived_login_success_check_only_for_pure_login_goals():
     # pure login -> a success check IS derived
     for g in (
         "log in",
-        "sign on to the legacy_core console",
+        "sign on to the legacy console",
         "log on to the system",
         "authenticate with the portal",
         "sign on as teller1",

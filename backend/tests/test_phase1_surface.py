@@ -111,7 +111,7 @@ async def test_resolve_legacy_form_field_by_name_attr(adapter, mockbank):
     <label for=...>, so the input has NO accessible name - only a stable
     `name=` attribute. `_resolve` must still find it from {role, name}
     (regression: it used to fall through and raise 'could not resolve target',
-    which sent discovery into a scroll loop on the legacy console's Update Member form)."""
+    which sent discovery into a scroll loop on a legacy Update Member form)."""
     h = await adapter.open_session(f"{mockbank}/search")
     page = adapter._sess(h).page
     await page.set_content(

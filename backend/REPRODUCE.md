@@ -63,32 +63,6 @@ Every discovery turn is logged in `events.jsonl` as
 so a run correlates back to the provider/model that served each decision;
 `provider_throttle` events show the client-side RPM pacing.
 
-## `evidence/06-discovery-escalation` — real stuck → human handoff → resume
-
-Gateway + a fault-injecting target. `?inject=server` degrades the the legacy console Funds
-Transfer form so a control never resolves; the agent retries, cannot proceed, and
-escalates.
-
-```bash
-cua serve &                                        # gateway :8080, reads backend/.env
-
-RID=$(curl -s -XPOST localhost:8080/runs -H 'content-type: application/json' -d '{
-  "goal":"Sign on as operator teller1 with password \"password\", open the Funds Transfer form, move $250 from member 100234 to member 100987, review the confirmation page and post the transfer.",
-  "target":"https://legacy-core.example.com/signon?inject=server"}' | python -c 'import sys,json;print(json.load(sys.stdin)["run_id"])')
-
-# poll until status == "stuck", then:
-IV=$(curl -s localhost:8080/runs/$RID/intervention | python -c 'import sys,json;print(json.load(sys.stdin)["intervention_id"])')
-curl -s localhost:8080/interventions/$IV                                   # the context bundle
-curl -s -XPOST localhost:8080/interventions/$IV/claim        -d '{"operator":"op_evidence"}' -H 'content-type: application/json'
-curl -s -XPOST localhost:8080/interventions/$IV/take-control -d '{"operator":"op_evidence"}' -H 'content-type: application/json'
-curl -s -XPOST localhost:8080/interventions/$IV/actions      -d '{"operator":"op_evidence","action":{"type":"click","target":"Funds Transfer"}}' -H 'content-type: application/json'
-curl -s -XPOST localhost:8080/interventions/$IV/release      -d '{"operator":"op_evidence"}' -H 'content-type: application/json'
-# run resumes; copy backend/.data/evidence/$RID/{events.jsonl,step*-*} into ../evidence/06-discovery-escalation/
-```
-
-`summary.json` in that bundle annotates the six phases (detect / route / take
-control / recorded human actions / hand back / re-escalation).
-
 ## No-key demo path (offline, not committed as evidence)
 
 The same pipeline runs fully offline with `CUA_LLM_PROVIDERS=scripted` — a
