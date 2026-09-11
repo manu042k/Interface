@@ -160,6 +160,39 @@ def test_confirm_business_outcome_marks_and_merges(tmp_path):
     assert t2 == ["cap_a"]
 
 
+def test_confirm_business_outcome_never_crosses_hosts_sharing_a_vendor_app_id(tmp_path):
+    """vendor_app_id is a free-form, human-supplied label — nothing stops two
+    genuinely different sites from being mislabeled with the same one (this
+    happened for real this session: every ParaBank capability got tagged
+    "mockbank"). A business outcome observed live on one site must never get
+    merged into an unrelated site's capability just because they share a
+    typo'd vendor_app_id — entry_host scopes the merge to the SAME actual
+    application."""
+    from cua.models import CapabilityArtifact, Condition, Step
+
+    store = ArtifactStore(tmp_path / "s.db")
+
+    def mk(name, url):
+        return CapabilityArtifact(
+            name=name, vendor_app_id="mockbank", entry_url=url, goal_description="g",
+            steps=[Step(step_index=0, action_type="navigate", description="go",
+                        value_binding={"literal": "http://x/"}, idempotent=True)],
+            checkpoint=Condition(kind="url_matches", params={"pattern": ".*"}),
+        )
+
+    store.save_draft(mk("parabank_bill_pay", "https://parabank.parasoft.com/parabank/index.htm"))
+    store.save_draft(mk("mockbank_balance_read", "http://127.0.0.1:8799/search"))
+
+    # a permission_denied phrase observed live on MockBank must only reach
+    # the MockBank capability, never the ParaBank one — even though both
+    # share vendor_app_id="mockbank"
+    touched = store.confirm_business_outcome(
+        "mockbank", "permission_denied", ["do not have permission"], "run-mockbank",
+        entry_host="127.0.0.1",
+    )
+    assert touched == ["mockbank_balance_read"]
+
+
 def test_retire_and_default_rollback(tmp_path):
     from cua.artifact.store import PromotionDecision
     from cua.models import CapabilityArtifact, Condition, Step

@@ -202,7 +202,7 @@ export const api = {
   run: (id: string) => j<RunView>(`/runs/${id}`),
   cancelRun: (id: string) =>
     j<RunView>(`/runs/${id}/cancel`, { method: "POST" }),
-  runs: () => j<RunRow[]>("/runs"),
+  runs: () => j<RunRow[]>("/runs?limit=2000"),
   activeRun: () =>
     j<{ run_id: string; status: string; goal: string | null; mode: string } | null>(
       "/runs/active",

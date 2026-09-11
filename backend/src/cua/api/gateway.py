@@ -230,15 +230,17 @@ def create_app(config: Config | None = None) -> FastAPI:
                     # on this app's capabilities (append if none had it).
                     code, _msg, phrases = transcript.business_outcome
                     try:
+                        entry_host = urlparse(target).hostname
                         touched: list[str] = []
                         if req.capability_name:
                             touched = sys.store.confirm_business_outcome(
                                 req.vendor_app_id, code, phrases, run.run_id,
-                                prefer_name=req.capability_name,
+                                prefer_name=req.capability_name, entry_host=entry_host,
                             )
                         if not touched:
                             touched = sys.store.confirm_business_outcome(
                                 req.vendor_app_id, code, phrases, run.run_id,
+                                entry_host=entry_host,
                             )
                         run.detail = (run.detail or "") + (
                             f" — confirmed on: {', '.join(touched)}" if touched
@@ -281,7 +283,7 @@ def create_app(config: Config | None = None) -> FastAPI:
             return {"ok": False, "reason": "unreachable", "detail": f"{type(exc).__name__}: {exc}"}
 
     @app.get("/runs")
-    async def list_runs(limit: int = 50) -> list[dict[str, Any]]:
+    async def list_runs(limit: int = 2000) -> list[dict[str, Any]]:
         runs = sorted(app.state.runs.values(), key=lambda r: r.started_at, reverse=True)
         return [
             {
@@ -291,7 +293,7 @@ def create_app(config: Config | None = None) -> FastAPI:
                 "step_count": r.step_count, "artifact_id": r.artifact_id,
                 "has_sandbox": bool(r.sandbox_container),
             }
-            for r in runs[: max(1, min(limit, 200))]
+            for r in runs[: max(1, min(limit, 2000))]
         ]
 
     @app.get("/runs/active")

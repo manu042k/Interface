@@ -313,7 +313,7 @@ class ArtifactStore:
 
     def confirm_business_outcome(
         self, vendor_app_id: str, code: str, phrases: list[str], run_id: str,
-        *, prefer_name: str | None = None,
+        *, prefer_name: str | None = None, entry_host: str | None = None,
     ) -> list[str]:
         """A discovery run LANDED on this business-outcome state live — promote
         it from a seeded guess to CONFIRMED on the affected capabilities.
@@ -323,7 +323,18 @@ class ArtifactStore:
         run id, and merge any newly-seen matched phrases into its when-clause.
         If a capability has no rule for `code`, append one (observed). Body is
         patched in place — this is additive confirmed knowledge, not a new
-        version. Returns the capability names touched."""
+        version. Returns the capability names touched.
+
+        `vendor_app_id` is a free-form, human-supplied label — nothing stops
+        two genuinely different sites from being mislabeled with the same one
+        (this happened for real: every ParaBank capability this session got
+        tagged "mockbank"). Without `entry_host`, a phrase observed on one
+        site would get merged into an unrelated site's capabilities purely
+        because they share a typo'd label. When given, skip any artifact
+        whose own recorded `entry_url` host doesn't match — same vendor_app_id
+        is not enough; it must be the same actual application."""
+        from urllib.parse import urlparse
+
         from ..models import BusinessOutcomeRule, Condition
 
         touched: list[str] = []
@@ -335,6 +346,8 @@ class ArtifactStore:
                 args.append(prefer_name)
             for row in con.execute(q, args).fetchall():
                 a = CapabilityArtifact.model_validate_json(row["body"])
+                if entry_host and (urlparse(a.entry_url).hostname or "").lower() != entry_host.lower():
+                    continue
                 rule = next((r for r in a.known_outcomes if r.code == code), None)
                 if rule is None:
                     rule = BusinessOutcomeRule(
