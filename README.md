@@ -156,26 +156,6 @@ ruff check src tests
 cd ../frontend && npm run build
 ```
 
-## What's real vs. mocked
-
-**Real:** the discovery loop, the artifact schema + SQLite store + versioning +
-review gate, the full replay executor with the business-outcome / recoverable /
-hard-failure taxonomy **and the stuck-replay → human-handoff → resume path**,
-the multi-strategy locator engine with drift signal, the fail-closed policy
-engine, the control-lock + session-handoff mechanism (same live session, actions
-recorded, resume), cross-host egress blocking, the LLM provider router with
-rotation + client-side RPM pacing, and — with `CUA_USE_SANDBOX=1` — a real
-per-run **Docker** container (`Xvfb → xfce → headed Chromium/CDP → x11vnc →
-websockify`) that the worker drives over CDP and an operator watches/​takes over
-via noVNC, held on `STUCK` for handoff.
-
-**Mocked / design-only (documented in `REPORT.md` §Cuts):** the operator console
-is a thin Next.js app over the real handoff API; a microVM (Firecracker/gVisor)
-boundary, kernel CPU/memory ceilings, a warm pool, and orchestration beyond a
-single Docker host are design-only; Postgres (SQLite behind the same interface);
-desktop/legacy-web surface adapters (one `SurfaceAdapter` seam, Playwright impl);
-the offline `scripted` discovery pilot for CI / the no-key demo.
-
 ## Author
 
 **Manoj Manjunatha** — [manu042k.tech](https://manu042k.tech/)
