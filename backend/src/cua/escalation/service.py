@@ -258,6 +258,11 @@ class EscalationService:
     def take_control(self, intervention_id: str, operator: str) -> dict[str, Any]:
         """Transfer the lock to the human on the SAME live session."""
         iv = self.get(intervention_id)
+        if iv.kind != "handoff":
+            raise ValueError(
+                f"intervention {intervention_id} is a {iv.kind}, not a handoff — "
+                "a risk_approval gate has no session lock transfer; resolve it with decide(...)"
+            )
         if iv.claimed_by != operator:
             raise ValueError("claim the intervention before taking control")
         session_id = iv.context["session_id"]

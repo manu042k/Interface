@@ -143,6 +143,31 @@ async def test_risk_approval_gate_open_and_decide(system):
     await sys.adapter.close_session(sess)
 
 
+async def test_take_control_refuses_a_risk_approval_gate(system):
+    """The docs promise a risk_approval gate has 'no session lock transfer at
+    all' — take_control must enforce that, not just decide()."""
+    sys, mockbank = system
+    from cua.models import RunRecord
+
+    run = RunRecord(run_id="r-risk-tc", mode="discovery", goal="transfer 500",
+                    tenant_id="default", app_target=f"{mockbank}/search")
+    sess = await sys.adapter.open_session(f"{mockbank}/search", "default")
+    sys.broker.register_session(sess, sess)
+
+    iv = await sys.escalation.open_risk_approval(
+        run=run, session_id=sess, step_index=7,
+        proposed_action="click 'Transfer' (value: 500) — goal: transfer 500 from A to B",
+        reason="committing an irreversible action on /transfer.htm",
+    )
+    sys.console.claim(iv.intervention_id, "op_kim")
+
+    import pytest
+    with pytest.raises(ValueError, match="not a handoff"):
+        sys.console.take_control(iv.intervention_id, "op_kim")
+
+    await sys.adapter.close_session(sess)
+
+
 async def test_two_risk_rejections_dead_end_instead_of_looping(system, monkeypatch):
     """A rejected risky action must not re-open the gate forever: the second
     rejection this run ends it DEAD_END."""

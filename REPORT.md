@@ -196,11 +196,26 @@ browser, they need to see *what's about to happen* and say yes or no.
 `EscalationService.open_risk_approval()` raises a second `InterventionRequest`
 kind (`risk_approval`, distinct from `handoff`) carrying the proposed action
 in plain language, with no session lock transfer at all; `decide(approved=…)`
-resolves it. Two rejections of the same proposed action `dead_end` the run
-rather than looping the agent back to try the identical rejected step again.
-This is the mechanism that actually implements §3.4's "require confirmation"
-disposition day to day; full handoff is reserved for when a human must
-*act*, not just *decide*.
+resolves it. `take_control()` enforces that separation directly: it raises if
+the intervention isn't a `handoff`, so a `risk_approval` gate cannot be driven
+through the takeover API by mistake, only through its own `decide()`. Two
+rejections of the same proposed action `dead_end` the run rather than looping
+the agent back to try the identical rejected step again. This is the
+mechanism that actually implements §3.4's "require confirmation" disposition
+day to day; full handoff is reserved for when a human must *act*, not just
+*decide*.
+
+`evidence/06-discovery-handoff` demonstrates the full handoff end to end with
+nothing scripted into the prompt: the goal states a business rule ("the
+account type and deposit amount are decisions only a supervisor is
+authorized to make"), never a tool name, and the model reaches `stuck()` on
+its own after being nudged back twice for calling it too early. A human
+(a script standing in for one, paced at 1.9-2.9s per action rather than fired
+back-to-back) takes control of the live session, decides the two fields,
+submits, and hands back; the agent resumes, re-observes, retries its own
+truncated first extract, and reports the real confirmation number MockBank
+computed. See `evidence/README.md` for the exact transcript and what remains
+simulated (the script itself) versus real (everything it drives).
 
 **Route.** `EscalationService.open_intervention()` acquires the automation lock
 via the `SessionBroker`, captures a context bundle (screenshot, DOM, transcript

@@ -89,12 +89,24 @@ CLI/gateway use) → `asyncio.create_task(orchestrator.run_discovery(...,
 handoff_wait_s=120))` (a real block-and-wait, like a live operator session) →
 polls `escalation.list_interventions(status="open")` until one appears →
 `console.claim` / `console.take_control` (real CAS+TTL lease transfer onto
-the SAME `session_id`) → four `console.perform(...)` calls against the live
-session (select the account type, type the deposit, click Review, click
-Confirm creation) → `console.release_control` (hands back; automation
+the SAME `session_id`) → four `console.perform(...)` calls, each preceded by
+a 1-4s pause (a human-scale gap, not four calls fired back-to-back) against
+the live session (select the account type, type the deposit, click Review,
+click Confirm creation) → `console.release_control` (hands back; automation
 resumes on the same session and, per §5, re-verifies rather than assuming
 success) → dumps evidence with `cua.cli._dump_run_evidence`, the same helper
 the CLI itself uses.
+
+The script's `GOAL` states a business rule ("the account type and deposit
+amount are decisions only a supervisor is authorized to make"), never a tool
+name — it does not tell the model to call `stuck`. The model reaches
+`stuck()` on its own once it's actually on the new-sub-account form; the
+script checks `iv.kind == "handoff"` before taking control and aborts with a
+clear message if it isn't (a `risk_approval` gate refuses `take_control`
+outright — see §5's "no session lock transfer at all"). If a model or a
+reworded goal produces a `risk_approval` gate instead, that is not a bug in
+the demo; it means the goal needs to push the model to recognise the
+business-rule conflict before it attempts the risky click, not after.
 
 MockBank's sub-account creation has a real duplicate-submission guard keyed
 on `(member_id, account_type, amount)` — restart `cua serve-mock` fresh
