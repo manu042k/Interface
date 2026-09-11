@@ -1441,18 +1441,24 @@ class Orchestrator:
         """Resume instruction after an operator hand-back. A person drove the
         LIVE browser (their direct clicks aren't itemised), so the current screen
         is authoritative. Arms a short window that blocks a verbatim repeat of
-        whatever failed right before the handoff."""
-        failed: list[str] = []
-        for e in transcript.entries[-10:]:
-            if not e.action_ok and e.tool_call.tool not in ("observe", "done", "stuck"):
-                failed.append(_describe_call(e.tool_call))
-        failed = list(dict.fromkeys(failed))[-6:]
-        transcript.post_handoff_block = set(failed)
-        transcript.post_handoff_steps = 5 if failed else 0
+        whatever was going nowhere right before the handoff — a FAILED attempt,
+        or a SUCCESSFUL-but-redundant one repeated 2+ times (e.g. re-typing a
+        value that's already there and re-clicking the wrong one of several
+        identical buttons — no error, just no progress)."""
+        recent = [e for e in transcript.entries[-10:] if e.tool_call.tool not in ("observe", "done", "stuck")]
+        failed = {_describe_call(e.tool_call) for e in recent if not e.action_ok}
+        counts: dict[str, int] = {}
+        for e in recent:
+            d = _describe_call(e.tool_call)
+            counts[d] = counts.get(d, 0) + 1
+        redundant = {d for d, n in counts.items() if n >= 2}
+        blocklist = list(dict.fromkeys([*failed, *redundant]))[-6:]
+        transcript.post_handoff_block = set(blocklist)
+        transcript.post_handoff_steps = 5 if blocklist else 0
         blocked = (
-            "\nThese attempts FAILED before the handoff — do NOT repeat any of them:\n  - "
-            + "\n  - ".join(failed)
-        ) if failed else ""
+            "\nThese went nowhere before the handoff (failed, or repeated with no "
+            "progress) — do NOT repeat any of them:\n  - " + "\n  - ".join(blocklist)
+        ) if blocklist else ""
         return (
             f"A human took control of the LIVE browser at step {step} and handed it back "
             f"(their direct actions are not itemised here: {acts_summary}). The CURRENT "

@@ -189,9 +189,29 @@ def test_handback_note_arms_a_repeat_block(system):
 
     note = sys.orchestrator._handback_note(t, 9, "release_control")
     assert t.post_handoff_steps == 5
-    assert any("criteria.amount" in s for s in t.post_handoff_block)
-    assert "do NOT repeat" in note.lower() or "do not repeat" in note.lower()
+    assert any("criteria.amount" in x for x in t.post_handoff_block)
+    assert "do not repeat" in note.lower()
     assert "criteria.amount" in note
+
+
+def test_handback_note_also_blocks_a_redundant_successful_repeat(system):
+    """No errors at all, just the same action redone with no progress (e.g.
+    re-typing an already-correct value and re-clicking one of several
+    identical buttons) must be blocked too, not only outright failures."""
+    sys, _ = system
+    from cua.discovery.orchestrator import DiscoveryTranscript, TranscriptEntry
+    from cua.models import SurfaceState, ToolCall
+
+    t = DiscoveryTranscript(run_id="r", goal="g", target="t", tenant="default")
+    st = SurfaceState(url="u")
+    for _ in range(3):
+        c = ToolCall(tool="type", args={"target": {"name": "amount"}}, reasoning="type 100")
+        t.entries.append(TranscriptEntry(9, st, c, None, True, {"ok": True}, "allow"))
+
+    note = sys.orchestrator._handback_note(t, 9, "release_control")
+    assert t.post_handoff_steps == 5
+    assert any("amount" in x for x in t.post_handoff_block)
+    assert "no progress" in note.lower()
 
 
 async def test_repeated_handoff_for_same_blocker_dead_ends(system):
