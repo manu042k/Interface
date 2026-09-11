@@ -1,9 +1,23 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import {
+  TrendingDown,
+  TrendingUp,
+  Minus,
+  Activity,
+  Coins,
+  DollarSign,
+  PiggyBank,
+  Gauge,
+  ShieldCheck,
+  Percent,
+  BarChart3,
+  type LucideIcon,
+} from "lucide-react";
 import { api, type Metrics, type MetricSeriesPoint } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +55,7 @@ function Body({ m }: { m: Metrics }) {
     <>
       <TrendBanner trend={m.trend} />
 
+      <SectionHeading>Overview</SectionHeading>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Total runs" value={fmt.format(o.total_runs)}
           sub={`${o.discovery_runs} discovery · ${o.replay_invocations} replay`} />
@@ -52,6 +67,7 @@ function Body({ m }: { m: Metrics }) {
           sub={`${fmt.format(e.tokens_saved_by_replay)} tokens not re-reasoned`} />
       </div>
 
+      <SectionHeading>Efficiency &amp; reliability</SectionHeading>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Efficiency per discovery run</CardTitle></CardHeader>
@@ -88,6 +104,7 @@ function Body({ m }: { m: Metrics }) {
         </Card>
       </div>
 
+      <SectionHeading>Trends by day</SectionHeading>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Avg tokens per discovery, by day</CardTitle></CardHeader>
@@ -123,6 +140,17 @@ function Body({ m }: { m: Metrics }) {
 }
 
 /* ---------- small pieces ---------- */
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 pt-2">
+      <h2 className="text-muted-foreground shrink-0 text-xs font-medium uppercase tracking-wide">
+        {children}
+      </h2>
+      <Separator className="flex-1" />
+    </div>
+  );
+}
 
 function TrendBanner({ trend }: { trend: Metrics["trend"] }) {
   const map = {
