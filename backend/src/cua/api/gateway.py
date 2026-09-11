@@ -286,7 +286,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         return [
             {
                 "run_id": r.run_id, "mode": r.mode, "status": r.status,
-                "goal": r.goal, "name": r.name,
+                "goal": _resolved_goal(r, app.state.system.store), "name": r.name,
                 "started_at": r.started_at, "ended_at": r.ended_at,
                 "step_count": r.step_count, "artifact_id": r.artifact_id,
                 "has_sandbox": bool(r.sandbox_container),
@@ -314,7 +314,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         # on-disk copy fresh so progress survives a crash mid-run
         if run.status in {RunStatus.PENDING, RunStatus.RUNNING, RunStatus.STUCK}:
             app.state.persist_runs()
-        return RunView(**_run_dict(run))
+        return RunView(**_run_dict(run, app.state.system.store))
 
     @app.post("/runs/{run_id}/cancel", response_model=RunView)
     async def cancel_run(run_id: str) -> RunView:
@@ -322,7 +322,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         if run is None:
             raise HTTPException(404, f"no such run: {run_id}")
         if run.status in {RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.DEAD_END}:
-            return RunView(**_run_dict(run))
+            return RunView(**_run_dict(run, app.state.system.store))
 
         task = app.state.tasks.get(run_id)
         if task is not None and not task.done():
@@ -341,7 +341,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         run.detail = "cancelled by user"
         run.ended_at = run.ended_at or time.time()
         app.state.persist_runs()
-        return RunView(**_run_dict(run))
+        return RunView(**_run_dict(run, app.state.system.store))
 
     # -- ST-025: artifact review -------------------------------------
     @app.get("/artifacts")
@@ -389,6 +389,7 @@ def create_app(config: Config | None = None) -> FastAPI:
                 "step_count": r.step_count,
                 "detail": r.detail,
                 "params": r.params,
+                "goal": _resolved_goal(r, app.state.system.store),
             }
 
         linked = [
@@ -477,6 +478,7 @@ def create_app(config: Config | None = None) -> FastAPI:
             run_id=invocation_id, mode=RunMode.REPLAY, tenant_id=req.tenant, app_target=target,
             artifact_id=artifact_id, artifact_version=req.version, params=req.params,
             name=artifact.name,
+            goal=artifact.goal_description,
             # a replay reproduces an already-approved capability - it never
             # records a new draft, so mark it as such for the run UI.
             record_outcome="reused",
@@ -801,7 +803,7 @@ def _build_report(app: FastAPI, run_id: str) -> dict[str, Any]:
                 replays.append({"invocation_id": inv_id, "params": r.params, **res.model_dump()})
 
     return {
-        "run": _run_dict(run),
+        "run": _run_dict(run, sys.store),
         "generated_at": time.time(),
         "timeline": timeline,
         "artifact": artifact,
@@ -890,10 +892,22 @@ def _validate_target_or_400(sys: System, tenant: str, target: str) -> str:
     return target
 
 
-def _run_dict(run: RunRecord) -> dict[str, Any]:
+def _resolved_goal(run: RunRecord, store: Any | None = None) -> str | None:
+    """Replay invocations historically stored no goal — fall back to the artifact."""
+    if run.goal:
+        return run.goal
+    if store is None or not run.artifact_id or run.artifact_version is None:
+        return None
+    try:
+        return store.get(run.artifact_id, run.artifact_version).goal_description or None
+    except KeyError:
+        return None
+
+
+def _run_dict(run: RunRecord, store: Any | None = None) -> dict[str, Any]:
     return {
         "run_id": run.run_id, "mode": run.mode, "status": run.status, "tenant_id": run.tenant_id,
-        "app_target": run.app_target, "goal": run.goal, "detail": run.detail, "step_count": run.step_count,
+        "app_target": run.app_target, "goal": _resolved_goal(run, store), "detail": run.detail, "step_count": run.step_count,
         "name": run.name, "params": run.params or {},
         "artifact_id": run.artifact_id, "artifact_version": run.artifact_version,
         "record_outcome": run.record_outcome,

@@ -679,6 +679,15 @@ function RunRow({ r }: { r: LinkedRun }) {
           {r.run_id.slice(0, 12)}
         </Link>
       </TableCell>
+      <TableCell className="text-muted-foreground max-w-[16rem] py-2">
+        {r.goal ? (
+          <span className="line-clamp-2 text-xs leading-relaxed" title={r.goal}>
+            {r.goal}
+          </span>
+        ) : (
+          "—"
+        )}
+      </TableCell>
       <TableCell className="py-2">
         <StatusBadge status={r.status} />
       </TableCell>
@@ -701,10 +710,11 @@ function RunsTable({ rows }: { rows: LinkedRun[] }) {
     return <p className="text-muted-foreground px-1 text-sm">None yet.</p>;
   return (
     <div className="overflow-x-auto">
-      <Table className="min-w-[560px]">
+      <Table className="min-w-[720px]">
         <TableHeader>
           <TableRow>
             <TableHead>Run</TableHead>
+            <TableHead>Goal</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Version</TableHead>
             <TableHead>Steps</TableHead>

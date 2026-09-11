@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Radio } from "lucide-react";
-import { api, type RunRow } from "@/lib/api";
+import { api, type Capability, type RunRow } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -36,8 +37,14 @@ export default function RunsPage() {
     refetchInterval: 2500,
   });
 
+  const { data: caps } = useQuery({
+    queryKey: ["capabilities"],
+    queryFn: api.capabilities,
+  });
+
   const runs = data ?? [];
   const live = runs.filter((r) => LIVE.has(r.status));
+  const goalOf = useGoalLookup(runs, caps);
 
   return (
     <div className="space-y-5">
@@ -58,12 +65,13 @@ export default function RunsPage() {
         </TabsList>
 
         <TabsContent value="all" className="mt-4">
-          <RunsTable rows={runs} empty="No runs yet." />
+          <RunsTable rows={runs} goalOf={goalOf} empty="No runs yet." />
         </TabsContent>
 
         <TabsContent value="live" className="mt-4">
           <RunsTable
             rows={live}
+            goalOf={goalOf}
             live
             empty="No runs in progress. Start one from New run."
           />
@@ -73,12 +81,35 @@ export default function RunsPage() {
   );
 }
 
+function useGoalLookup(runs: RunRow[], caps?: Capability[]) {
+  return useMemo(() => {
+    const byName = new Map<string, string>();
+    const byArtifact = new Map<string, string>();
+    for (const r of runs) {
+      if (r.name && r.goal && !byName.has(r.name)) byName.set(r.name, r.goal);
+    }
+    for (const c of caps ?? []) {
+      const g = c.goal || c.summary;
+      if (!g) continue;
+      if (c.name) byName.set(c.name, g);
+      if (c.artifact_id) byArtifact.set(c.artifact_id, g);
+    }
+    return (r: RunRow) =>
+      r.goal ||
+      (r.artifact_id ? byArtifact.get(r.artifact_id) : undefined) ||
+      (r.name ? byName.get(r.name) : undefined) ||
+      null;
+  }, [runs, caps]);
+}
+
 function RunsTable({
   rows,
+  goalOf,
   live = false,
   empty,
 }: {
   rows: RunRow[];
+  goalOf: (r: RunRow) => string | null;
   live?: boolean;
   empty: string;
 }) {
@@ -89,6 +120,7 @@ function RunsTable({
         <TableHeader>
           <TableRow>
             <TableHead>Run</TableHead>
+            <TableHead>Goal</TableHead>
             <TableHead>Mode</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Steps</TableHead>
@@ -97,20 +129,26 @@ function RunsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pageRows.map((r) => (
+          {pageRows.map((r) => {
+            const goal = goalOf(r);
+            return (
             <TableRow key={r.run_id}>
-              <TableCell className="max-w-[20rem]">
+              <TableCell className="max-w-[16rem]">
                 <div className="font-heading truncate font-medium">
-                  {r.name || r.goal ? (
-                    sentenceCase(r.name || r.goal)
+                  {r.name || goal ? (
+                    sentenceCase(r.name || goal)
                   ) : (
                     <span className="text-muted-foreground">-</span>
                   )}
                 </div>
-                {r.name && r.goal && (
-                  <div className="text-muted-foreground truncate text-xs">
-                    {r.goal.length > 90 ? `${r.goal.slice(0, 90)}…` : r.goal}
-                  </div>
+              </TableCell>
+              <TableCell className="text-muted-foreground max-w-[22rem]">
+                {goal ? (
+                  <span className="line-clamp-2 text-xs leading-relaxed" title={goal}>
+                    {goal}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground/60">-</span>
                 )}
               </TableCell>
               <TableCell className="text-muted-foreground">{r.mode}</TableCell>
@@ -133,11 +171,12 @@ function RunsTable({
                 </Button>
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
           {rows.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="text-muted-foreground py-8 text-center"
               >
                 {empty}{" "}

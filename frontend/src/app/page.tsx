@@ -209,6 +209,10 @@ export default function NewRunPage() {
 
           <div className="space-y-2">
             <Label>Typed parameters</Label>
+            <p className="text-muted-foreground text-xs">
+              Optional. Values you mention in the description are detected
+              automatically by the agent.
+            </p>
             <div className="space-y-2">
               {params.map((row, i) => (
                 <div key={i} className="flex items-center gap-2">

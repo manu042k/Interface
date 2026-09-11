@@ -327,6 +327,7 @@ export type LinkedRun = {
   step_count: number;
   detail: string | null;
   params: Record<string, unknown> | null;
+  goal: string | null;
 };
 
 export type ArtifactRuns = {

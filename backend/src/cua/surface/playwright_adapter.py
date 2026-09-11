@@ -917,7 +917,20 @@ def _strict_locate(page: Page, kind: str, params: dict[str, Any], target: dict[s
             "select, textarea, "
             "input:not([type=submit]):not([type=button]):not([type=reset]):not([type=hidden])"
         )
-        return fillable.or_(row.locator("td").last).first, f"near={near!r}"
+        row_result = fillable.or_(row.locator("td").last)
+        # No <tr> ancestor at all (a modern div/card layout — an e-commerce
+        # product grid, not a legacy table) — `row_result` matches nothing.
+        # Fall back to the nearest ancestor block that itself contains an
+        # actionable control, the div/li/article/section equivalent of "the
+        # row". `.or_()` is a union of matches, not a priority fallback, but
+        # a table structure and a card structure are mutually exclusive in
+        # practice, so only one side ever actually resolves.
+        card = anchor.locator(
+            "xpath=ancestor::*[self::div or self::li or self::article or self::section]"
+            "[.//button or .//a or .//input[not(@type='hidden')] or .//select][1]"
+        )
+        card_ctrl = card.locator("button, a, input:not([type=hidden]), select")
+        return row_result.or_(card_ctrl).first, f"near={near!r}"
     if kind in {"dom_anchor", "test_id"}:
         if p.get("css"):
             return page.locator(p["css"]), f"css={p['css']}"

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import pytest_asyncio
 
-from cua.models import LocatorStrategy
+from cua.models import ActionType, LocatorStrategy
 from cua.replay.locator import LocatorResolutionEngine
+from cua.surface.base import Action
 from cua.surface.playwright_adapter import PlaywrightAdapter
 
 
@@ -94,6 +95,46 @@ async def test_two_visible_matches_stay_genuinely_ambiguous(adapter, mockbank):
     outcome = await adapter.try_strategy(h, "dom_anchor", {"css": '[name="amount"], [id="amount"]'})
     assert outcome["matched"] is False
     assert "ambiguous" in outcome["reason"]
+
+
+async def test_relative_to_landmark_falls_back_to_a_div_card_when_no_table_row_exists(adapter, mockbank):
+    """relative_to_landmark's <tr> ancestor lookup only covers legacy table
+    layouts. A modern e-commerce product grid (SauceDemo: <div
+    class="inventory_item"><h4>Sauce Labs Backpack</h4>...<button>Add to
+    cart</button></div>) has no <tr> ancestor at all, so it used to resolve
+    to nothing ('no element matched') even though there's an obvious
+    per-card control to fall back to, the div/card equivalent of a table row.
+    Found live-testing saucedemo_purchase_item: the recorded 'near=Sauce
+    Labs Backpack' step hard-failed on replay."""
+    h = await adapter.open_session(f"{mockbank}/search")
+    page = adapter._sess(h).page
+    await page.set_content(
+        """
+        <div class="inventory_list">
+          <div class="inventory_item">
+            <div class="inventory_item_name">Sauce Labs Bike Light</div>
+            <button>Add to cart</button>
+          </div>
+          <div class="inventory_item">
+            <div class="inventory_item_name">Sauce Labs Backpack</div>
+            <button>Add to cart</button>
+          </div>
+        </div>
+        """
+    )
+    outcome = await adapter.try_strategy(h, "relative_to_landmark", {"near": "Sauce Labs Backpack"})
+    assert outcome["matched"] is True, outcome
+    assert outcome["describe"] == "near='Sauce Labs Backpack'"
+
+    eng = LocatorResolutionEngine()
+    spec = [LocatorStrategy(kind="relative_to_landmark", params={"near": "Sauce Labs Backpack"}, rank=0, rationale="r")]
+    res = await eng.resolve(spec, adapter, h, artifact_version=1, surface_fingerprint="fp-card", step_index=0)
+    assert res.ok, res.error
+
+    r = await adapter.execute(
+        h, Action(type=ActionType.CLICK, target_description={"near": "Sauce Labs Backpack"})
+    )
+    assert r.ok, r.error
 
 
 async def test_cache_singleflight(adapter, mockbank):

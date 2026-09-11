@@ -67,6 +67,61 @@ function ago(ts: number | null): string {
   return new Date(ts * 1000).toLocaleString();
 }
 
+function ArtifactFollowup({
+  outcome,
+  status,
+}: {
+  outcome?: RunView["record_outcome"];
+  status?: string | null;
+}) {
+  if (outcome === "reused") {
+    return (
+      <>
+        (reproduced an existing capability - confirmation logged, no new draft)
+      </>
+    );
+  }
+  if (status === "approved") {
+    return (
+      <>
+        (
+        {outcome === "new_version"
+          ? "flow differed from the previous version — now "
+          : outcome === "updated_draft"
+            ? "pending draft was updated — now "
+            : ""}
+        <Link
+          href="/capabilities"
+          className="text-primary underline underline-offset-2"
+        >
+          approved
+        </Link>
+        )
+      </>
+    );
+  }
+  if (status === "rejected") {
+    return <> (draft was rejected)</>;
+  }
+  return (
+    <>
+      (
+      {outcome === "updated_draft"
+        ? "flow changed - updated the pending draft, "
+        : outcome === "new_version"
+          ? "flow differs from the approved version - new draft, "
+          : "new draft - "}
+      <Link
+        href="/review"
+        className="text-primary underline underline-offset-2"
+      >
+        review to approve
+      </Link>
+      )
+    </>
+  );
+}
+
 function DetailRow({
   label,
   children,
@@ -96,6 +151,23 @@ export default function RunPage() {
       q.state.data && TERMINAL.has(q.state.data.status) ? false : 1500,
   });
 
+  // Replay invocations historically stored no goal — same subtitle as
+  // discovery comes from the recorded capability. Also used to see whether
+  // a draft from this run is still pending, approved, or rejected.
+  const { data: artifact } = useQuery({
+    queryKey: ["artifact", run?.artifact_id, run?.artifact_version],
+    queryFn: () => api.artifact(run!.artifact_id!, run!.artifact_version!),
+    enabled: !!run?.artifact_id && run.artifact_version != null,
+  });
+  const goal =
+    run?.goal ||
+    (typeof artifact?.goal_description === "string"
+      ? artifact.goal_description
+      : null) ||
+    null;
+  const artifactStatus =
+    typeof artifact?.status === "string" ? artifact.status : null;
+
   // A stuck run now resumes automation after hand-back, so `stuck` is a
   // transient state, not an end state.
   const isStuck = run?.status === "stuck";
@@ -114,12 +186,12 @@ export default function RunPage() {
   const ok = run?.status === "completed";
   const tokens = (run?.tokens_in ?? 0) + (run?.tokens_out ?? 0);
   const isReplay = run?.mode === "replay";
-  // a fresh/updated draft lives in Review until approved; a reused one is
-  // already in the catalog.
+  // Drafts go to Review; once approved (or this run only reused one) the
+  // catalog is the right place.
   const artifactHref =
-    run?.record_outcome && run.record_outcome !== "reused"
-      ? "/review"
-      : "/capabilities";
+    run?.record_outcome === "reused" || artifactStatus === "approved"
+      ? "/capabilities"
+      : "/review";
 
   const cancel = useMutation({
     mutationFn: () => api.cancelRun(id),
@@ -133,10 +205,10 @@ export default function RunPage() {
   return (
     <div className="flex h-full min-h-[640px] flex-col gap-3">
       <PageHeader
-        title={run?.name || run?.goal || "…"}
+        title={run?.name || goal || "…"}
         description={
-          run?.name && run?.goal && run.name !== run.goal
-            ? sentenceCase(run.goal)
+          run?.name && goal && run.name !== goal
+            ? sentenceCase(goal)
             : undefined
         }
       >
@@ -222,8 +294,8 @@ export default function RunPage() {
                     <DetailRow label="Run ID">
                       <code className="text-xs">{id}</code>
                     </DetailRow>
-                    {run.goal && run.goal !== run.name && (
-                      <DetailRow label="Description">{run.goal}</DetailRow>
+                    {goal && goal !== run.name && (
+                      <DetailRow label="Description">{goal}</DetailRow>
                     )}
                     <DetailRow label="Target">
                       <a
@@ -330,24 +402,10 @@ export default function RunPage() {
                 {run.artifact_id.slice(0, 8)} v{run.artifact_version}
               </Link>
               <span className="text-muted-foreground">
-                {run.record_outcome === "reused" ? (
-                  "(reproduced an existing capability - confirmation logged, no new draft)"
-                ) : (
-                  <>
-                    {run.record_outcome === "updated_draft"
-                      ? "(flow changed - updated the pending draft, "
-                      : run.record_outcome === "new_version"
-                        ? "(flow differs from the approved version - new draft, "
-                        : "(new draft - "}
-                    <Link
-                      href="/review"
-                      className="text-primary underline underline-offset-2"
-                    >
-                      review to approve
-                    </Link>
-                    )
-                  </>
-                )}
+                <ArtifactFollowup
+                  outcome={run.record_outcome}
+                  status={artifactStatus}
+                />
               </span>
             </>
           )}
