@@ -168,6 +168,14 @@ strategies would be flagged for re-review before it breaks, without disturbing
 the other 199; the aggregation/alerting on top of the signal is the design's
 next step, not yet built.
 
+**Validated breadth, not just MockBank.** Beyond the curated `evidence/`
+bundles, `backend/.data/`  is this project's real
+dev database: 19 distinct capabilities (31 approved artifact versions) built
+live against three different surfaces (MockBank, ParaBank, SauceDemo),
+including transfers, loan applications, account creation, and
+validation-error paths, each with its own recorded run history. It's the
+evidence that the abstraction above held up outside the one demo app.
+
 ## 5. Escalation & handoff
 
 **Detect.** Discovery emits `stuck(reason)` when it can't safely proceed

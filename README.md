@@ -55,8 +55,9 @@ Discovery needs an LLM. **Everything else — replay, guardrails, escalation, th
 whole test suite — runs with no external services** using `CUA_LLM_PROVIDERS=scripted`.
 
 **This repo ships with its dev database committed** (`backend/.data/cua.db` +
-`backend/.data/evidence/`, ~30 approved capabilities across MockBank, ParaBank,
-and SauceDemo, built up over this project's development). Point `cua serve` +
+`backend/.data/evidence/`, 19 distinct capabilities / 31 approved artifact
+versions across MockBank, ParaBank, and SauceDemo, built up over this
+project's development). Point `cua serve` +
 the frontend at it with no setup and the Capabilities / Runs / Review pages are
 already populated — you don't have to run discovery yourself first to see a
 working system. Delete `backend/.data/` (or point `CUA_DB_PATH` elsewhere) for
