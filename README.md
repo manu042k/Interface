@@ -18,12 +18,13 @@ when replay or discovery gets stuck.
 ## Layout
 
 ```
-backend/    Python monolith: discovery loop, artifact schema+store, replay
-            executor, policy/guardrails, escalation/handoff, per-run Docker
-            sandbox (noVNC + CDP), MockBank target app
-frontend/   Next.js 16 + shadcn console: goal input, live noVNC + event stream +
-            sandbox terminal, stuck-run handoff, printable run report
-evidence/   Committed demo bundles
+backend/         Python monolith: discovery loop, artifact schema+store, replay
+                  executor, policy/guardrails, escalation/handoff, per-run Docker
+                  sandbox (noVNC + CDP), MockBank target app
+backend/.data/    Committed dev DB + run history (see note below) — NOT gitignored
+frontend/         Next.js 16 + shadcn console: goal input, live noVNC + event stream +
+                  sandbox terminal, stuck-run handoff, printable run report
+evidence/         Committed demo bundles
 ```
 
 ## Setup
@@ -52,6 +53,14 @@ cp .env.example .env          # optional — only needed for a REAL LLM discover
 
 Discovery needs an LLM. **Everything else — replay, guardrails, escalation, the
 whole test suite — runs with no external services** using `CUA_LLM_PROVIDERS=scripted`.
+
+**This repo ships with its dev database committed** (`backend/.data/cua.db` +
+`backend/.data/evidence/`, ~30 approved capabilities across MockBank, ParaBank,
+and SauceDemo, built up over this project's development). Point `cua serve` +
+the frontend at it with no setup and the Capabilities / Runs / Review pages are
+already populated — you don't have to run discovery yourself first to see a
+working system. Delete `backend/.data/` (or point `CUA_DB_PATH` elsewhere) for
+a clean slate.
 
 ## Demo path (exact commands)
 
