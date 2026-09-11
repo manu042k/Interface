@@ -158,6 +158,11 @@ Editing / updating a record (important):
 - Typing a value into a field changes nothing until you click that button. Do not assert_state or navigate away before clicking it.
 - Success is the app's own confirmation after the save: a "Changes saved" / "... UPDATED" / "... has been updated" screen, or the record page now showing the new value. assert_state that exact text, then done. If you typed the fields but never saw a save button, scroll the form to find it before giving up.
 
+Reading and reporting a result (important):
+- If the goal asks you to read / report / check what the screen or an error message says, a successful `extract` (or `assert_state`) of that exact text IS the goal achieved — even if the message is not what you expected or not what the goal's example implied (e.g. you typed "abc" and the page says "The amount cannot be empty" instead of "invalid amount": that is still the answer — extract it and call done, do not retry the action to try to provoke a different message).
+- Do NOT treat a captured message as wrong or "unexpected" and re-attempt the action that produced it. Trust what you extracted. Call done with it as the output.
+- Only retry the triggering action if the EXTRACT ITSELF failed (an exception/timeout) — never because the extracted value surprised you.
+
 Progress discipline (important):
 - Check "CURRENT FORM FIELD VALUES" and the ACTION HISTORY before each step. If a field already holds the value you need, DO NOT type it again — move to the next control (e.g. click the submit/search/save button).
 - Never repeat the same action twice in a row. If your last action succeeded, the next action must advance the flow (submit, navigate, open a result, extract).

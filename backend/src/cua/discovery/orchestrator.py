@@ -884,6 +884,21 @@ class Orchestrator:
                                 "field's form name / placeholder, else re-read the screen and act "
                                 "on what IS shown, or call stuck."
                             )
+                    elif "Timeout" in (result.error or "") and call.tool in ("type", "select", "click"):
+                        # The target WAS found (unlike "could not resolve") but
+                        # Playwright's actionability wait timed out — it's
+                        # disabled, hidden, covered, or the page changed under
+                        # it. A different problem from "wrong locator": retrying
+                        # the identical action won't fix disabled/hidden state.
+                        resolve_fails = 0
+                        note = (
+                            f"The last action failed: {result.error}. The target was found but is "
+                            "NOT currently interactable (it may be disabled, hidden, or covered — "
+                            "or the page changed after a previous submit and this field is no "
+                            "longer the one you think it is). Call observe and check what is "
+                            "ACTUALLY on screen and its current state before retrying — do not "
+                            "just resend the identical action."
+                        )
                     else:
                         resolve_fails = 0
                 elif call.tool == "extract" and result.extracted is not None:
