@@ -712,7 +712,14 @@ def _distinctive_phrases(html: str, visible_text: str, *, limit: int = 4) -> lis
     for m in _HEADING_RE.finditer(html):
         _add(m.group(1))
 
-    return (lead + rest)[:limit]
+    # `rest` is generic heading/nav chrome ("Solutions", "About Us") that sits
+    # on every page of the site, not just this exceptional one. It's only
+    # useful padding when NOTHING error-like was found at all — mixed into an
+    # `any` (OR) match alongside a real lead phrase, it turns a precise rule
+    # into one that fires on literally any page, silently swallowing every
+    # future run that merely passes through this screen (regardless of
+    # whether the real error text is even present).
+    return lead[:limit] if lead else rest[:limit]
 
 
 def _bind_locator_params(

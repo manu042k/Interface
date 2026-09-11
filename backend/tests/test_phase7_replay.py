@@ -311,6 +311,29 @@ def test_distinctive_phrases_leads_with_the_exceptional_sentence():
     assert phrases and "session has ended" in phrases[0].lower()  # not the nav chrome
 
 
+def test_distinctive_phrases_excludes_nav_chrome_when_a_lead_phrase_exists():
+    """A real error sentence found -> the `any` list must be JUST that (plus
+    other lead phrases), never padded with generic site-wide nav/heading text.
+    Found live: a drift-proposed rule mixed 'An internal error has occurred
+    and has been logged.' with 'Solutions' / 'About Us' / 'Experience the
+    difference' — boilerplate present on every ParaBank page — turning an
+    'any' (OR) match into one that fires on literally any page reaching that
+    step, regardless of whether the real error is present."""
+    from cua.replay.executor import _distinctive_phrases
+
+    html = (
+        "<div id='nav'>Experience the difference | Solutions | "
+        "<a href='/about.htm'>About Us</a></div>"
+        "<h1>An internal error has occurred and has been logged.</h1>"
+    )
+    text = ("Experience the difference Solutions About Us\n"
+            "An internal error has occurred and has been logged.")
+
+    phrases = _distinctive_phrases(html, text)
+    assert phrases == ["An internal error has occurred and has been logged."]
+    assert not any(p in ("Solutions", "About Us", "Experience the difference") for p in phrases)
+
+
 def test_looks_exceptional_is_false_for_an_ordinary_page():
     from cua.replay.executor import _looks_exceptional
 
