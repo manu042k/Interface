@@ -15,6 +15,11 @@ when replay or discovery gets stuck.
 - **User stories / build log:** [`docs/USER_STORIES.md`](./docs/USER_STORIES.md) — 45 stories, 10 phases, each committed with tests
 - **Original design doc:** [`docs/TDD-ComputerUse-Automation-System.md`](./docs/TDD-ComputerUse-Automation-System.md)
 
+Every command shown in this file, `backend/README.md`, `frontend/README.md`,
+and `backend/REPRODUCE.md` has actually been run against this repo, not just
+written down — including both `start.sh` modes (with and without Docker) and
+the full `evidence/01-05` reproduce sequence.
+
 ## Layout
 
 ```

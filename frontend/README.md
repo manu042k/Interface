@@ -16,15 +16,15 @@ Next.js 16 (App Router) + shadcn/ui. Design language: `DESIGN.md`
 
 ## Run
 
-```bash
-# backend (repo root)
-bash backend/sandbox_image/build.sh          # once
-bash start.sh                                # MockBank :8799, gateway :8080 (CUA_USE_SANDBOX=1)
+See the repo-root `README.md`'s "Frontend console" section for the full
+backend+frontend sequence (`./start.sh`, with or without the Docker sandbox).
+Just this package:
 
-# frontend
+```bash
 cd frontend
 npm install
 npm run dev                                  # http://localhost:3000
+npm run build                                # production build check
 ```
 
 `NEXT_PUBLIC_API_BASE` defaults to `http://localhost:8080`; override in
