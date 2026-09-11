@@ -95,7 +95,15 @@ _RISKY_URL_RE = re.compile(
     r"hold|stop-?payment|update-?profile)(/|$|\?|\.htm|\.do|\.aspx)",
     re.I,
 )
-_TOKEN_RE = re.compile(r"[a-z][a-z0-9_\-]{0,20}")  # looks like a name/id attr, not a label
+_TOKEN_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9_\-.]{0,40}(?<![.\-_])")  # looks like a name/id attr, not a label
+# Legacy Struts-style forms (ParaBank et al.) name fields "customer.firstName",
+# "customer.address.street" — mixed case, dotted. A plain lowercase-only token
+# regex missed these, so `name_is_token` stayed False, no dom_anchor candidate
+# was ever generated, and _rank_locators() fell through to its last-resort
+# `kind="text", params=target` branch — but target only has a "name" key, not
+# "text", so the resolver failed every such field at replay with
+# "strategy not applicable to params". Broadening the regex fixes it at the
+# source: any name/id-looking token, not just simple lowercase ones.
 _SECRETISH_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{8,}$")  # mixed alnum, 8+ — conservative
 # Interstitials are runtime-variable: they belong in recoverable_rules, not the
 # linear step list. A click made *while one was on screen* is dropped from steps
@@ -594,10 +602,22 @@ def _rank_locators(
         ))
     # ensure at least one strategy
     if not cands:
-        cands.append(LocatorStrategy(
-            kind="text", params=target, rank=0,
-            rationale="raw target description carried through — review and strengthen before approval",
-        ))
+        # Defense in depth: a bare `kind="text"` strategy needs a "text" param
+        # to be resolvable at replay. If none of the branches above fired but
+        # the target still carries a name/id-looking attribute, use that
+        # instead of blindly stuffing the whole target dict under "text" —
+        # that produced an unresolvable ("strategy not applicable to params")
+        # locator whenever `name` wasn't recognised as a token upstream.
+        if name:
+            cands.append(LocatorStrategy(
+                kind="dom_anchor", params={"css": f'[name="{name}"]'}, rank=0,
+                rationale="raw target description carried through — review and strengthen before approval",
+            ))
+        else:
+            cands.append(LocatorStrategy(
+                kind="text", params=target if target.get("text") else {"text": str(target)}, rank=0,
+                rationale="raw target description carried through — review and strengthen before approval",
+            ))
     # A strategy value that is really a run param ("Select the row near 100987")
     # gets a `<key>_param` sibling so replay substitutes the caller's value.
     for strat in cands:

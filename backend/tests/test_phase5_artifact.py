@@ -315,6 +315,26 @@ def test_locator_landmark_that_equals_a_param_is_rebindable_on_replay():
     assert next(s for s in kept if s.kind == "relative_to_landmark").params["near"] == "100987"
 
 
+def test_dotted_struts_style_field_name_becomes_a_dom_anchor_not_bare_text():
+    """Legacy Struts-style forms (ParaBank et al.) name fields
+    'customer.firstName' - mixed case, dotted. _TOKEN_RE used to be
+    lowercase-only, so name_is_token stayed False, no dom_anchor candidate
+    was produced, and _rank_locators() fell through to a bare
+    kind='text' strategy whose params only held {'name': ...} (no 'text'
+    key) - unresolvable at replay ('strategy not applicable to params')."""
+    from cua.artifact.recorder import _rank_locators
+
+    specs = _rank_locators({"name": "customer.firstName"}, 'name/id="customer.firstName"', {})
+    anchor = next((s for s in specs if s.kind == "dom_anchor"), None)
+    assert anchor is not None, f"no resolvable strategy produced: {specs}"
+    assert anchor.params["css"] == '[name="customer.firstName"]'
+    # every candidate must be resolvable - never a bare "text" kind without a
+    # "text" param
+    for s in specs:
+        if s.kind == "text":
+            assert "text" in s.params
+
+
 async def test_recorder_captures_params_written_into_the_goal(system, mockbank):
     """A value the user put in the goal text (not in params) is recorded as a
     reusable input, not baked in as a literal — and a credential is masked."""
