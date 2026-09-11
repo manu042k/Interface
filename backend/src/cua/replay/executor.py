@@ -43,7 +43,7 @@ from ..models import (
 )
 from ..policy.engine import ActionContext, PolicyEngine, PolicyVerdict
 from ..surface.base import Action, SurfaceAdapter
-from ..surface.perception import Perception
+from ..surface.perception import Perception, strip_hidden_elements
 from .locator import LocatorResolutionEngine
 
 _RETRYABLE_CEILING = 3
@@ -634,7 +634,15 @@ class ReplayExecutor:
         # here — ADR-07 keeps the replay loop LLM-free.)
         drift = None
         if propose_drift and snap is not None:
-            html = getattr(snap, "html", "") or ""
+            # Strip hidden markup first: legacy pages bake a site-wide error
+            # template into every load (ParaBank's transfer/billpay pages
+            # carry a <div id="showError" style="display:none"> with generic
+            # "An internal error has occurred..." text) that is never
+            # actually shown unless JS reveals it. Left in, it poisons the
+            # drift-candidate phrase for ANY unrelated failure on that page —
+            # a human reviewer would approve a bogus rule that masks the real
+            # cause behind an error the page never showed.
+            html = strip_hidden_elements(getattr(snap, "html", "") or "")
             text = getattr(snap, "visible_text", "") or ""
             exceptional = _looks_exceptional(html, text)
             phrases = _distinctive_phrases(html, text) if (exceptional or not require_exceptional) else []

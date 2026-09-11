@@ -311,6 +311,36 @@ def test_distinctive_phrases_leads_with_the_exceptional_sentence():
     assert phrases and "session has ended" in phrases[0].lower()  # not the nav chrome
 
 
+def test_hard_failure_drift_candidate_ignores_a_hidden_sitewide_error_template():
+    """ParaBank's transfer/billpay pages carry a permanent, hidden error
+    template on EVERY load — <div id="showError" style="display:none">Error!
+    An internal error has occurred and has been logged.</div> — revealed by
+    client-side JS only on a real AJAX failure. _hard_failure()'s
+    drift-candidate phrase extraction reads raw snapshot HTML directly
+    (a separate path from Perception's already-fixed dom_excerpt), so it
+    still surfaced this latent, never-shown text as the 'observed_phrases'
+    for a completely unrelated real failure (e.g. a stale recorded account
+    id no longer in the <select>) — which would lead a human reviewer to
+    approve a bogus 'internal error' business-outcome rule that masks the
+    actual cause."""
+    from cua.replay.executor import _distinctive_phrases, _looks_exceptional
+    from cua.surface.perception import strip_hidden_elements
+
+    html = (
+        '<select name="toAccountId"><option value="12345">12345</option></select>'
+        '<div id="showError" style="display: none;">'
+        '<h1 class="title">Error!</h1>'
+        '<p class="error">An internal error has occurred and has been logged.</p>'
+        "</div>"
+    )
+    text = "12345"  # innerText already excludes the hidden div natively
+
+    cleaned = strip_hidden_elements(html)
+    assert "internal error" not in cleaned.lower()
+    assert _looks_exceptional(cleaned, text) is False
+    assert _distinctive_phrases(cleaned, text) == []
+
+
 def test_distinctive_phrases_excludes_nav_chrome_when_a_lead_phrase_exists():
     """A real error sentence found -> the `any` list must be JUST that (plus
     other lead phrases), never padded with generic site-wide nav/heading text.

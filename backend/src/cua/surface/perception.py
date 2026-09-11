@@ -140,6 +140,29 @@ _HIDDEN_EL_RE = re.compile(
 )
 
 
+def strip_hidden_elements(html: str) -> str:
+    """Drop elements hidden via style="display:none"/"visibility:hidden" or a
+    bare `hidden` attribute — legacy forms bake client-side validation
+    placeholders AND site-wide error templates right into the markup
+    ("Payee name is required.", a generic <div id="showError"
+    style="display:none">An internal error has occurred...</div> present on
+    every load of ParaBank's transfer/billpay pages) invisible until JS
+    reveals them. Any text-based check — dom_excerpt for the live agent,
+    hard-failure/drift-candidate evidence for a human reviewer — must not
+    treat this latent markup as something actually on screen. Non-greedy
+    same-tag close is good enough for the small, non-nested placeholders
+    this targets; a genuinely nested hidden container just leaves its inner
+    markup for the next pass.
+    """
+    if not html:
+        return html
+    for _ in range(3):  # a couple of passes catches shallow nesting cheaply
+        html, n = _HIDDEN_EL_RE.subn("", html)
+        if not n:
+            break
+    return html
+
+
 def _dom_outline(html: str, max_chars: int) -> str:
     if not html:
         return ""
@@ -147,19 +170,7 @@ def _dom_outline(html: str, max_chars: int) -> str:
     html = re.sub(r"<script\b.*?</script>", "", html, flags=re.S | re.I)
     html = re.sub(r"<style\b.*?</style>", "", html, flags=re.S | re.I)
     html = re.sub(r"<!--.*?-->", "", html, flags=re.S)
-    # Drop elements hidden via style="display:none"/"visibility:hidden" or a
-    # bare `hidden` attribute — legacy forms bake client-side validation
-    # placeholders right into the markup ("Payee name is required.") invisible
-    # until JS reveals them on a real failed submit. Without this, that text
-    # leaks into dom_excerpt and a business_outcome / text_present check
-    # matches it on the FIRST load of the page, before anything was even
-    # submitted. Non-greedy same-tag close is good enough for the small,
-    # non-nested placeholder spans this actually targets; a genuinely nested
-    # hidden container just leaves its inner markup for the next pass.
-    for _ in range(3):  # a couple of passes catches shallow nesting cheaply
-        html, n = _HIDDEN_EL_RE.subn("", html)
-        if not n:
-            break
+    html = strip_hidden_elements(html)
 
     out: list[str] = []
     depth = 0
