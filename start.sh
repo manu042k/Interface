@@ -48,9 +48,14 @@ trap cleanup EXIT INT TERM
 echo "==> MockBank on :8799"
 ( cd backend && MOCKBANK_INTERSTITIAL=1 .venv/bin/cua serve-mock --port 8799 ) & pids+=($!)
 
-echo "==> Gateway on :8080 (CUA_USE_SANDBOX=$USE_SANDBOX, offline scripted pilot)"
-( cd backend && CUA_USE_SANDBOX="$USE_SANDBOX" CUA_LLM_PROVIDERS="${CUA_LLM_PROVIDERS:-scripted}" \
-  .venv/bin/cua serve --port 8080 ) & pids+=($!)
+echo "==> Gateway on :8080 (CUA_USE_SANDBOX=$USE_SANDBOX)"
+# CUA_LLM_PROVIDERS is deliberately NOT forced here (that was the same bug
+# CUA_USE_SANDBOX had): if it's set on this invocation it passes through as
+# normal shell inheritance; otherwise the backend's own config loading picks
+# it up from backend/.env (defaults to the offline scripted pilot if .env
+# doesn't set it either). Forcing scripted here would silently override a
+# real .env provider key with no way to tell without checking `ps`.
+( cd backend && CUA_USE_SANDBOX="$USE_SANDBOX" .venv/bin/cua serve --port 8080 ) & pids+=($!)
 
 echo "==> Console on :3000"
 ( cd frontend && npm run dev ) & pids+=($!)
