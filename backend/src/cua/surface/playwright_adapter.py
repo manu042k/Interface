@@ -264,11 +264,19 @@ class PlaywrightAdapter(SurfaceAdapter):
                 best_dy, best_i = dy, i
         return best_i
 
-    async def _resolve(self, page: Page, desc: Any) -> tuple[Locator, str]:
+    async def _resolve(self, page: Page, desc: Any, action_type: Any = None) -> tuple[Locator, str]:
         """Best-effort description -> Locator for the discovery path.
 
-        Replay uses the dedicated multi-strategy Locator Resolution Engine; this
-        is the lighter resolver the model's structured target_description feeds.
+        Replay uses the dedicated multi-strategy Locator Resolution Engine to
+        VALIDATE a step's strategy chain, but the actual action still comes
+        through here (`_locator` re-resolves from the plain target_description
+        dict, not the engine's already-matched Locator) — so this resolver's
+        behaviour for a given description must match what the engine expects.
+
+        `action_type` disambiguates the "near a landmark" case: an EXTRACT
+        wants the row's VALUE cell (a `<td>Balance</td>` is not a "control"),
+        while click/type want an actual interactive control, anchors and
+        buttons included.
         """
         if desc is None:
             raise SurfaceError("action has no target_description and no locator")
@@ -394,9 +402,18 @@ class PlaywrightAdapter(SurfaceAdapter):
             if await anchor.count():
                 row = anchor.first.locator("xpath=ancestor::tr[1]")
                 if await row.count():
-                    ctrl = row.locator("input, select, textarea, button, a")
-                    if await ctrl.count():
-                        return ctrl.first, f"near={near!r}:control"
+                    # EXTRACT wants the row's VALUE cell, never a clickable
+                    # control — an <a>/<button> in an earlier column (e.g. the
+                    # account-number link in "Account | Balance | Available
+                    # Amount") is not the value being read, and picking it
+                    # silently returns the wrong column's text instead of
+                    # failing loudly. click/type genuinely want the control,
+                    # anchors and buttons included (e.g. "the Select link near
+                    # member X").
+                    if action_type != ActionType.EXTRACT:
+                        ctrl = row.locator("input, select, textarea, button, a")
+                        if await ctrl.count():
+                            return ctrl.first, f"near={near!r}:control"
                     cells = row.locator("td")
                     if await cells.count():
                         return cells.last, f"near={near!r}:value-cell"
@@ -724,7 +741,7 @@ class PlaywrightAdapter(SurfaceAdapter):
             val = action.locator["value"]
             sel = val if eng == "css" else f"{eng}={val}"
             return sess.page.locator(sel).first, f"{eng}={val}"
-        return await self._resolve(sess.page, action.target_description)
+        return await self._resolve(sess.page, action.target_description, action.type)
 
     async def _settle(self, page: Page) -> None:
         try:

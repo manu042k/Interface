@@ -173,6 +173,45 @@ async def test_resolve_legacy_form_field_by_name_attr(adapter, mockbank):
     assert await page.locator('input[name="address"]').input_value() == "742 Evergreen Terrace"
 
 
+async def test_extract_near_a_landmark_skips_an_anchor_to_reach_the_value_cell(adapter, mockbank):
+    """A 3-column table (Account | Balance | Available Amount) where the
+    FIRST column is itself a hyperlink (<a href="activity.htm?id=13344">
+    13344</a>) — ParaBank's real Accounts Overview markup. Extracting 'the
+    balance near landmark 13344' must land on the Balance cell, not on the
+    landmark's own anchor: _resolve()'s "control in the row" branch treated
+    any <a>/<button> as a control, so it returned the account-number LINK
+    itself (extracting '13344' again) instead of moving to the value cell.
+    click/type on the same row must still prefer an actual control (e.g. a
+    'Select' link) — this only changes EXTRACT's behaviour."""
+    h = await adapter.open_session(f"{mockbank}/search")
+    page = adapter._sess(h).page
+    await page.set_content(
+        """
+        <table><tr>
+          <td><a href="activity.htm?id=13344">13344</a></td>
+          <td>$1231.10</td>
+          <td>$1231.10</td>
+        </tr></table>
+        """
+    )
+    r = await adapter.execute(
+        h, Action(type=ActionType.EXTRACT, target_description={"near": "13344"}, expected_shape="currency")
+    )
+    assert r.ok, r.error
+    assert r.extracted["raw"] == "$1231.10"
+    assert "value-cell" in r.matched_strategy
+
+    # click/type on the same row-shape still prefers a real control (a Select
+    # link), not the value cell — this fix must not break that.
+    await page.set_content(
+        '<table><tr><td>100987</td><td><a href="select.htm?id=1">Select</a></td></tr></table>'
+    )
+    r2 = await adapter.execute(
+        h, Action(type=ActionType.CLICK, target_description={"near": "100987"})
+    )
+    assert r2.ok, r2.error
+
+
 async def test_near_disambiguates_identical_role_name_buttons(adapter, mockbank):
     """Several visually-identical buttons (one 'Submit' per repeated sub-form,
     like ParaBank's four 'FIND TRANSACTIONS' buttons) — role+name alone always
