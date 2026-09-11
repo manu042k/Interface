@@ -69,6 +69,39 @@ async def test_observe_returns_normalized_state(adapter, mockbank):
     assert state.ax_summary  # not empty (degrades to a message if truly bare)
 
 
+def test_dom_outline_drops_hidden_validation_placeholders():
+    """Legacy forms (ParaBank's billpay.htm et al.) bake client-side
+    validation messages right into the markup, invisible until JS reveals
+    them on a failed submit: <span style="display:none" class="error">Payee
+    name is required.</span>. Left in dom_excerpt, a business_outcome /
+    text_present rule for 'is required' matches on the FIRST page load,
+    before any field was even filled in — found live-testing
+    parabank_bill_pay: it reported validation_error immediately after
+    landing on a blank Bill Pay form."""
+    from cua.surface.perception import _dom_outline
+
+    html = (
+        "<form><table><tr>"
+        '<td><input class="input" name="payee.name"></td>'
+        '<td><span style="display:none" id="validationModel-name" class="error">'
+        "Payee name is required.</span></td>"
+        "</tr></table></form>"
+    )
+    outline = _dom_outline(html, 6000)
+    assert "is required" not in outline.lower()
+    assert 'name="payee.name"' in outline  # the real, visible control survives
+
+
+def test_dom_outline_keeps_visible_error_text():
+    """A REAL, visible error banner (no hidden styling) must still surface —
+    the hidden-element strip must not be so broad it eats legitimate content."""
+    from cua.surface.perception import _dom_outline
+
+    html = '<div class="error">Username already exists.</div>'
+    outline = _dom_outline(html, 6000)
+    assert "already exists" in outline.lower()
+
+
 async def test_fingerprint_stable_across_content_change(adapter, mockbank):
     per = Perception()
     h1 = await adapter.open_session(f"{mockbank}/member/12345?ack=1")
