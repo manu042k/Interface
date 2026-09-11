@@ -52,6 +52,50 @@ async def test_unresolvable_returns_structured_error(adapter, mockbank):
     assert len(res.tried) == 2 and all(not t["matched"] for t in res.tried)
 
 
+async def test_sole_visible_match_disambiguates_a_hidden_validation_placeholder(adapter, mockbank):
+    """A `[name="x"], [id="x"]` dom_anchor can also match a hidden
+    validation-placeholder span/div sharing the real control's id/name
+    (ParaBank's billpay.htm: <input name="amount"> plus a hidden
+    <span id="amount">, a client-side-JS error message invisible until a
+    failed submit). Two matches used to fail closed as 'ambiguous' even
+    though only one of them is actually visible/actionable. Found live-
+    testing parabank_bill_pay after the earlier name-or-id css fix widened
+    the selector enough to also catch the hidden placeholder."""
+    h = await adapter.open_session(f"{mockbank}/search")
+    page = adapter._sess(h).page
+    await page.set_content(
+        """
+        <form>
+          <input type="text" name="amount" value="">
+          <span id="amount" style="display:none" class="error">Amount is required.</span>
+        </form>
+        """
+    )
+    outcome = await adapter.try_strategy(h, "dom_anchor", {"css": '[name="amount"], [id="amount"]'})
+    assert outcome["matched"] is True and outcome["count"] == 1
+    assert "only visible match" in outcome["describe"]
+
+    eng = LocatorResolutionEngine()
+    spec = [LocatorStrategy(kind="dom_anchor", params={"css": '[name="amount"], [id="amount"]'}, rank=0, rationale="r")]
+    res = await eng.resolve(spec, adapter, h, artifact_version=1, surface_fingerprint="fp-amount", step_index=0)
+    assert res.ok, res.error
+
+
+async def test_two_visible_matches_stay_genuinely_ambiguous(adapter, mockbank):
+    """The hidden-placeholder heuristic must not paper over a REAL duplicate —
+    two equally visible, unrelated controls sharing a name/id still fail
+    closed rather than guessing."""
+    h = await adapter.open_session(f"{mockbank}/search")
+    page = adapter._sess(h).page
+    await page.set_content(
+        '<input type="text" name="amount" value="one">'
+        '<input type="text" id="amount" value="two">'
+    )
+    outcome = await adapter.try_strategy(h, "dom_anchor", {"css": '[name="amount"], [id="amount"]'})
+    assert outcome["matched"] is False
+    assert "ambiguous" in outcome["reason"]
+
+
 async def test_cache_singleflight(adapter, mockbank):
     h = await adapter.open_session(f"{mockbank}/search")
     calls = {"n": 0}

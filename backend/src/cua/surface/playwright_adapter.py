@@ -502,10 +502,20 @@ class PlaywrightAdapter(SurfaceAdapter):
             # interchangeable — take the first visible one rather than failing.
             # Anything else genuinely ambiguous still fails closed.
             equiv_idx = await self._equivalent_link_index(loc, count)
-            if equiv_idx is None:
-                return {"matched": False, "count": count, "visible": False, "describe": describe, "reason": f"ambiguous: {count} matches"}
-            idx = equiv_idx
-            describe = f"{describe} (1 of {count} equivalent links)"
+            if equiv_idx is not None:
+                idx = equiv_idx
+                describe = f"{describe} (1 of {count} equivalent links)"
+            else:
+                # A `[name="x"], [id="x"]` dom_anchor also matches any hidden
+                # validation-placeholder span/div sharing that id/name — a
+                # legacy-form pattern (ParaBank et al.), not a real duplicate
+                # control. If exactly one match is actually visible, that's
+                # unambiguously the intended target.
+                sole_idx = await self._sole_visible_index(loc, count)
+                if sole_idx is None:
+                    return {"matched": False, "count": count, "visible": False, "describe": describe, "reason": f"ambiguous: {count} matches"}
+                idx = sole_idx
+                describe = f"{describe} (1 of {count}, only visible match)"
         visible = False
         try:
             visible = await loc.nth(idx).is_visible()
@@ -552,6 +562,22 @@ class PlaywrightAdapter(SurfaceAdapter):
                 if await loc.nth(i).is_visible():
                     return i
             return 0
+        except Exception:  # noqa: BLE001
+            return None
+
+    async def _sole_visible_index(self, loc: Locator, count: int) -> int | None:
+        """If exactly one of the matches is visible, return its index — a
+        hidden validation-placeholder element (span/div sharing the real
+        control's id/name) is never the intended target. If zero or more than
+        one are visible, this stays genuinely ambiguous (None)."""
+        try:
+            visible_idxs: list[int] = []
+            for i in range(min(count, 8)):
+                if await loc.nth(i).is_visible():
+                    visible_idxs.append(i)
+                if len(visible_idxs) > 1:
+                    return None
+            return visible_idxs[0] if len(visible_idxs) == 1 else None
         except Exception:  # noqa: BLE001
             return None
 
