@@ -66,3 +66,20 @@ operator_handed_back` sequence in order. The stuck-replay (as opposed to
 stuck-discovery) escalation path is structurally identical — same
 `EscalationService`/`SessionBroker`, same lease/resume mechanics — and is
 covered by `backend/tests/test_phase8_escalation.py`.
+
+**What's real here vs. staged, plainly:** the goal text explicitly tells the
+model a human must decide, so it reliably calls `stuck()` instead of
+depending on it organically wandering into trouble; the four operator actions
+run back-to-back in ~132ms (`select`→`type`→`click`→`click`, measured from
+`events.jsonl`) because a script stands in for a person, not a real 10-30s of
+typing and clicking. Both are deliberate, for a reproducible bundle. Nothing
+else is: `SessionBroker` is a real CAS + TTL-lease class (`threading.Lock`,
+a genuine expiry check, no stub); `console.perform()` submits real requests
+against the live MockBank session; the sub-account really gets created
+server-side and `SA-391403` is MockBank's own `hash(member, type, amount)`
+confirmation number, not fabricated; and the agent's resume step genuinely
+re-observes and extracts that real value off the real resulting page rather
+than being told the outcome. The lock-transfer and resume mechanics are the
+thing being demonstrated, and they run unmodified from what a live noVNC
+takeover through the gateway would exercise (§5's "mechanism... is real and
+covered by tests for both discovery and replay").
