@@ -61,6 +61,10 @@ export default function ReviewPage() {
         title="Review"
         description="Draft artifacts. Unattended replay is refused until a human approves."
       />
+      <p className="text-muted-foreground -mt-3 text-xs">
+        Risk is whether a step can be undone. Risky irreversible means transfer,
+        wire, or close account — approving lets replay do that unattended.
+      </p>
 
       <div className="bg-card overflow-x-auto rounded-lg border">
         <Table className="min-w-[640px]">
@@ -134,7 +138,7 @@ export default function ReviewPage() {
 
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
         <DialogContent className="flex h-[85vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
-          <DialogHeader className="space-y-0 border-b px-5 py-4 text-left">
+          <DialogHeader className="space-y-1.5 border-b px-5 py-4 text-left">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pr-6">
               <DialogTitle>{sentenceCase(open?.name)}</DialogTitle>
               <span className="text-muted-foreground text-xs">
@@ -142,6 +146,11 @@ export default function ReviewPage() {
               </span>
               <RiskBadge risk={open?.risk_class} />
             </div>
+            <p className="text-muted-foreground text-xs">
+              {open?.risk_class === "risky_irreversible"
+                ? "Risky irreversible: this flow can transfer money or change an account in a way that cannot be undone. Approving lets agents replay it unattended."
+                : "Safe and reversible: replay can run unattended without moving money or permanently changing an account."}
+            </p>
           </DialogHeader>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
@@ -162,7 +171,9 @@ export default function ReviewPage() {
 
           <div className="bg-muted/30 flex items-center justify-between gap-3 border-t px-5 py-3">
             <span className="text-muted-foreground text-xs">
-              Approving allows unattended replay.
+              {open?.risk_class === "risky_irreversible"
+                ? "Approving authorizes unattended replay of this irreversible flow."
+                : "Approving allows unattended replay."}
             </span>
             <div className="flex gap-2">
               <Button

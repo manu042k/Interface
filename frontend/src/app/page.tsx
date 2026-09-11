@@ -265,15 +265,21 @@ export default function NewRunPage() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={confirmRisky}
-              onChange={(e) => setConfirmRisky(e.target.checked)}
-              className="accent-primary h-4 w-4 rounded"
-            />
-            Pre-authorize risky / irreversible steps for this goal
-          </label>
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={confirmRisky}
+                onChange={(e) => setConfirmRisky(e.target.checked)}
+                className="accent-primary h-4 w-4 rounded"
+              />
+              Pre-authorize risky / irreversible steps for this goal
+            </label>
+            <p className="text-muted-foreground text-xs">
+              Risky means a step that cannot be undone (transfer, wire, close
+              account); without this, the agent stops and waits for a human.
+            </p>
+          </div>
 
           <div className="flex justify-end pt-1">
             <Button onClick={submit} disabled={!canSubmit} size="lg">
