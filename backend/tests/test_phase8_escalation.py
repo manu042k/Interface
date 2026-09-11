@@ -174,3 +174,52 @@ async def test_two_risk_rejections_dead_end_instead_of_looping(system, monkeypat
     assert "rejected" in (run.detail or "").lower()
     # ended promptly, not ground to the step ceiling
     assert run.step_count < 12
+
+
+def test_handback_note_arms_a_repeat_block(system):
+    sys, _ = system
+    from cua.discovery.orchestrator import DiscoveryTranscript, TranscriptEntry
+    from cua.models import SurfaceState, ToolCall
+
+    t = DiscoveryTranscript(run_id="r", goal="g", target="t", tenant="default")
+    st = SurfaceState(url="u")
+    for _ in range(3):
+        c = ToolCall(tool="type", args={"target": {"name": "criteria.amount"}})
+        t.entries.append(TranscriptEntry(9, st, c, None, False, {"ok": False}, "allow"))
+
+    note = sys.orchestrator._handback_note(t, 9, "release_control")
+    assert t.post_handoff_steps == 5
+    assert any("criteria.amount" in s for s in t.post_handoff_block)
+    assert "do NOT repeat" in note.lower() or "do not repeat" in note.lower()
+    assert "criteria.amount" in note
+
+
+async def test_repeated_handoff_for_same_blocker_dead_ends(system):
+    """Bouncing back to a human for the SAME reason must end the run, not loop."""
+    sys, mockbank = system
+    from cua.models import RunRecord
+
+    run = RunRecord(run_id="r-loop", mode="discovery", goal="g",
+                    tenant_id="default", app_target=f"{mockbank}/search")
+    sess = await sys.adapter.open_session(f"{mockbank}/search", "default")
+    sys.broker.register_session(sess, sess)
+    from cua.discovery.orchestrator import DiscoveryTranscript
+    t = DiscoveryTranscript(run_id="r-loop", goal="g", target=f"{mockbank}/search", tenant="default")
+
+    reason = "repeated type failed 4x in a row"
+    # 1st handoff: opens an intervention, returns None (wait_s=0, non-interactive)
+    out1 = await sys.orchestrator._escalate_and_wait(
+        run, t, sess, 12, reason, "g", [], sys.orchestrator._logger_factory("r-loop"), 0.0,
+    )
+    assert out1 is None and t.handoff_count == 1
+    assert run.status.value != "dead_end"
+
+    # 2nd handoff, SAME reason -> capped, run ends dead_end, no new intervention wait
+    out2 = await sys.orchestrator._escalate_and_wait(
+        run, t, sess, 20, reason, "g", [], sys.orchestrator._logger_factory("r-loop"), 0.0,
+    )
+    assert out2 is None
+    assert run.status.value == "dead_end"
+    assert "escalated to a human" in (run.detail or "")
+
+    await sys.adapter.close_session(sess)

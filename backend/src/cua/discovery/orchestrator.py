@@ -241,6 +241,11 @@ class DiscoveryTranscript:
     business_outcome: tuple[str, str, list[str]] | None = None
     session_id: str | None = None
     intervention_id: str | None = None
+    # handoff loop-guard state
+    handoff_count: int = 0
+    handoff_reasons: list[str] = field(default_factory=list)
+    post_handoff_block: set[str] = field(default_factory=set)
+    post_handoff_steps: int = 0
 
 
 class Orchestrator:
@@ -505,6 +510,24 @@ class Orchestrator:
                         step += 1
                         continue
 
+                # Just after a hand-back: refuse a verbatim repeat of an action
+                # that was already failing before the human stepped in — the
+                # page may have changed and the model tends to resume its stale
+                # plan. Window is short; any successful action clears it.
+                if transcript.post_handoff_steps > 0 and call.tool not in ("observe", "done", "stuck"):
+                    transcript.post_handoff_steps -= 1
+                    _cd = _describe_call(call)
+                    if _cd in transcript.post_handoff_block:
+                        log.event(step, "post_handoff_repeat_blocked", attempted=_cd)
+                        history.append(f"blocked (already failed before handoff): {_cd}")
+                        note = (
+                            f"BLOCKED — '{_cd}' already failed repeatedly before the human "
+                            f"handoff. Do not try it again. Re-observe the CURRENT screen and "
+                            f"pick a DIFFERENT control or tool, or call stuck naming the blocker."
+                        )
+                        step += 1
+                        continue
+
                 # actionable tool -> build Action, guardrail, execute
                 action, extract_as = self._to_action(call, params)
                 # last-ditch: the model gave assert_state/wait_for a condition it
@@ -702,6 +725,10 @@ class Orchestrator:
                     matched_strategy=result.matched_strategy, url_after=result.url_after,
                     error=result.error, timed_out=result.timed_out,
                 )
+                if ok and transcript.post_handoff_steps:
+                    # made progress after the hand-back — stop policing repeats
+                    transcript.post_handoff_block.clear()
+                    transcript.post_handoff_steps = 0
                 risk = RiskClass.RISKY_IRREVERSIBLE if decision.verdict == PolicyVerdict.REQUIRE_CONFIRMATION else RiskClass.SAFE_REVERSIBLE
                 entry = TranscriptEntry(
                     step, state, call, action, ok,
@@ -1281,6 +1308,25 @@ class Orchestrator:
         if self.escalation is None:
             return None
 
+        # Loop guard: a run that keeps bouncing back to a human — especially for
+        # the SAME blocker — is not going to finish. A person already looked and
+        # handed it back; asking again just wedges the run. End it.
+        transcript.handoff_count += 1
+        transcript.handoff_reasons.append(reason)
+        _same = sum(1 for x in transcript.handoff_reasons if x == reason)
+        if transcript.handoff_count >= 3 or _same >= 2:
+            run.status = RunStatus.DEAD_END
+            run.detail = (
+                f"escalated to a human {transcript.handoff_count}x this run"
+                + (f" ({_same}x for the same blocker)" if _same >= 2 else "")
+                + f"; automation cannot progress past: {reason[:80]}"
+            )
+            transcript.stuck_reason = run.detail
+            log.event(step, "handoff_cap_reached", count=transcript.handoff_count,
+                      same=_same, reason=reason)
+            log.run_finished("dead_end", reason=run.detail)
+            return None
+
         attempting = _attempting_str(last_call, goal)
         r = reason.lower()
         terminal = any(m in r for m in (
@@ -1331,14 +1377,7 @@ class Orchestrator:
                 run.status = RunStatus.RUNNING
                 run.detail = None
                 log.event(step, "operator_handed_back", intervention_id=iv.intervention_id, actions=summary)
-                return (
-                    f"An operator took control at step {step} and has now handed it back. "
-                    f"What the operator did: {summary}. "
-                    "Do NOT assume the goal is finished. Call observe first to re-read the "
-                    "CURRENT screen, work out exactly what state the page is in now, then "
-                    "continue toward the goal from here. Only call done after verifying the "
-                    "success condition with assert_state / extract."
-                )
+                return self._handback_note(transcript, step, summary)
         # The wait expired. If a human claimed it, give them ONE more window to
         # finish, then abandon regardless — a claimed-but-never-resolved
         # intervention must not hold a sandbox forever.
@@ -1359,11 +1398,7 @@ class Orchestrator:
                 if cur.status == InterventionStatus.RESOLVED:
                     run.status = RunStatus.RUNNING
                     run.detail = None
-                    return (
-                        f"An operator handed control back at step {step}. Call observe "
-                        "first, then continue toward the goal; verify with assert_state / "
-                        "extract before done."
-                    )
+                    return self._handback_note(transcript, step, "grace window")
         try:
             self.escalation.abandon(iv.intervention_id, f"no resolution within {2 * wait_s:.0f}s")
         except Exception:  # noqa: BLE001
@@ -1374,6 +1409,33 @@ class Orchestrator:
                   detail="unclaimed - ending run, releasing sandbox")
         log.run_finished("dead_end", reason=run.detail)
         return None
+
+    def _handback_note(self, transcript, step: int, acts_summary: str) -> str:
+        """Resume instruction after an operator hand-back. A person drove the
+        LIVE browser (their direct clicks aren't itemised), so the current screen
+        is authoritative. Arms a short window that blocks a verbatim repeat of
+        whatever failed right before the handoff."""
+        failed: list[str] = []
+        for e in transcript.entries[-10:]:
+            if not e.action_ok and e.tool_call.tool not in ("observe", "done", "stuck"):
+                failed.append(_describe_call(e.tool_call))
+        failed = list(dict.fromkeys(failed))[-6:]
+        transcript.post_handoff_block = set(failed)
+        transcript.post_handoff_steps = 5 if failed else 0
+        blocked = (
+            "\nThese attempts FAILED before the handoff — do NOT repeat any of them:\n  - "
+            + "\n  - ".join(failed)
+        ) if failed else ""
+        return (
+            f"A human took control of the LIVE browser at step {step} and handed it back "
+            f"(their direct actions are not itemised here: {acts_summary}). The CURRENT "
+            f"screen is the only source of truth — trust what `observe` shows over any "
+            f"earlier plan. Call observe now, read the whole screen, and act on a control "
+            f"that is ACTUALLY visible. If your previous approach was not working, use a "
+            f"DIFFERENT control or tool, or call stuck naming the exact blocker. Do NOT "
+            f"assume the goal is finished — verify with assert_state / extract before done."
+            f"{blocked}"
+        )
 
     # -- helpers ---------------------------------------------------
     async def _decide_with_backoff(
