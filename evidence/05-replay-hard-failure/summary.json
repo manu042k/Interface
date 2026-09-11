@@ -1,6 +1,6 @@
 {
   "kind": "replay",
-  "artifact_id": "2d0c8caf0198420f8797bfe6b2d2c33a",
+  "artifact_id": "ab3176d4808745c5897cdb04e58a4301",
   "version": 1,
   "target": "http://127.0.0.1:8799/member/34567?ack=1",
   "params": {
@@ -10,21 +10,23 @@
     "outcome": "hard_failure",
     "outputs": null,
     "business_outcome_code": null,
+    "business_outcome_detail": null,
     "recovered_conditions": [],
     "failure_detail": {
       "step_index": 0,
-      "expected": "resolve a control for: To search for the member by their ID.",
-      "observed": "unresolvable target: [rank 0 dom_anchor] no element matched",
+      "expected": "resolve a control for: The goal is to look up member 12345, so I will type 12345 into the \"Member ID or name\" field.",
+      "observed": "unresolvable target: [rank 0 dom_anchor] no element matched; [rank 1 relative_to_landmark] no element matched",
       "evidence_refs": [
-        "step0-screenshot-1788966686831.png",
-        "step0-dom-1788966686832.html"
+        "step0-screenshot-1789150176521.png",
+        "step0-dom-1789150176521.html"
       ]
     },
     "evidence_refs": [
-      "step0-screenshot-1788966686831.png",
-      "step0-dom-1788966686832.html"
+      "step0-screenshot-1789150176521.png",
+      "step0-dom-1789150176521.html"
     ],
     "steps_executed": 0,
-    "duration_seconds": 0.5911519527435303
+    "duration_seconds": 0.3502011299133301,
+    "drift_candidate": null
   }
 }

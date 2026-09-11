@@ -1,9 +1,9 @@
 # Evidence
 
-End-to-end demonstration bundles from a **real LLM-driven run** — the discovery
-loop was driven by `openai/gpt-4o-mini` via OpenRouter (not the offline `scripted`
-pilot, which exists only for CI / the no-key demo and is exercised by the test
-suite, not here).
+End-to-end demonstration bundles from a **real LLM-driven run** — `01`-`05`'s
+discovery loop was driven by `google/gemini-2.5-flash` via OpenRouter (not the
+offline `scripted` pilot, which exists only for CI / the no-key demo and is
+exercised by the test suite, not here).
 
 Each bundle is self-contained: the structured per-step event log
 (`events.jsonl`), per-step screenshots (`stepN-screenshot-*.png` + `.meta.json`),
@@ -23,7 +23,7 @@ no model in the loop** — one bundle per outcome class.
 
 | Bundle | Mode | Input | Outcome | What it shows |
 |---|---|---|---|---|
-| `01-discovery-real-llm` | discovery (`openrouter` / `gpt-4o-mini`) | `member_id=12345` | `completed` | 13 `llm_call` events (`"provider":"openrouter","model":"openai/gpt-4o-mini"`), client-side RPM pacing visible as `provider_throttle`. Produces a 4-step artifact: typed `member_id` in / `savings_balance` out, 2 `known_outcomes` (`member_not_found`, `permission_denied`), 2 `recoverable_rules`. `artifact.json` is the approved capability. |
+| `01-discovery-real-llm` | discovery (`openrouter` / `gemini-2.5-flash`) | `member_id=12345` | `completed` | 7 `llm_call` events (`"provider":"openrouter","model":"google/gemini-2.5-flash"`). Produces a 5-step artifact: typed `member_id` in / `savings_balance` out, 2 `known_outcomes` (`member_not_found`, `permission_denied`), 3 `recoverable_rules`. The checkpoint is `all_of(url_matches, extract_matches)` — it genuinely verifies the re-read `savings_balance` is present and currency-shaped, not just that the URL looks right. The search field's locator chain is ranked two deep (`dom_anchor` + `relative_to_landmark`, the field's row-label text), not a single selector with no fallback. `artifact.json` is the approved capability. |
 | `02-replay-success` | replay | `member_id=12345` | `recoverable_then_success` | Happy path. The MockBank record screen shows a one-time session notice; the artifact's `session_notice_interstitial` rule dismisses it and the run returns `savings_balance = $4,182.55`. |
 | `03-replay-member-not-found` | replay | `member_id=00000` | `business_outcome` · `member_not_found` | A "no such member" result is a **legitimate answer**, not a crash — `failure_detail` is null, nothing logged as an error. Stops at step 1. |
 | `04-replay-permission-denied` | replay | `member_id=99999` | `business_outcome` · `permission_denied` | The second declared business outcome — a permission wall the caller must be told about. |

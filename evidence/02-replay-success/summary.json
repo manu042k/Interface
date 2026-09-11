@@ -1,6 +1,6 @@
 {
   "kind": "replay",
-  "artifact_id": "2d0c8caf0198420f8797bfe6b2d2c33a",
+  "artifact_id": "ab3176d4808745c5897cdb04e58a4301",
   "version": 1,
   "target": "http://127.0.0.1:8799/search",
   "params": {
@@ -15,12 +15,14 @@
       }
     },
     "business_outcome_code": null,
+    "business_outcome_detail": null,
     "recovered_conditions": [
       "session_notice_interstitial"
     ],
     "failure_detail": null,
     "evidence_refs": [],
-    "steps_executed": 4,
-    "duration_seconds": 1.1534080505371094
+    "steps_executed": 5,
+    "duration_seconds": 1.3736870288848877,
+    "drift_candidate": null
   }
 }

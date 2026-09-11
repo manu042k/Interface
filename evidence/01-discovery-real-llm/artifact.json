@@ -1,10 +1,12 @@
 {
-  "artifact_id": "2d0c8caf0198420f8797bfe6b2d2c33a",
+  "artifact_id": "ab3176d4808745c5897cdb04e58a4301",
   "version": 1,
   "status": "approved",
+  "is_default": true,
   "name": "read_savings_balance",
   "goal_description": "look up member 12345 and read their current savings balance",
-  "agent_summary": "This capability allows an AI agent to retrieve the current savings balance for a specified member by their ID in the mockbank application. It should be called when there is a need to check a member's financial status, returning the savings balance or indicating if the member was not found or if permission was denied. It is classified as safe and reversible, but care should be taken to handle the potential outcomes appropriately.",
+  "agent_summary": "Retrieves a member's current savings balance from mockbank v7.2. Call with a `member_id` string. Returns `savings_balance` as currency, or reports `member_not_found` or `permission_denied`. This is a safe and reversible action.",
+  "entry_url": "http://127.0.0.1:8799/search",
   "vendor_app_id": "mockbank",
   "app_version": "7.2",
   "tenant_scope": {
@@ -40,21 +42,30 @@
     {
       "step_index": 0,
       "action_type": "type",
-      "description": "To search for the member by their ID.",
+      "description": "The goal is to look up member 12345, so I will type 12345 into the \"Member ID or name\" field.",
       "locator_spec": [
         {
           "kind": "dom_anchor",
           "params": {
-            "css": "[name=\"q\"]",
-            "_discovery_matched": "name=\"q\""
+            "css": "[name=\"q\"], [id=\"q\"]",
+            "_discovery_matched": "name/id=\"q\""
           },
           "rank": 0,
-          "rationale": "form-control name attribute — legacy server-rendered forms expose these and they are stable across releases"
+          "rationale": "form-control name/id attribute — legacy server-rendered forms expose these and they are stable across releases"
+        },
+        {
+          "kind": "relative_to_landmark",
+          "params": {
+            "near": "Member ID or name"
+          },
+          "rank": 1,
+          "rationale": "anchored to a visible row label ('the value cell in the Savings row') — robust against table nesting with no ids"
         }
       ],
       "value_binding": {
         "literal": null,
-        "param": "member_id"
+        "param": "member_id",
+        "from_output": null
       },
       "output_binding": null,
       "step_checkpoint": null,
@@ -66,16 +77,32 @@
     {
       "step_index": 1,
       "action_type": "click",
-      "description": "To initiate the search for the member with ID 12345.",
+      "description": "The member ID has been entered, now click the search button to find the member.",
       "locator_spec": [
         {
           "kind": "dom_anchor",
           "params": {
-            "css": "[name=\"go\"]",
-            "_discovery_matched": "name=\"go\""
+            "css": "[name=\"go\"], [id=\"go\"]",
+            "_discovery_matched": "name/id=\"go\""
           },
           "rank": 0,
-          "rationale": "form-control name attribute — legacy server-rendered forms expose these and they are stable across releases"
+          "rationale": "form-control name/id attribute — legacy server-rendered forms expose these and they are stable across releases"
+        },
+        {
+          "kind": "role_name",
+          "params": {
+            "role": "submit"
+          },
+          "rank": 1,
+          "rationale": "ARIA role only — usable when the control is the sole one of its role on the screen; verify uniqueness at replay"
+        },
+        {
+          "kind": "text",
+          "params": {
+            "text": "Search"
+          },
+          "rank": 2,
+          "rationale": "visible/link text — readable and fairly stable, but breaks on wording or localization changes"
         }
       ],
       "value_binding": null,
@@ -89,23 +116,15 @@
     {
       "step_index": 2,
       "action_type": "click",
-      "description": "To open the member record for member ID 12345.",
+      "description": "The search results show a single member record. I need to open it to view the details.",
       "locator_spec": [
-        {
-          "kind": "role_name",
-          "params": {
-            "role": "link",
-            "_discovery_matched": "role=link name='Open record'"
-          },
-          "rank": 0,
-          "rationale": "ARIA role only — usable when the control is the sole one of its role on the screen; verify uniqueness at replay"
-        },
         {
           "kind": "text",
           "params": {
-            "text": "Open record"
+            "text": "Open record",
+            "_discovery_matched": "text='Open\\xa0record' (exact)"
           },
-          "rank": 1,
+          "rank": 0,
           "rationale": "visible/link text — readable and fairly stable, but breaks on wording or localization changes"
         }
       ],
@@ -120,7 +139,7 @@
     {
       "step_index": 3,
       "action_type": "extract",
-      "description": "To read the current savings balance for member 12345.",
+      "description": "Extract the savings balance from the screen.",
       "locator_spec": [
         {
           "kind": "relative_to_landmark",
@@ -129,6 +148,22 @@
             "_discovery_matched": "near='Savings':value-cell"
           },
           "rank": 0,
+          "rationale": "the control in the row whose label cell holds this text — how a legacy table form with no <label for> is targeted; survives id/name churn"
+        },
+        {
+          "kind": "role_name",
+          "params": {
+            "role": "text"
+          },
+          "rank": 1,
+          "rationale": "ARIA role only — usable when the control is the sole one of its role on the screen; verify uniqueness at replay"
+        },
+        {
+          "kind": "relative_to_landmark",
+          "params": {
+            "near": "Savings"
+          },
+          "rank": 2,
           "rationale": "anchored to a visible row label ('the value cell in the Savings row') — robust against table nesting with no ids"
         }
       ],
@@ -142,14 +177,49 @@
       "mutex_key": null,
       "risk_class": "safe_reversible",
       "wait_timeout_ms": 15000
+    },
+    {
+      "step_index": 4,
+      "action_type": "assert_state",
+      "description": "The member page is displayed and the savings balance has been extracted.",
+      "locator_spec": [],
+      "value_binding": null,
+      "output_binding": null,
+      "step_checkpoint": {
+        "kind": "url_matches",
+        "params": {
+          "pattern": "http://\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+/member/\\d+"
+        },
+        "description": ""
+      },
+      "idempotent": true,
+      "mutex_key": null,
+      "risk_class": "safe_reversible",
+      "wait_timeout_ms": 15000
     }
   ],
   "checkpoint": {
-    "kind": "url_matches",
+    "kind": "all_of",
     "params": {
-      "pattern": "http://\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+/member/\\d+"
+      "conditions": [
+        {
+          "kind": "url_matches",
+          "params": {
+            "pattern": "http://\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+/member/\\d+"
+          },
+          "description": ""
+        },
+        {
+          "kind": "extract_matches",
+          "params": {
+            "field": "savings_balance",
+            "pattern": "[\\$£€]?\\s?-?[\\d,]+\\.\\d{2}"
+          },
+          "description": "replay re-read 'savings_balance' and it is present and currency-shaped"
+        }
+      ]
     },
-    "description": "ended on http://127.0.0.1:8799/member/12345?ack=1"
+    "description": "url_matches AND replay re-read 'savings_balance' and it is present and currency-shaped"
   },
   "known_outcomes": [
     {
@@ -159,13 +229,21 @@
         "params": {
           "any": [
             "No members matched",
-            "was not found"
+            "no member records matched",
+            "no records matched",
+            "no matching members",
+            "was not found",
+            "not found",
+            "no results"
           ]
         },
         "description": ""
       },
       "message": "The requested member does not exist.",
-      "from_step": 1
+      "from_step": 1,
+      "observed": false,
+      "observed_run_ids": [],
+      "detail_selector": null
     },
     {
       "code": "permission_denied",
@@ -174,13 +252,21 @@
         "params": {
           "any": [
             "do not have permission",
-            "member record is restricted"
+            "member record is restricted",
+            "is not authorized to perform",
+            "not authorized to perform this function",
+            "authorization required",
+            "access denied",
+            "a supervisor must sign on"
           ]
         },
         "description": ""
       },
-      "message": "Caller is not permitted to view this record.",
-      "from_step": 1
+      "message": "The operator is not permitted to perform this action.",
+      "from_step": 1,
+      "observed": false,
+      "observed_run_ids": [],
+      "detail_selector": null
     }
   ],
   "recoverable_rules": [
@@ -240,17 +326,49 @@
       },
       "timeout_ms": 8000,
       "max_attempts": 2
+    },
+    {
+      "name": "transient_server_error",
+      "when": {
+        "kind": "text_present",
+        "params": {
+          "any": [
+            "unexpected error",
+            "please retry",
+            "try again later",
+            "temporarily unavailable",
+            "Internal Server Error"
+          ]
+        },
+        "description": ""
+      },
+      "action": "reload",
+      "target": [],
+      "settle": {
+        "kind": "text_absent",
+        "params": {
+          "any": [
+            "unexpected error",
+            "please retry",
+            "Internal Server Error"
+          ]
+        },
+        "description": ""
+      },
+      "timeout_ms": 5000,
+      "max_attempts": 2
     }
   ],
   "risk_class": "safe_reversible",
-  "created_from_run_id": "27c12f85328b4d20b30409bbd5bf3efc",
-  "created_at": 1788966667.5293398,
+  "created_from_run_id": "d18e74bc6b47460da4a7960cad26647b",
+  "created_at": 1789150153.5341492,
   "reviewed_by": "demo-reviewer",
-  "reviewed_at": 1788966681.723267,
+  "reviewed_at": 1789150163.5112,
   "review_notes": null,
-  "flow_fingerprint": "4f11ca6ee6813220",
+  "flow_fingerprint": "65b5a653e892b579",
   "supersedes": null,
   "confirmations": 0,
   "last_confirmed_at": null,
+  "duplicate_of": null,
   "record_outcome": null
 }

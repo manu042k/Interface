@@ -393,6 +393,36 @@ def test_dotted_struts_style_field_name_becomes_a_dom_anchor_not_bare_text():
             assert "text" in s.params
 
 
+def test_model_supplied_near_alongside_name_gets_a_landmark_fallback():
+    """A bare legacy table-form field (name/id only, no role/label/placeholder
+    - MockBank's search input) records a single-strategy chain if the model's
+    tool call only passes {"name": "q"}: nothing to fall back to if the
+    name/id attribute ever drifted. _rank_locators already turns a `near` key
+    on the target dict into a relative_to_landmark candidate unconditionally
+    (see the `if target.get("near")` branch) - the agent system prompt now
+    tells the model to pass `near` alongside `name` for exactly this case
+    (an unlabeled legacy field), which is what actually closes the gap; this
+    test is the recorder-side half: given that the model does supply it, the
+    chain comes out ranked, not single-strategy."""
+    from cua.artifact.recorder import _rank_locators
+
+    specs = _rank_locators(
+        {"name": "q", "near": "Member ID or name"}, 'name/id="q"', {},
+    )
+    kinds = [s.kind for s in specs]
+    assert "dom_anchor" in kinds and "relative_to_landmark" in kinds
+    anchor = next(s for s in specs if s.kind == "dom_anchor")
+    landmark = next(s for s in specs if s.kind == "relative_to_landmark")
+    assert anchor.params["css"] == '[name="q"], [id="q"]'
+    assert landmark.params["near"] == "Member ID or name"
+
+    # A landmark that resolved as the PRIMARY match (the discovery resolver's
+    # own near=/label-cell= match, e.g. an extract with no name/id at all)
+    # is unaffected by this.
+    specs2 = _rank_locators({"near": "Savings"}, "near='Savings':value-cell", {})
+    assert specs2[0].kind == "relative_to_landmark" and specs2[0].rank == 0
+
+
 async def test_recorder_captures_params_written_into_the_goal(system, mockbank):
     """A value the user put in the goal text (not in params) is recorded as a
     reusable input, not baked in as a literal — and a credential is masked."""

@@ -11,19 +11,24 @@ cua serve-mock &                       # http://127.0.0.1:8799
 ## `evidence/01-05` — genuine LLM discovery + deterministic replays
 
 `backend/.env` (gitignored) needs a working provider key. Config used for the
-committed bundles:
+currently committed `01-05` bundles:
 
 ```
 CUA_LLM_PROVIDERS=openrouter,groq,nvidia_nim   # router rotates on 429, disables on 402
 OPENROUTER_API_KEY=sk-or-...
-OPENROUTER_MODEL=openai/gpt-4o-mini            # emits proper OpenAI tool_calls; cost-right for the loop
+OPENROUTER_MODEL=google/gemini-2.5-flash       # what 01-05 were actually recorded with
 GROQ_API_KEY=gsk_...                           # GROQ_MODEL=openai/gpt-oss-20b (fallback)
 CUA_PROVIDER_RPM=20                            # client-side pacing so free tiers don't 429
 ```
 
-Model notes (from the keys used for the committed bundles):
-- **OpenRouter `openai/gpt-4o-mini`** — completes the MockBank flow reliably and
-  returns valid `tool_calls`. This is the default and what `01-05` were recorded with.
+Model notes:
+- **OpenRouter `google/gemini-2.5-flash`** — what the committed `01-05` bundles
+  were recorded with. Weaker on raw tool-call formatting than `gpt-4o-mini`
+  (the `assert_state`/`wait_for` malformed-output repair in `REPORT.md` §3 was
+  written against this model's failure modes) but completes the flow reliably.
+- **OpenRouter `openai/gpt-4o-mini`** — also completes the MockBank flow
+  reliably with clean `tool_calls`; a fine alternative, just not what's
+  currently committed.
 - **Groq `openai/gpt-oss-20b`** — valid `tool_calls`, but too weak to finish the
   flow on its own; useful only as a rotation fallback.
 - **NVIDIA NIM `deepseek-ai/deepseek-v4-flash-0731`** — works; several `nemotron`
@@ -59,7 +64,7 @@ MOCKBANK_INTERSTITIAL=0 cua replay $AID --version 1 \
 ```
 
 Every discovery turn is logged in `events.jsonl` as
-`{"event":"llm_call","provider":"openrouter","model":"openai/gpt-4o-mini",...}`
+`{"event":"llm_call","provider":"openrouter","model":"google/gemini-2.5-flash",...}`
 so a run correlates back to the provider/model that served each decision;
 `provider_throttle` events show the client-side RPM pacing.
 

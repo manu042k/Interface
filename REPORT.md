@@ -258,7 +258,7 @@ takeover. What's still genuinely cut:
 - **Discovery model quality**: the offline `scripted` pilot recognises a
   handful of MockBank screens for CI/no-key demos; a real run uses
   OpenRouter/Groq/NIM/OpenAI via the router with identical downstream
-  behaviour. `evidence/01-05` is a real `gpt-4o-mini` discovery run and its
+  behaviour. `evidence/01-05` is a real `gemini-2.5-flash` discovery run and its
   deterministic replays.
 - **Artifact governance**: a single `draft → approved` gate with a reviewer
   name, no multi-reviewer workflow or RBAC. Re-review *is* auto-triggered for

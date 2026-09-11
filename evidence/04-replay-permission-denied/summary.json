@@ -1,6 +1,6 @@
 {
   "kind": "replay",
-  "artifact_id": "2d0c8caf0198420f8797bfe6b2d2c33a",
+  "artifact_id": "ab3176d4808745c5897cdb04e58a4301",
   "version": 1,
   "target": "http://127.0.0.1:8799/search",
   "params": {
@@ -10,10 +10,12 @@
     "outcome": "business_outcome",
     "outputs": null,
     "business_outcome_code": "permission_denied",
+    "business_outcome_detail": "The operator is not permitted to perform this action.",
     "recovered_conditions": [],
     "failure_detail": null,
     "evidence_refs": [],
     "steps_executed": 1,
-    "duration_seconds": 0.6815323829650879
+    "duration_seconds": 0.5833127498626709,
+    "drift_candidate": null
   }
 }

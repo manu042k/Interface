@@ -20,7 +20,7 @@ review → report). Same backend, same `System` underneath either front door.
 [![Demo video](https://img.youtube.com/vi/JTa-ZaWoFZ0/hqdefault.jpg)](https://youtu.be/JTa-ZaWoFZ0)
 
 - **Design write-up:** [`REPORT.md`](./REPORT.md) (7 required headings)
-- **End-to-end evidence:** [`evidence/`](./evidence/) — a **real** `gpt-4o-mini` discovery run (via OpenRouter) with its recorded `artifact.json`, deterministic replays of that artifact covering every outcome class (`recoverable_then_success`, `business_outcome` ×2 codes, `hard_failure`), and a **real** discovery → stuck → live-session handoff → resume bundle (`06-discovery-handoff`, `google/gemini-2.5-flash`) — genuine `stuck()` reached through the model's own reasoning (never told which tool to call), a real operator taking control of the *same* session, and a clean resume-to-completion. `07-discovery-handoff-parabank` runs the identical mechanism against a real external site (ParaBank, the brief's own "public proxy target" example), proving it isn't MockBank-specific. The offline `scripted` pilot is a CI/no-key demo path only, not evidence.
+- **End-to-end evidence:** [`evidence/`](./evidence/) — a **real** `gemini-2.5-flash` discovery run (via OpenRouter) with its recorded `artifact.json`, deterministic replays of that artifact covering every outcome class (`recoverable_then_success`, `business_outcome` ×2 codes, `hard_failure`), and a **real** discovery → stuck → live-session handoff → resume bundle (`06-discovery-handoff`, `google/gemini-2.5-flash`) — genuine `stuck()` reached through the model's own reasoning (never told which tool to call), a real operator taking control of the *same* session, and a clean resume-to-completion. `07-discovery-handoff-parabank` runs the identical mechanism against a real external site (ParaBank, the brief's own "public proxy target" example), proving it isn't MockBank-specific. The offline `scripted` pilot is a CI/no-key demo path only, not evidence.
 - **User stories / build log:** [`docs/USER_STORIES.md`](./docs/USER_STORIES.md) — 45 stories, 10 phases, each committed with tests
 - **Original design doc:** [`docs/TDD-ComputerUse-Automation-System.md`](./docs/TDD-ComputerUse-Automation-System.md)
 
@@ -110,7 +110,7 @@ cua replay <artifact_id> --version 1 \
 ```
 
 The committed bundles under [`evidence/`](./evidence/) come from a real
-`gpt-4o-mini` discovery run — see [`backend/REPRODUCE.md`](./backend/REPRODUCE.md)
+`gemini-2.5-flash` discovery run — see [`backend/REPRODUCE.md`](./backend/REPRODUCE.md)
 to regenerate them.
 
 ### HTTP API (optional)
