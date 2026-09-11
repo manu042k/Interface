@@ -115,7 +115,7 @@ runs and the console still works minus the live view.
 ## Tests
 
 ```bash
-cd backend && pytest        # 115 tests (~50s); sandbox tests skip cleanly without Docker/image
+cd backend && pytest        # 154 tests (~55s); sandbox tests skip cleanly without Docker/image
 ruff check src tests
 cd ../frontend && npm run build
 ```

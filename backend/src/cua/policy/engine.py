@@ -64,6 +64,9 @@ _MUTATION_ROUTE_RE = re.compile(
 )
 
 
+_MUTATING_ACTIONS = frozenset({"click", "type", "select", "press_key"})
+
+
 def _mutation_signal(action_type: str, path_q: str, signal: str) -> str | None:
     """A built-in banking-mutation reason, or None.
 
@@ -196,7 +199,16 @@ class PolicyEngine:
             return RiskClass.RISKY_IRREVERSIBLE
         if str(ctx.action_type) in tenant.risk_policy.risky_action_types:
             return RiskClass.RISKY_IRREVERSIBLE
-        if tenant.route_is_risky(path_q):
+        # A tenant's risky-route list matches by PATH ALONE — it has no notion
+        # of what the action actually does. Reading the screen (extract /
+        # assert_state / wait_for) or just navigating/scrolling can never be
+        # "irreversible" no matter which route it happens on; only gate a
+        # route match for action types that can actually mutate something.
+        # (Mirrors _mutation_signal's own click/press_key-only scope below —
+        # found live: an assert_state re-check right after a human handoff
+        # resume got risk-gated purely for being on a mutation route, with
+        # nothing to actually confirm.)
+        if str(ctx.action_type) in _MUTATING_ACTIONS and tenant.route_is_risky(path_q):
             return RiskClass.RISKY_IRREVERSIBLE
         # built-in banking-mutation signal — tenant-independent
         extra = ctx.extra or {}

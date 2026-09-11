@@ -127,6 +127,30 @@ def test_navigating_to_the_transfer_form_is_NOT_gated():
     assert d2.verdict == PolicyVerdict.ALLOW
 
 
+def test_passive_read_on_a_risky_route_is_not_gated_but_a_click_still_is():
+    """A tenant's `risky_route_patterns` matches by PATH ALONE — it has no
+    notion of what the action actually does. Reading the screen
+    (assert_state / extract) can never be irreversible no matter which route
+    it happens to be on; only a mutating action type should be gated.
+
+    Found live: after a human handoff resume, the agent's very next action —
+    a plain assert_state re-check, no mutation at all — got risk-gated
+    purely for being on the config/allowlist.example.json tenant's
+    /sub-account/create$ risky route, with nothing to actually confirm."""
+    eng = _engine()  # config/allowlist.example.json: risky_route_patterns ["/sub-account/create$"]
+    route = "http://127.0.0.1:8799/member/12345/sub-account/create"
+
+    for action_type in (ActionType.ASSERT_STATE, ActionType.EXTRACT, ActionType.WAIT_FOR):
+        d = eng.check(ActionContext("default", action_type, route))
+        assert d.verdict == PolicyVerdict.ALLOW, f"{action_type} should not be risk-gated"
+        assert d.risk_class == RiskClass.SAFE_REVERSIBLE
+
+    # a mutating action on the SAME route is still correctly gated
+    d = eng.check(ActionContext("default", ActionType.CLICK, route, extra={"target": "Confirm creation"}))
+    assert d.verdict == PolicyVerdict.REQUIRE_CONFIRMATION
+    assert d.risk_class == RiskClass.RISKY_IRREVERSIBLE
+
+
 def test_send_payment_on_the_billpay_form_is_gated():
     eng = _engine()
     tgt = "https://parabank.parasoft.com/parabank/billpay.htm"
