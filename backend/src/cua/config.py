@@ -77,10 +77,18 @@ class Config:
     max_steps: int
     run_timeout_seconds: int
     action_timeout_seconds: int
-    # How long a stuck run holds its live session waiting for an operator to
-    # take over before it abandons and releases the sandbox. 0 = don't wait
-    # in-loop (CLI / non-interactive).
+    # How long a stuck DISCOVERY run holds its live session waiting for an
+    # operator to take over before it abandons and releases the sandbox.
+    # 0 = don't wait in-loop (CLI / non-interactive).
     handoff_wait_seconds: int
+    # Replay is deterministic and unattended by design (ADR-07: no LLM, and no
+    # live human gate either, beyond the artifact's own approval) — an
+    # unrecoverable step reports hard_failure immediately instead of blocking
+    # the caller's HTTP request on a person. The escalate-and-resume mechanism
+    # (ReplayExecutor._escalate_replay, brief §3.6 "a replay hits a condition
+    # it can't recover from") still exists and is exercised directly by the
+    # test suite; set this > 0 to opt a deployment INTO waiting on replay too.
+    replay_handoff_wait_seconds: int
 
     # Browser
     headed: bool
@@ -197,6 +205,7 @@ def load_config(
         run_timeout_seconds=_int("CUA_RUN_TIMEOUT_SECONDS", 300),
         action_timeout_seconds=_int("CUA_ACTION_TIMEOUT_SECONDS", 15),
         handoff_wait_seconds=_int("CUA_HANDOFF_WAIT_SECONDS", 240),
+        replay_handoff_wait_seconds=_int("CUA_REPLAY_HANDOFF_WAIT_SECONDS", 0),
         headed=_bool("CUA_HEADED", False),
         use_sandbox=_bool("CUA_USE_SANDBOX", False),
         sandbox_image=_optional("CUA_SANDBOX_IMAGE", "cua-sandbox:latest"),

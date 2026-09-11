@@ -26,6 +26,19 @@ def test_config_offline_scripted_needs_no_key(monkeypatch):
     assert cfg.max_steps > 0
 
 
+def test_replay_never_waits_on_a_human_by_default():
+    """Replay is unattended by design: an unrecoverable step must report
+    hard_failure immediately, not block the caller on a live human — that is a
+    DISCOVERY-only behaviour. Only handoff_wait_seconds (discovery) defaults
+    nonzero; replay_handoff_wait_seconds defaults to 0 and is a separate knob,
+    so raising the discovery wait can never accidentally make replay block."""
+    from cua.config import load_config
+
+    cfg = load_config(strict=False, use_dotenv=False)
+    assert cfg.replay_handoff_wait_seconds == 0
+    assert cfg.handoff_wait_seconds > 0  # discovery keeps its live-takeover window
+
+
 # --- ST-002: core models validate at construction --------------------------
 def test_step_requires_idempotent_flag():
     from cua.models import ActionType, Step

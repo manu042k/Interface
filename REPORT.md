@@ -163,13 +163,21 @@ next step, not yet built.
 
 **Detect.** Discovery emits `stuck(reason)` when it can't safely proceed
 (missing control, unexpected screen, a no-progress loop, guardrail block it can't
-route around, or `all_providers_exhausted`). Replay does the same on an
-**unrecoverable step** (`ReplayExecutor._escalate_replay`): a step that isn't a
-declared business outcome and can't be recovered opens an intervention instead of
-returning `hard_failure` outright — but only when an `EscalationService` is wired
-*and* a `handoff_wait_s` is given (the gateway passes 900s; the CLI and tests
-pass 0, so an offline replay stays a clean terminal `hard_failure`). Either way
-the run transitions to `stuck` and its session is **held, not torn down**.
+route around, or `all_providers_exhausted`) and blocks up to
+`CUA_HANDOFF_WAIT_SECONDS` (default 240s) for an operator, since discovery is a
+live, attended run by nature. Replay is the opposite by design: it is the
+unattended, deterministic path an AI agent invokes in production, so it must
+never block an invoke request on a human just because one step couldn't
+recover — it reports `hard_failure` immediately (with `failure_detail` +
+evidence + a `drift_candidate`), full stop. The escalate-and-resume mechanism
+for replay (`ReplayExecutor._escalate_replay`, brief §3.6 "a replay hits a
+condition it can't recover from") is still real and exercised directly by the
+test suite — it opens an intervention exactly like discovery's, on the SAME
+session, when wired with a `handoff_wait_s` — but it is **not** the gateway's
+default invoke path (`CUA_REPLAY_HANDOFF_WAIT_SECONDS` defaults to `0`, a
+separate knob from discovery's; a deployment opts a replay path INTO waiting
+on a human explicitly). Either way that it fires, the run transitions to
+`stuck` and its session is **held, not torn down**.
 
 **Route.** `EscalationService.open_intervention()` acquires the automation lock
 via the `SessionBroker`, captures a context bundle (screenshot, DOM, transcript

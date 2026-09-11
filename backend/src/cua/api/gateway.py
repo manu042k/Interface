@@ -491,10 +491,14 @@ def create_app(config: Config | None = None) -> FastAPI:
                 result = await sys.replay.execute(
                     artifact, req.params, target=target, tenant=req.tenant,
                     run_id=invocation_id, idempotency_key=req.idempotency_key, run=run,
-                    # an unrecoverable step blocks for a human hand-back (§3.6)
-                    # rather than failing outright; tests call execute() directly
-                    # with the default 0.0 and stay fast.
-                    handoff_wait_s=float(app.state.config.handoff_wait_seconds),
+                    # Replay is unattended by design: an unrecoverable step
+                    # reports hard_failure immediately rather than blocking the
+                    # caller's invoke request on a human (CUA_REPLAY_HANDOFF_
+                    # WAIT_SECONDS, default 0). The escalate-and-resume
+                    # mechanism (§3.6) still exists and is exercised directly
+                    # by the test suite; this is an explicit opt-in, not the
+                    # default invoke path.
+                    handoff_wait_s=float(app.state.config.replay_handoff_wait_seconds),
                 )
             except Exception as exc:  # noqa: BLE001 - surface any replay crash on the run
                 run.status = RunStatus.FAILED
