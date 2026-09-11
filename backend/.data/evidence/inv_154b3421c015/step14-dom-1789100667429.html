@@ -1,0 +1,384 @@
+<!DOCTYPE html><html><head>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<title>ParaBank | Bill Pay</title>
+		<link href="template.css" rel="stylesheet" type="text/css">
+		<link href="style.css" rel="stylesheet" type="text/css">
+		<script src="webjars/jquery/4.0.0/jquery.min.js"></script>
+	</head>
+
+	<body>
+		<div id="mainPanel">
+			
+				
+				
+					
+
+
+
+<div id="topPanel">
+  <a href="admin.htm"><img src="images/clear.gif" width="56" height="42" border="0" class="admin"></a>
+  <a href="index.htm"><img src="images/logo.gif" alt="ParaBank" width="136" height="31" border="0" class="logo" title="ParaBank"></a>
+  <p class="caption">Experience the difference</p>
+</div>
+<div id="headerPanel" style="background: url(images/header-customer.jpg) 0 0 no-repeat;">
+  
+
+
+<ul class="leftmenu">
+  <li class="Solutions">Solutions</li>
+  <li><a href="about.htm">About Us</a></li>
+  <li><a href="services.htm">Services</a></li>
+  <li><a href="http://www.parasoft.com/jsp/products.jsp">Products</a></li>
+  <li><a href="http://www.parasoft.com/jsp/pr/contacts.jsp">Locations</a></li>
+  <li><a href="admin.htm">Admin Page</a></li>
+  
+</ul>
+  
+
+
+<ul class="button">
+  <li class="home"><a href="index.htm">home</a></li>
+  <li class="aboutus"><a href="about.htm">about</a></li>
+  <li class="contact"><a href="contact.htm">contact</a></li>
+</ul>
+</div>
+				
+			
+			<div id="bodyPanel">
+				<div id="leftPanel">
+					
+						
+						
+							
+
+
+<p class="smallText"><b>Welcome</b> John Smith</p>
+
+<h2>Account Services</h2>
+
+
+
+<ul>
+  <li><a href="openaccount.htm">Open New Account</a></li>
+  <li><a href="overview.htm">Accounts Overview</a></li>
+  <li><a href="transfer.htm">Transfer Funds</a></li>
+  <li><a href="billpay.htm">Bill Pay</a></li>
+  <li><a href="findtrans.htm">Find Transactions</a></li>
+  <li><a href="updateprofile.htm">Update Contact Info</a></li>
+  <li><a href="requestloan.htm">Request Loan</a></li>
+  <li><a href="logout.htm">Log Out</a></li>
+</ul>
+						
+					
+				</div>
+				<div id="rightPanel">
+					
+
+
+
+<div>
+
+<div id="billpayForm">
+    <h1 class="title">Bill Payment Service</h1>
+    <p>Enter payee information</p>
+
+    <form>
+        <table class="form2">
+            <tbody><tr>
+                <td align="right" width="30%"><b>Payee Name:</b></td>
+                <td width="20%"><input class="input" name="payee.name" style=""></td>
+                <td width="50%">
+                    <span style="display:none" id="validationModel-name" class="error">Payee name is required.</span>
+                </td>
+            </tr>
+            <tr>
+                <td align="right" width="30%"><b>Address:</b></td>
+                <td width="20%"><input class="input" name="payee.address.street" style=""></td>
+                <td width="50%"><span style="display:none" id="validationModel-address" class="error">Address is required.</span></td>
+            </tr>
+            <tr>
+                <td align="right" width="30%"><b>City:</b></td>
+                <td width="20%"><input class="input" name="payee.address.city" style=""></td>
+                <td width="50%"><span style="display:none" id="validationModel-city" class="error">City is required.</span></td>
+            </tr>
+            <tr>
+                <td align="right" width="30%"><b>State:</b></td>
+                <td width="20%"><input class="input" name="payee.address.state" style=""></td>
+                <td width="50%"><span style="display:none" id="validationModel-state" class="error">State is required.</span></td>
+            </tr>
+            <tr>
+                <td align="right" width="30%"><b>Zip Code:</b></td>
+                <td width="20%"><input class="input" name="payee.address.zipCode" style=""></td>
+                <td width="50%"><span style="display:none" id="validationModel-zipCode" class="error">Zip Code is required.</span></td>
+            </tr>
+            <tr>
+                
+                
+                <td align="right" width="30%"><b>Phone #:</b></td>
+                <td width="20%"><input id="38fb1961-977c-4c92-9512-05a2e403edbc" class="input phone-number-38fb1961-977c-4c92-9512-05a2e403edbc" name="payee.phoneNumber" style=""></td>
+                <td width="50%"><span style="display:none" id="validationModel-phoneNumber" class="error">Phone number is required.</span></td>
+            </tr>
+            <tr><td>&nbsp;</td></tr>
+            <tr>
+                <td align="right" width="30%"><b>Account #:</b></td>
+                <td><input class="input" name="payee.accountNumber" style=""></td>
+                <td width="50%">
+                    <span style="display:none" id="validationModel-account-empty" class="error">Account number is required.</span>
+                    <span style="display:none" id="validationModel-account-invalid" class="error">Please enter a valid number.</span>
+                </td>
+            </tr>
+            <tr>
+                <td align="right" width="30%"><b>Verify Account #:</b></td>
+                <td width="20%"><input class="input" name="verifyAccount" style=""></td>
+                <td width="50%">
+                    <span style="display:none" id="validationModel-verifyAccount-empty" class="error">Account number is required.</span>
+                    <span style="display:none" id="validationModel-verifyAccount-invalid" class="error">Please enter a valid number.</span>
+                    <span style="display:none" id="validationModel-verifyAccount-mismatch" class="error">The account numbers do not match.</span>
+                </td>
+            </tr>
+            <tr>
+                <td>&nbsp;</td>
+            </tr>
+            <tr>
+                <td align="right" width="30%"><b>Amount: $</b></td>
+                <td width="20%"><input class="input" name="amount" style=""></td>
+                <td width="50%">
+                    <span style="display:none" id="validationModel-amount-empty" class="error">The amount cannot be empty. </span>
+                    <span style="display:none" id="validationModel-amount-invalid" class="error">Please enter a valid amount.</span>
+                </td>
+            </tr>
+            <tr>
+                <td>&nbsp;</td>
+            </tr>
+            <tr>
+                <td align="right"><b>From account #:</b></td>
+                <td>
+                    <select name="fromAccountId" class="input">
+                        
+                            <option value="12678">12678</option>
+                        
+                            <option value="12789">12789</option>
+                        
+                            <option value="12900">12900</option>
+                        
+                            <option value="13011">13011</option>
+                        
+                            <option value="13122">13122</option>
+                        
+                            <option value="13233">13233</option>
+                        
+                            <option value="13344">13344</option>
+                        
+                            <option value="54321">54321</option>
+                        
+                            <option value="12345">12345</option>
+                        
+                            <option value="12456">12456</option>
+                        
+                            <option value="17007">17007</option>
+                        
+                            <option value="12567">12567</option>
+                        
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>&nbsp;</td>
+                <td><input type="button" class="button" value="Send Payment" style=""></td>
+            </tr>
+        </tbody></table>
+    </form>
+</div>
+
+<div id="billpayResult" style="display:none">
+    <h1 class="title">Bill Payment Complete</h1>
+    <p>
+        Bill Payment to <span id="payeeName"></span> in the amount of <span id="amount"></span> from account <span id="fromAccountId"></span> was successful.
+    </p>
+    <p>See Account Activity for more details.</p>
+</div>
+
+<div id="billpayError" style="display:none">
+     <h1 class="title">Error!</h1>
+     <p class="error">An internal error has occurred and has been logged.</p>
+</div>
+
+</div>
+
+<script type="text/javascript">
+	$(document).ready(function() {
+		var accountId= null;
+		var verifyAccount = null;
+		var amount = null;
+		var showForm = function(visible) {
+			if (visible) {
+				$("#billpayForm").show();
+			} else {
+				$("#billpayForm").hide();
+			}
+		}
+        var showResult = function(visible) {
+			if (visible) {
+				$("#billpayResult").show();
+			} else {
+				$("#billpayResult").hide();
+			}	
+        }
+        var showBillpayError = function(visible) {
+			if (visible) {
+				$("#billpayError").show();
+			} else {
+				$("#billpayError").hide();
+			}
+        }
+        var payee = {
+			address : { }
+        };
+        
+        var currencyFormat = function(amount) {
+            return '$' + amount.toFixed(2);
+        }
+        
+        var isNonEmpty = function(str) {
+        	return str !== null && str !== undefined && str.trim() !== '';
+        }
+        
+        var isNumber = function(num) {
+            return !isNaN(parseFloat(num));
+        }
+        
+        var validateNumber = function(num) {
+        	if (!isNonEmpty(num)) {
+        		return 'empty';
+        	} else if (isNaN(parseFloat(num))) {
+        		return 'invalid'
+        	}
+        	return null;
+        }
+        var createValidationModel = function() {
+        	return { 
+                name : true,
+                address : true,
+                city : true,
+                state : true,
+                zipCode : true,
+                phoneNumber : true,
+                account : null,
+                verifyAccount : null,
+                amount : null
+            };
+        }
+        
+        var updateModels = function() {
+        	//payee
+	        payee.name = $("[name='payee.name']").val();
+	        payee.address.street = $("[name='payee.address.street']").val();
+	        payee.address.city = $("[name='payee.address.city']").val();
+	        payee.address.state = $("[name='payee.address.state']").val();
+	        payee.address.zipCode = $("[name='payee.address.zipCode']").val();
+	        payee.phoneNumber = $("[name='payee.phoneNumber']").val();
+	        payee.accountNumber = $("[name='payee.accountNumber']").val();
+	        
+	        //account
+	        accountId = $("[name='fromAccountId']").val();
+	        verifyAccount = $("[name='verifyAccount']").val();
+	        amount = $("[name='amount']").val();
+        }
+        
+        var showError= function(error) {
+            validationModel = createValidationModel();
+            showForm(false);
+            showResult(false);
+            showBillpayError(true);
+            var status = error.status > 0 ? error.status : "timeout";
+            var data = error.data ? error.data : "Server timeout"
+            console.error("Server returned " + status + ": " + data);
+        }
+        
+        var validate = function() {
+            isNonEmpty(payee.name) ? $("#validationModel-name").hide() : $("#validationModel-name").show();
+        	var address = payee.address;
+            isNonEmpty(address.street) ? $("#validationModel-address").hide() : $("#validationModel-address").show();
+        	isNonEmpty(address.city) ? $("#validationModel-city").hide() : $("#validationModel-city").show();
+        	isNonEmpty(address.state) ? $("#validationModel-state").hide() : $("#validationModel-state").show();
+        	isNonEmpty(address.zipCode) ? $("#validationModel-zipCode").hide() : $("#validationModel-zipCode").show();
+        	isNonEmpty(payee.phoneNumber) ? $("#validationModel-phoneNumber").hide() : $("#validationModel-phoneNumber").show();
+        	var account = payee.accountNumber;
+        	validationModel.account = validateNumber(payee.accountNumber);
+        	validationModel.account == "empty" ? $("#validationModel-account-empty").show() : $("#validationModel-account-empty").hide();
+        	validationModel.account == "invalid" ? $("#validationModel-account-invalid").show() : $("#validationModel-account-invalid").hide();
+        	validationModel.verifyAccount = validateNumber(verifyAccount);
+        	if (validationModel.verifyAccount == null && verifyAccount !== account) {
+        		validationModel.verifyAccount = 'mismatch';
+        	}
+        	validationModel.verifyAccount == "empty" ? $("#validationModel-verifyAccount-empty").show() : $("#validationModel-verifyAccount-empty").hide();
+        	validationModel.verifyAccount == "mismatch" ? $("#validationModel-verifyAccount-mismatch").show() : $("#validationModel-verifyAccount-mismatch").hide();
+        	validationModel.verifyAccount == "invalid" ? $("#validationModel-verifyAccount-invalid").show() : $("#validationModel-verifyAccount-invalid").hide();
+        	
+        	validationModel.amount = validateNumber(amount)
+        	validationModel.amount == "empty" ? $("#validationModel-amount-empty").show() : $("#validationModel-amount-empty").hide();
+        	validationModel.amount == "invalid" ? $("#validationModel-amount-invalid").show() : $("#validationModel-amount-invalid").hide();
+			
+        	//look thru validation markers to see if any are visible
+        	return $("[id^=validationModel]:visible").length == 0;
+        }
+        
+        var validationModel = createValidationModel();
+        
+        var submit = function() {
+            if (!validate()) {
+            	return;
+            } 
+            $.ajax({
+            	  url: 'services_proxy/bank/billpay?accountId='+ accountId + '&amount=' + amount,
+            	  type: 'POST',
+            	  contentType: 'application/json',
+            	  data: JSON.stringify(payee),
+            	  success: function(response) {
+					$("#payeeName").text(response.payeeName);
+					$("#amount").text(currencyFormat(response.amount));
+              		$("#fromAccountId").text(response.accountId);
+              		showForm(false);
+					showResult(true);
+              		document.title = 'ParaBank | ' + 'Bill Payment Complete'
+            	  },
+            	  error: function(xhr, status, error) {
+            		  showError(error);
+            	  }
+            	});
+        }
+        $("input[type=button]").click(() => {
+        	updateModels();
+        	submit(); 
+		});
+	});
+</script>
+				</div>
+			</div>
+		</div>
+		
+
+
+<div id="footermainPanel">
+  <div id="footerPanel">
+    <ul>
+      <li><a href="index.htm">Home</a>| </li>
+      <li><a href="about.htm">About Us</a>| </li>
+      <li><a href="services.htm">Services</a>| </li>
+      <li><a href="http://www.parasoft.com/jsp/products.jsp">Products</a>| </li>
+      <li><a href="http://www.parasoft.com/jsp/pr/contacts.jsp">Locations</a>| </li>
+      <li><a href="http://forums.parasoft.com/">Forum</a>| </li>
+      <li><a href="sitemap.htm">Site Map</a>| </li>
+      <li><a href="contact.htm">Contact Us</a></li>
+    </ul>
+    <p class="copyright">© Parasoft. All rights reserved.</p>
+    <ul class="visit">
+      <li>Visit us at:</li>
+      <li><a href="http://www.parasoft.com/" target="_blank">www.parasoft.com</a></li>
+    </ul>
+  </div>
+</div>
+	
+
+</body></html>

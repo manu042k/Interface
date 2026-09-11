@@ -1,0 +1,1240 @@
+{"ts": 1789086378.456911, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.94}
+{"ts": 1789086378.517173, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.88}
+{"ts": 1789086378.8606741, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.53}
+{"ts": 1789086379.8862562, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086380.181725, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.21}
+{"ts": 1789086382.508588, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086382.567772, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086382.736863, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086382.804394, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.6}
+{"ts": 1789086382.985111, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.42}
+{"ts": 1789086383.0408561, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086383.2520058, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.16}
+{"ts": 1789086383.395416, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.01}
+{"ts": 1789086385.7170088, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086385.720447, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086385.722232, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086385.7234151, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086386.264971, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.2}
+{"ts": 1789086386.2772322, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.19}
+{"ts": 1789086386.28337, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.19}
+{"ts": 1789086386.9216142, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.55}
+{"ts": 1789086388.816275, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086388.8313658, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086388.8397388, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086388.941888, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086389.013712, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.48}
+{"ts": 1789086389.807413, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.69}
+{"ts": 1789086389.8188941, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.68}
+{"ts": 1789086389.932131, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.56}
+{"ts": 1789086391.699264, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086391.701851, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086391.702784, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086391.703579, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086391.937331, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789086391.9905071, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.53}
+{"ts": 1789086392.706998, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.81}
+{"ts": 1789086392.711513, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.8}
+{"ts": 1789086394.61445, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086394.650461, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086394.682664, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086394.686856, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086394.836364, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.71}
+{"ts": 1789086394.8638358, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.68}
+{"ts": 1789086394.897207, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.65}
+{"ts": 1789086394.9366798, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.61}
+{"ts": 1789086397.81533, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086397.9102888, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086398.231555, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.34}
+{"ts": 1789086398.265344, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086398.324123, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.24}
+{"ts": 1789086398.56022, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.01}
+{"ts": 1789086398.646411, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086398.83485, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.73}
+{"ts": 1789086401.429016, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086401.498389, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086401.821331, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.77}
+{"ts": 1789086402.178354, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086402.274341, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086402.563412, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.03}
+{"ts": 1789086402.5657349, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.02}
+{"ts": 1789086404.153546, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086404.2553291, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086404.385548, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.21}
+{"ts": 1789086405.42692, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086407.526756, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086407.764677, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.83}
+{"ts": 1789086410.391493, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086410.562589, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.04}
+{"ts": 1789086412.718644, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086413.1551628, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789086415.94138, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086416.2075279, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.39}
+{"ts": 1789086418.9935591, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086419.802912, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.8}
+{"ts": 1789086422.052352, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789086422.2454112, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.36}
+{"ts": 1789086425.172257, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086425.437921, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.17}
+{"ts": 1789086428.224444, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789086428.465065, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.14}
+{"ts": 1789086428.6801028, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.93}
+{"ts": 1789086431.318496, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086431.324369, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789086431.4726012, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.15}
+{"ts": 1789086433.0459142, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.58}
+{"ts": 1789086434.20192, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789086441.236022, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086443.657162, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086443.988658, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.15}
+{"ts": 1789086446.6605198, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086447.125546, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.01}
+{"ts": 1789086447.816111, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.32}
+{"ts": 1789086449.316372, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.83}
+{"ts": 1789086449.8228831, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086450.135808, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086450.412786, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.73}
+{"ts": 1789086453.011343, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789086463.406584, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789086463.57542, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.42}
+{"ts": 1789086466.69077, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789086466.985622, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.01}
+{"ts": 1789086468.1540182, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.84}
+{"ts": 1789086472.9507358, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789086489.29599, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.78}
+{"ts": 1789086489.731636, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789086492.610058, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789086492.725163, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.35}
+{"ts": 1789086495.5908911, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789086503.266773, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086505.006078, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.04}
+{"ts": 1789086506.707129, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.34}
+{"ts": 1789086507.148559, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.9}
+{"ts": 1789086509.094187, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.96}
+{"ts": 1789086509.398645, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086512.7141771, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.35}
+{"ts": 1789086515.432985, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086520.632162, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789086525.566428, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789087161.494911, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087161.771927, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.34}
+{"ts": 1789087164.229368, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087164.536268, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789087167.491512, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087168.668227, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.45}
+{"ts": 1789087170.50294, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087171.399761, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.72}
+{"ts": 1789087173.343724, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087173.578041, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.54}
+{"ts": 1789087176.397047, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087176.656456, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.46}
+{"ts": 1789087185.772095, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087187.543832, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789087187.879487, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.21}
+{"ts": 1789087190.426732, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087190.643796, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789087193.406993, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087193.809439, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.29}
+{"ts": 1789087196.401556, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789087196.536795, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.56}
+{"ts": 1789087199.5027578, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789087199.7623491, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.33}
+{"ts": 1789087202.196455, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.9}
+{"ts": 1789087204.8070269, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.29}
+{"ts": 1789087289.3187158, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087289.587917, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.37}
+{"ts": 1789087292.454966, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087292.709676, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.25}
+{"ts": 1789087295.3103712, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087296.427267, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.54}
+{"ts": 1789087298.321307, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087299.4150982, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.55}
+{"ts": 1789087301.171635, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087301.4145322, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.55}
+{"ts": 1789087304.2995589, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087304.550643, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.42}
+{"ts": 1789087307.147815, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087307.3815098, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.59}
+{"ts": 1789087310.061756, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087310.346538, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.62}
+{"ts": 1789087313.194776, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087313.371413, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.6}
+{"ts": 1789087316.778191, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087316.997949, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.97}
+{"ts": 1789087319.2215538, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087319.4410071, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.53}
+{"ts": 1789087322.416296, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087322.681906, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.29}
+{"ts": 1789087325.2356732, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087325.42808, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.55}
+{"ts": 1789087328.313594, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789087328.6891892, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.29}
+{"ts": 1789087331.453812, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087331.770261, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.21}
+{"ts": 1789087334.201271, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087341.948941, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789087342.0695271, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.59}
+{"ts": 1789087345.448261, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789087345.676689, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.99}
+{"ts": 1789087347.824478, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.84}
+{"ts": 1789087465.4954119, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087465.856525, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.44}
+{"ts": 1789087469.907284, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087470.2346282, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.06}
+{"ts": 1789087472.4884338, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087475.404969, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789087475.580362, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.24}
+{"ts": 1789087478.831223, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789087478.9571478, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.87}
+{"ts": 1789087481.050827, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789087481.243755, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789087484.0232801, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.8}
+{"ts": 1789087486.803335, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.02}
+{"ts": 1789087489.912974, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.92}
+{"ts": 1789087561.617755, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087561.867305, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.68}
+{"ts": 1789087564.235463, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087564.52147, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.03}
+{"ts": 1789087567.385451, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087570.938192, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789087571.300603, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.65}
+{"ts": 1789087573.493029, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087574.542516, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.41}
+{"ts": 1789087576.663882, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789087576.967534, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.98}
+{"ts": 1789087579.489909, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087579.638678, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.31}
+{"ts": 1789087582.272457, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087582.374418, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789087585.731636, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087585.849865, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.1}
+{"ts": 1789087588.5292969, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087588.759268, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.19}
+{"ts": 1789087621.292906, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789087621.452296, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.5}
+{"ts": 1789087624.826661, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087624.993527, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.97}
+{"ts": 1789087627.492231, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087627.669696, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.3}
+{"ts": 1789087704.064685, "run_id": "router", "step": null, "event": "provider_rotate", "provider": "openrouter", "reason": "unavailable"}
+{"ts": 1789087705.4878771, "run_id": "router", "step": null, "event": "llm_call", "provider": "groq", "model": "openai/gpt-oss-20b", "tool": "click", "rotated": true}
+{"ts": 1789087705.67512, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "groq", "wait_s": 0.79}
+{"ts": 1789087706.690312, "run_id": "router", "step": null, "event": "provider_rotate", "provider": "groq", "reason": "rate_limited", "cooldown_s": 7.0}
+{"ts": 1789087781.9465668, "run_id": "router", "step": null, "event": "provider_degraded", "provider": "nvidia_nim"}
+{"ts": 1789087781.95021, "run_id": "router", "step": null, "event": "provider_rotate", "provider": "nvidia_nim", "reason": "unavailable"}
+{"ts": 1789087786.151083, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789087786.638282, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.32}
+{"ts": 1789087789.167925, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789087789.59475, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.36}
+{"ts": 1789087792.3259919, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087792.4937012, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.46}
+{"ts": 1789087795.666495, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087795.929326, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.03}
+{"ts": 1789087798.592184, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087798.733719, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.23}
+{"ts": 1789087801.254543, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087801.512445, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789087804.21837, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087804.477282, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789087807.5058298, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087807.786332, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.18}
+{"ts": 1789087810.922243, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087811.187455, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.78}
+{"ts": 1789087814.510067, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087814.7704341, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.2}
+{"ts": 1789087816.159754, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789087816.5228631, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.44}
+{"ts": 1789087819.233533, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087819.399842, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.57}
+{"ts": 1789087822.185316, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087822.602389, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.37}
+{"ts": 1789087844.256578, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789087844.3676429, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.53}
+{"ts": 1789087847.199361, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087863.775726, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087863.914263, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789087866.944248, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087883.624485, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087883.844749, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.27}
+{"ts": 1789087958.0649312, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789087958.178732, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789087960.918006, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087978.058819, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789087994.822643, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088630.654699, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088630.9288561, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.12}
+{"ts": 1789088633.382891, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088633.620382, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.43}
+{"ts": 1789088637.438383, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789088640.11578, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789088640.312151, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.12}
+{"ts": 1789088642.8323781, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789088643.04185, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.4}
+{"ts": 1789088645.548427, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789088646.527414, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.91}
+{"ts": 1789088648.59553, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088648.934608, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.51}
+{"ts": 1789088651.794079, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088652.059367, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.39}
+{"ts": 1789088654.72695, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789088655.09851, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.35}
+{"ts": 1789088657.6546292, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088657.837013, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.61}
+{"ts": 1789088660.624119, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789088660.9665039, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.48}
+{"ts": 1789088663.9842482, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088664.275627, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.18}
+{"ts": 1789088666.7929869, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088667.031592, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.42}
+{"ts": 1789088670.637592, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088671.021621, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.43}
+{"ts": 1789088797.330275, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088797.599731, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.3}
+{"ts": 1789088799.976131, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088800.191322, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.71}
+{"ts": 1789088803.121257, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789088803.5827599, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.32}
+{"ts": 1789088806.312035, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088806.62721, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.27}
+{"ts": 1789088809.517876, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088809.8019772, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.1}
+{"ts": 1789088812.375699, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789088812.802895, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.1}
+{"ts": 1789091841.492136, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789091841.804981, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.62}
+{"ts": 1789091843.469528, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789091843.899282, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.53}
+{"ts": 1789091846.869044, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789091847.766878, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.66}
+{"ts": 1789091849.732927, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789091850.034963, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.4}
+{"ts": 1789091852.777984, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789091852.9382222, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789091855.683177, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789091856.525026, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.91}
+{"ts": 1789091858.703486, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789091858.9017448, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.53}
+{"ts": 1789091861.673693, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789091861.83155, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.6}
+{"ts": 1789091864.839396, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789091865.789132, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.65}
+{"ts": 1789091867.669677, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789091867.924716, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.51}
+{"ts": 1789091870.965375, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789091871.2085462, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.23}
+{"ts": 1789091873.5982249, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789091874.4669282, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.97}
+{"ts": 1789091876.548084, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789091876.7906618, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.65}
+{"ts": 1789091879.707835, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789091879.984011, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.46}
+{"ts": 1789091882.992168, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789091884.057729, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.39}
+{"ts": 1789091885.64831, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789091885.988838, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.46}
+{"ts": 1789092176.731698, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092177.1719859, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.36}
+{"ts": 1789092178.988918, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092179.29882, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.23}
+{"ts": 1789092182.251607, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789092184.7960021, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789092185.734208, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.9}
+{"ts": 1789092187.9192162, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092188.162933, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789092191.039176, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789092191.420109, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.22}
+{"ts": 1789092193.889493, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789092194.017272, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.62}
+{"ts": 1789092196.852431, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789092197.1082282, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.53}
+{"ts": 1789092199.9587111, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.68}
+{"ts": 1789092202.73759, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.9}
+{"ts": 1789092376.8167849, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092377.1517599, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.12}
+{"ts": 1789092379.792037, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092380.071269, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.2}
+{"ts": 1789092382.487527, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789092383.56428, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.71}
+{"ts": 1789092385.559813, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789092386.388051, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.89}
+{"ts": 1789092388.540607, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092388.9213078, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.35}
+{"ts": 1789092391.550397, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789092392.0297, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.25}
+{"ts": 1789092394.7605278, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789092395.125452, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.15}
+{"ts": 1789092397.7414799, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789092398.142137, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.14}
+{"ts": 1789092400.5929139, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789092401.015875, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.27}
+{"ts": 1789092403.6196392, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789092417.6734731, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789092417.7698822, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.35}
+{"ts": 1789092420.788262, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092420.93785, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.18}
+{"ts": 1789092423.730288, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789092423.862002, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.26}
+{"ts": 1789092426.8498619, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092443.143496, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789092443.237748, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.75}
+{"ts": 1789092446.2, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092446.3295202, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.66}
+{"ts": 1789092449.0667598, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789092449.20134, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.79}
+{"ts": 1789092452.570705, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789092452.679608, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.31}
+{"ts": 1789092455.1049201, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789092455.2277682, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.77}
+{"ts": 1789092458.513456, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092474.928289, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789092475.048074, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.61}
+{"ts": 1789092478.1571789, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092494.854012, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092511.585193, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789092511.8257961, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.2}
+{"ts": 1789092514.1391869, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092569.53556, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789092569.6421309, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.51}
+{"ts": 1789092572.522571, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092572.838378, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.32}
+{"ts": 1789092789.327708, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092789.6907809, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.62}
+{"ts": 1789092791.549035, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092791.875844, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789092794.579894, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789092795.65764, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.67}
+{"ts": 1789092797.759579, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092797.880113, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789092800.41979, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092800.593908, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.74}
+{"ts": 1789092803.664, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789092803.887483, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789092858.548583, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092858.86191, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789092861.708148, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789092862.0840058, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.36}
+{"ts": 1789092864.602287, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789092865.568628, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.87}
+{"ts": 1789092867.639107, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092867.82901, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.62}
+{"ts": 1789092870.8111281, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092870.977686, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789092873.802183, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092873.948123, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.5}
+{"ts": 1789092876.581536, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092876.7354171, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.71}
+{"ts": 1789092880.023114, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092880.193303, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.26}
+{"ts": 1789092882.931199, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092883.137884, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.31}
+{"ts": 1789092885.9616508, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092886.246175, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.21}
+{"ts": 1789092933.507456, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092933.71453, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.46}
+{"ts": 1789092936.4369369, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092936.591279, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.59}
+{"ts": 1789092940.1296551, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789092940.487023, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.69}
+{"ts": 1789093360.5313542, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093360.773536, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.24}
+{"ts": 1789093363.192075, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093363.4638379, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.55}
+{"ts": 1789093366.973953, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789093386.178302, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789093386.303442, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.0}
+{"ts": 1789093388.567756, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789093388.7846851, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.52}
+{"ts": 1789093391.5352, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789093391.782312, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.53}
+{"ts": 1789093419.211013, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093419.5607831, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.41}
+{"ts": 1789093422.2924101, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093422.5356941, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.44}
+{"ts": 1789093425.420853, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789093428.676506, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789093428.846146, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.3}
+{"ts": 1789093431.2306151, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789093431.3599691, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.79}
+{"ts": 1789093435.870368, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789093435.974565, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.17}
+{"ts": 1789093438.050946, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789093438.223507, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.93}
+{"ts": 1789093551.093411, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789093551.957299, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.9}
+{"ts": 1789093554.2084439, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789093554.366762, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789093557.196511, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "scroll", "rotated": false}
+{"ts": 1789093557.3645692, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789093560.020382, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "scroll", "rotated": false}
+{"ts": 1789093560.279894, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789093564.9509041, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789093657.390147, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093657.620192, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.48}
+{"ts": 1789093660.597033, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093660.904406, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.19}
+{"ts": 1789093663.480282, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789093664.994638, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.1}
+{"ts": 1789093666.177496, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789093667.415733, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.69}
+{"ts": 1789093669.211104, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093669.469176, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.63}
+{"ts": 1789093672.4069068, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093672.608874, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.5}
+{"ts": 1789093675.604979, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789093675.9432352, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.16}
+{"ts": 1789093678.3018172, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789093678.675618, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.43}
+{"ts": 1789093681.919285, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789093682.083462, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.02}
+{"ts": 1789093684.261012, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789093684.453181, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.66}
+{"ts": 1789093687.110521, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.0}
+{"ts": 1789093689.972333, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.14}
+{"ts": 1789093692.8543239, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.26}
+{"ts": 1789093726.364774, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789093727.4501061, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.59}
+{"ts": 1789093729.184049, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093729.481639, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.56}
+{"ts": 1789093732.792253, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093732.9778078, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.07}
+{"ts": 1789093735.250995, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093735.4808562, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.57}
+{"ts": 1789093739.700188, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789093739.951987, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.1}
+{"ts": 1789093742.064696, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789093744.784735, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789093744.911777, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.27}
+{"ts": 1789093747.832213, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789093747.9515038, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.23}
+{"ts": 1789093750.2037618, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789093750.3767, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.81}
+{"ts": 1789094820.6457999, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789094820.884382, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.36}
+{"ts": 1789094823.9759412, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789094824.474249, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.77}
+{"ts": 1789094826.6108532, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789094827.593129, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.65}
+{"ts": 1789094829.424156, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789094830.369057, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.88}
+{"ts": 1789094832.427854, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789094832.857873, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.39}
+{"ts": 1789094835.529664, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789094835.933202, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.32}
+{"ts": 1789094838.425803, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789094855.4398751, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789094855.5795178, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789094858.313355, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789094858.6172202, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.44}
+{"ts": 1789094861.478186, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789094863.977279, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.08}
+{"ts": 1789094866.715868, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.34}
+{"ts": 1789094919.197865, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789094919.4692538, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.34}
+{"ts": 1789094922.383775, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789094922.618231, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.19}
+{"ts": 1789094925.32598, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789094926.4754062, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.33}
+{"ts": 1789094928.147573, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789094929.1060731, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.7}
+{"ts": 1789094931.032452, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789094931.26745, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.54}
+{"ts": 1789094934.2618408, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789094934.617517, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.2}
+{"ts": 1789094937.823593, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789094938.176065, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.64}
+{"ts": 1789094940.114302, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789095061.0843189, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789095061.198675, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.07}
+{"ts": 1789095064.777257, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789095065.014433, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.26}
+{"ts": 1789095066.522035, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.75}
+{"ts": 1789095070.416304, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.86}
+{"ts": 1789095072.295609, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.98}
+{"ts": 1789096868.60845, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789096869.87068, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.29}
+{"ts": 1789096871.4737349, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789096871.7965288, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.36}
+{"ts": 1789096874.680287, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789096874.934487, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.23}
+{"ts": 1789096877.429622, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789096877.711421, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789096880.534018, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789096880.8005362, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.36}
+{"ts": 1789096883.333493, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789096883.6010408, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.57}
+{"ts": 1789096886.307223, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789096886.588872, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789096889.495229, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789096889.677921, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789096892.8314629, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789096893.0440361, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.13}
+{"ts": 1789096895.57248, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789096895.7433238, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.43}
+{"ts": 1789096898.477898, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789096898.763197, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.41}
+{"ts": 1789096901.340333, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789096901.639193, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.54}
+{"ts": 1789096904.56177, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789096905.652792, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.52}
+{"ts": 1789096907.3554718, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789096907.520973, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.66}
+{"ts": 1789096910.473342, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789096910.771553, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.41}
+{"ts": 1789097067.288883, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789097068.461157, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.34}
+{"ts": 1789097069.9225311, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097070.259118, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.54}
+{"ts": 1789097073.025109, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097073.265141, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.54}
+{"ts": 1789097076.127115, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097076.3926442, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.41}
+{"ts": 1789097079.270249, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097079.5472388, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.26}
+{"ts": 1789097082.283031, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097082.54191, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.27}
+{"ts": 1789097085.097944, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097085.269035, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.54}
+{"ts": 1789097088.0996668, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097088.278225, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.53}
+{"ts": 1789097091.201525, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097091.5069299, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.3}
+{"ts": 1789097094.253813, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097094.521145, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.29}
+{"ts": 1789097097.052075, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097097.29487, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.52}
+{"ts": 1789097100.33499, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097100.682875, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.13}
+{"ts": 1789097103.782697, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789097104.495326, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.32}
+{"ts": 1789097106.059241, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097106.269063, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.55}
+{"ts": 1789097109.223364, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097109.5072372, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.31}
+{"ts": 1789097112.2145789, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097112.587925, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.23}
+{"ts": 1789097187.062805, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097187.212064, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.31}
+{"ts": 1789097189.869898, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097190.136896, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.39}
+{"ts": 1789097192.9586308, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097193.124796, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.41}
+{"ts": 1789097195.6598861, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097195.937942, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.59}
+{"ts": 1789097198.8516638, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097199.14206, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.39}
+{"ts": 1789097201.7697642, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097201.987106, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.55}
+{"ts": 1789097204.791821, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097205.0556722, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.48}
+{"ts": 1789097207.79021, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097208.061128, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789097210.728983, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097211.000205, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.54}
+{"ts": 1789097215.2754948, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789097219.3154602, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789103018.3314729, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789103018.723454, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.96}
+{"ts": 1789103021.243238, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789103021.566574, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.12}
+{"ts": 1789103024.045707, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789103024.983735, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.7}
+{"ts": 1789103026.7387269, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789103027.572114, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.12}
+{"ts": 1789103029.872161, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789103030.2507432, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.44}
+{"ts": 1789103032.9533749, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789103033.3891609, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.3}
+{"ts": 1789103036.075598, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789103036.404276, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.29}
+{"ts": 1789103039.06579, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789103039.190677, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.5}
+{"ts": 1789103041.794774, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789103042.015189, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.68}
+{"ts": 1789103044.5827992, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.11}
+{"ts": 1789103047.6727, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.03}
+{"ts": 1789103050.840246, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.86}
+{"ts": 1789103389.538048, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789103389.7563698, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.39}
+{"ts": 1789103393.287733, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789103393.641373, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.51}
+{"ts": 1789103395.4024372, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789103396.315212, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.84}
+{"ts": 1789103398.317504, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789103399.477589, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.68}
+{"ts": 1789103401.665349, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789103401.990565, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.16}
+{"ts": 1789103404.7893372, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789103405.205266, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.95}
+{"ts": 1789103407.254308, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789103407.581911, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.57}
+{"ts": 1789103410.557268, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789103410.700191, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.46}
+{"ts": 1789103413.406812, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789103413.5796192, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789103416.380217, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789103417.122468, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.04}
+{"ts": 1789103419.2148962, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789103419.4649348, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.7}
+{"ts": 1789103423.794415, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789103424.082844, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.08}
+{"ts": 1789103425.469758, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789103425.8675368, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.3}
+{"ts": 1789103428.407038, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789103428.804493, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.36}
+{"ts": 1789103431.549345, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789103431.6785579, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789103434.6056771, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789103434.83498, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.34}
+{"ts": 1789103437.028672, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.14}
+{"ts": 1789103439.955934, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.23}
+{"ts": 1789103442.904066, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.29}
+{"ts": 1789104060.299291, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104060.612969, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.19}
+{"ts": 1789104063.542311, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104063.8178198, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.99}
+{"ts": 1789104066.1666, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104067.297326, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.51}
+{"ts": 1789104069.06247, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104070.190068, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.62}
+{"ts": 1789104072.469975, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104072.913399, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.9}
+{"ts": 1789104074.856145, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104075.3454971, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789104077.9192488, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104094.481327, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789104094.61268, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.57}
+{"ts": 1789104097.251004, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104097.6848068, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789104100.449431, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104101.0560179, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.12}
+{"ts": 1789104131.701617, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104132.025415, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.5}
+{"ts": 1789104134.918491, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104135.223086, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.3}
+{"ts": 1789104137.8201542, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104138.867269, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.66}
+{"ts": 1789104140.820085, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104141.608931, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.92}
+{"ts": 1789104143.756484, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104144.153832, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.38}
+{"ts": 1789104146.598101, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104146.870102, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.66}
+{"ts": 1789104150.0760992, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104150.445905, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.09}
+{"ts": 1789104152.997816, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104153.889683, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.65}
+{"ts": 1789104155.820149, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104156.090327, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789104158.6249611, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104159.040556, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.5}
+{"ts": 1789104162.106518, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104162.358206, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.18}
+{"ts": 1789104164.9239092, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104165.32263, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.22}
+{"ts": 1789104171.81251, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789104174.4918451, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789104174.724959, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.24}
+{"ts": 1789104175.947212, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.02}
+{"ts": 1789104178.685077, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.28}
+{"ts": 1789104181.766732, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.2}
+{"ts": 1789104230.888654, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104231.1546519, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.46}
+{"ts": 1789104234.0572789, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104234.348338, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.27}
+{"ts": 1789104236.824907, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104237.856949, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.76}
+{"ts": 1789104239.991114, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104240.891146, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.73}
+{"ts": 1789104242.6542552, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104243.008478, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.61}
+{"ts": 1789104245.8808289, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104246.24756, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.37}
+{"ts": 1789104248.721496, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104249.2180228, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.41}
+{"ts": 1789104279.8842502, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104279.9813461, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.69}
+{"ts": 1789104283.013161, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104283.1802912, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.5}
+{"ts": 1789104285.986059, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104286.228346, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.46}
+{"ts": 1789104288.997061, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104289.3293068, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.36}
+{"ts": 1789104293.197505, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104293.322548, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.37}
+{"ts": 1789104295.0489411, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104295.480192, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.21}
+{"ts": 1789104297.950698, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104298.410069, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.28}
+{"ts": 1789104301.352735, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104301.770742, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.92}
+{"ts": 1789104303.805772, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789104303.978092, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.71}
+{"ts": 1789104307.0595012, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104307.895436, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.8}
+{"ts": 1789104310.032851, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104310.268815, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.43}
+{"ts": 1789104313.1030989, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104313.3407948, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.35}
+{"ts": 1789104316.0714188, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104316.3084219, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.39}
+{"ts": 1789104319.392014, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104319.579406, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.12}
+{"ts": 1789104321.893711, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104322.22666, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789104325.0063019, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104325.428818, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.27}
+{"ts": 1789104328.027647, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104328.300391, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.4}
+{"ts": 1789104331.0500019, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104331.283576, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.42}
+{"ts": 1789104333.888711, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104334.228205, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789104336.788269, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104337.084863, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.62}
+{"ts": 1789104352.8805661, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789104353.140535, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.48}
+{"ts": 1789104355.8766289, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789104356.1360269, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789104765.6404538, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104765.9219441, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.42}
+{"ts": 1789104768.713446, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104769.053154, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.29}
+{"ts": 1789104771.6051068, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104772.544729, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.8}
+{"ts": 1789104774.4808462, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104775.277872, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.07}
+{"ts": 1789104777.48483, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104777.874562, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789104780.778242, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104797.84658, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "observe", "rotated": false}
+{"ts": 1789104797.953071, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.05}
+{"ts": 1789104800.39184, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104800.765789, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.24}
+{"ts": 1789104803.161102, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104803.709451, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.3}
+{"ts": 1789104949.2466629, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104949.530112, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.51}
+{"ts": 1789104952.603626, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789104952.899311, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.14}
+{"ts": 1789104955.390659, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104956.4642692, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.58}
+{"ts": 1789104958.5351639, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104959.369729, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.68}
+{"ts": 1789104961.43439, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789104961.804183, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.25}
+{"ts": 1789104964.6858602, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104965.0501409, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.0}
+{"ts": 1789104967.706963, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789104968.061358, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.0}
+{"ts": 1789104971.019441, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789104971.247485, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.81}
+{"ts": 1789104973.255431, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789104973.422428, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.64}
+{"ts": 1789104976.108201, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789104976.332949, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.73}
+{"ts": 1789104978.9946449, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.07}
+{"ts": 1789104981.7704341, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.3}
+{"ts": 1789104985.283304, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.79}
+{"ts": 1789105586.3310459, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789105586.528896, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.37}
+{"ts": 1789105589.183882, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789105589.4331892, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789105592.0885801, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789105592.416057, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789105595.0834079, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789105595.30675, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.61}
+{"ts": 1789105598.031142, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789105598.214664, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.7}
+{"ts": 1789105601.09702, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789105601.414716, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.5}
+{"ts": 1789105718.3547862, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789105718.5904682, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789105721.4565902, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789105722.0047119, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.17}
+{"ts": 1789105724.158376, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789105724.829663, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.34}
+{"ts": 1789105727.320074, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789105727.852138, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.32}
+{"ts": 1789105730.377955, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789105730.9463491, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.23}
+{"ts": 1789105733.2761111, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789105733.8226151, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.35}
+{"ts": 1789105736.215185, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789105736.4942222, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.68}
+{"ts": 1789105739.347643, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789105739.6304371, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.55}
+{"ts": 1789105742.4581718, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789105742.760625, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.43}
+{"ts": 1789105745.301952, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789105745.8823402, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.3}
+{"ts": 1789105748.304362, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789105748.820336, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.37}
+{"ts": 1789105751.315275, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789105751.525434, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.66}
+{"ts": 1789105754.3218591, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789105754.539398, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.65}
+{"ts": 1789105757.084341, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.11}
+{"ts": 1789106393.070909, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789106393.606912, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.86}
+{"ts": 1789106395.81883, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789106396.093531, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.37}
+{"ts": 1789106398.801614, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106399.355188, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.11}
+{"ts": 1789106401.9557009, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106402.573225, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.9}
+{"ts": 1789106404.731748, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106405.0753028, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.4}
+{"ts": 1789106408.245095, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106408.784621, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.69}
+{"ts": 1789106410.8555799, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106411.4863858, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.99}
+{"ts": 1789106414.025703, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106414.506477, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.97}
+{"ts": 1789106416.809063, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789106417.031311, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789106419.860211, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789106420.078868, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.4}
+{"ts": 1789106423.052683, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789106423.34062, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.14}
+{"ts": 1789106590.942697, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789106591.1790972, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.03}
+{"ts": 1789106593.511599, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789106593.8359082, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.37}
+{"ts": 1789106596.456175, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106596.997235, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.21}
+{"ts": 1789106601.943615, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106603.9950268, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106604.41935, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.04}
+{"ts": 1789106606.937244, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106607.358721, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.1}
+{"ts": 1789106609.862108, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789106610.212464, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.24}
+{"ts": 1789106612.573955, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789106612.824886, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.63}
+{"ts": 1789106616.013036, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106616.360105, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.1}
+{"ts": 1789106624.911993, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789106626.385655, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789106626.645777, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789106629.484899, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.66}
+{"ts": 1789106632.174764, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.97}
+{"ts": 1789106634.8526049, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 2.29}
+{"ts": 1789106950.894311, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789106951.1237628, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.34}
+{"ts": 1789106953.939939, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106954.522215, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.94}
+{"ts": 1789106957.213772, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106957.370355, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.09}
+{"ts": 1789106959.817878, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106960.457013, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.01}
+{"ts": 1789106962.8491971, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789106963.477494, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.99}
+{"ts": 1789106965.841099, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789106965.9737349, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789106968.921367, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789106969.16362, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.31}
+{"ts": 1789106971.628499, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789106971.80186, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.67}
+{"ts": 1789106979.142441, "run_id": "router", "step": null, "event": "provider_rotate", "provider": "openrouter", "reason": "error"}
+{"ts": 1789106980.158002, "run_id": "router", "step": null, "event": "llm_call", "provider": "groq", "model": "openai/gpt-oss-20b", "tool": "done", "rotated": true}
+{"ts": 1789107118.5687811, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789107118.821901, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.1}
+{"ts": 1789107121.451021, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107534.332528, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789107534.623544, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.25}
+{"ts": 1789107537.2075, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107597.762177, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789107598.0445151, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.17}
+{"ts": 1789107599.4541461, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107600.2305121, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.98}
+{"ts": 1789107602.352533, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107602.939151, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.28}
+{"ts": 1789107605.739902, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107606.348496, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.87}
+{"ts": 1789107608.403306, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107608.979323, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.24}
+{"ts": 1789107611.487112, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789107611.8187819, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.4}
+{"ts": 1789107615.354461, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789107615.6248, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.59}
+{"ts": 1789107617.369836, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789107617.6799731, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.54}
+{"ts": 1789107620.458773, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107621.0402298, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.18}
+{"ts": 1789107623.650558, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107624.124906, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.1}
+{"ts": 1789107626.760118, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789107643.497244, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789107659.9691572, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789107676.550411, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789107693.00915, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.76}
+{"ts": 1789107739.4461372, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789107739.762135, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789107742.537141, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789107742.839042, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.5}
+{"ts": 1789107745.617625, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107746.2072399, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.13}
+{"ts": 1789107748.7637608, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107749.294848, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.05}
+{"ts": 1789107751.941403, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107752.4020422, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.94}
+{"ts": 1789107754.582367, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107755.1346061, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.21}
+{"ts": 1789107757.6725812, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789107758.0718348, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.27}
+{"ts": 1789107760.404355, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789107760.882488, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.46}
+{"ts": 1789107763.438221, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789107763.681403, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.67}
+{"ts": 1789107766.586345, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107767.254467, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.09}
+{"ts": 1789107769.865154, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107770.3179572, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.03}
+{"ts": 1789107772.6694882, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789107772.771879, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789107776.021089, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789107776.204674, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.15}
+{"ts": 1789107779.061394, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789107779.14851, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.2}
+{"ts": 1789107781.8456728, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789107782.006516, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.35}
+{"ts": 1789107784.839654, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789107785.044447, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.31}
+{"ts": 1789107787.6618931, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789107787.884966, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789107811.420307, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789107811.8223429, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789107814.703479, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107815.498846, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.81}
+{"ts": 1789107817.845255, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107818.451562, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.86}
+{"ts": 1789107821.643902, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107822.216704, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.1}
+{"ts": 1789107823.479406, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107823.945004, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.37}
+{"ts": 1789107826.927729, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789107827.342707, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.97}
+{"ts": 1789107829.631933, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789107830.0565279, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.26}
+{"ts": 1789107832.512387, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789107832.773707, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.54}
+{"ts": 1789107835.659861, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107836.1630368, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.16}
+{"ts": 1789107845.965813, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789107847.84605, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789107847.968508, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789107850.838499, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789107850.977536, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.44}
+{"ts": 1789107853.66322, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789107853.856478, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.56}
+{"ts": 1789107856.779113, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789107857.043156, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.38}
+{"ts": 1789107859.806816, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.62}
+{"ts": 1789107862.5706, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.86}
+{"ts": 1789138564.0705988, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789138564.177747, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.79}
+{"ts": 1789138566.481212, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789138566.6272461, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.34}
+{"ts": 1789138569.2685282, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789138569.32778, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.65}
+{"ts": 1789138572.247614, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789138572.361475, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.61}
+{"ts": 1789138575.392939, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789138575.526786, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789138578.0490172, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789138578.1930912, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.78}
+{"ts": 1789138581.3795571, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789138581.410377, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.57}
+{"ts": 1789138584.051008, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789138584.1051059, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.88}
+{"ts": 1789138587.3080719, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789138587.3778281, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.6}
+{"ts": 1789138591.359935, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.63}
+{"ts": 1789138593.239737, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789138978.5978339, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789138978.692904, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.23}
+{"ts": 1789138981.408809, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789138981.575723, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.35}
+{"ts": 1789138984.357725, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789138984.491103, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.43}
+{"ts": 1789138987.108895, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789138987.2591958, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.67}
+{"ts": 1789138990.343007, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789138990.478393, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.45}
+{"ts": 1789138993.073384, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789138993.11363, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.81}
+{"ts": 1789138996.204745, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789138996.243412, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.69}
+{"ts": 1789138999.27931, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789138999.375055, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.55}
+{"ts": 1789139003.251549, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.68}
+{"ts": 1789139005.336948, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139005.388907, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.54}
+{"ts": 1789139036.111691, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789139036.194186, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.54}
+{"ts": 1789139039.250029, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139039.373358, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.36}
+{"ts": 1789139042.21071, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139042.272017, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.46}
+{"ts": 1789139045.184166, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139045.3233652, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.41}
+{"ts": 1789139048.0694962, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139048.208545, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.53}
+{"ts": 1789139051.3162591, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139051.443169, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.3}
+{"ts": 1789139054.184513, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139054.228114, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.51}
+{"ts": 1789139056.912952, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139056.96097, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.78}
+{"ts": 1789139059.991248, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139060.1310909, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.61}
+{"ts": 1789139064.2508879, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.49}
+{"ts": 1789139066.1974359, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139066.27317, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789139132.9467819, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789139133.05825, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.56}
+{"ts": 1789139135.884453, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139136.0231419, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.6}
+{"ts": 1789139138.86548, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139139.00598, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.62}
+{"ts": 1789139141.677662, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139141.825309, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.8}
+{"ts": 1789139145.022838, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139145.1561332, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789139147.840922, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139147.894689, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.73}
+{"ts": 1789139151.216096, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139151.258683, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.37}
+{"ts": 1789139154.4469771, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139154.5251079, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.1}
+{"ts": 1789139161.76854, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139161.8215811, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.37}
+{"ts": 1789139222.598392, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789139222.7091908, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.4}
+{"ts": 1789139225.341963, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139225.472026, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.65}
+{"ts": 1789139228.348997, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139228.472773, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.65}
+{"ts": 1789139231.7286882, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139231.873155, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.25}
+{"ts": 1789139242.92315, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789139244.6772811, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139244.723424, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.43}
+{"ts": 1789139247.6176572, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139247.65903, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.5}
+{"ts": 1789139250.5079, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789139250.606251, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.55}
+{"ts": 1789139254.4785779, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.68}
+{"ts": 1789139256.2709398, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789139256.293959, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.87}
+{"ts": 1789139259.3704488, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789139259.423118, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.74}
+{"ts": 1789139262.787505, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789139262.860082, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.31}
+{"ts": 1789139265.784529, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789139265.8565388, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.31}
+{"ts": 1789139268.2503302, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789139268.303571, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.87}
+{"ts": 1789140568.90564, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789140569.024724, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.39}
+{"ts": 1789140571.614572, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789140571.736311, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.68}
+{"ts": 1789140575.117496, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789140575.253392, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.17}
+{"ts": 1789140577.548716, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789140577.689287, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.73}
+{"ts": 1789140580.5945559, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789140580.6561458, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.77}
+{"ts": 1789140583.534156, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789140583.5624042, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.86}
+{"ts": 1789140587.292904, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789140587.318856, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.11}
+{"ts": 1789141175.6406112, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789141175.744231, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.27}
+{"ts": 1789141178.623261, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141178.7585669, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.26}
+{"ts": 1789141182.499894, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141182.6250482, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.39}
+{"ts": 1789141184.379592, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141184.526741, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.49}
+{"ts": 1789141187.545741, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141187.69448, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.33}
+{"ts": 1789141190.7559092, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789141190.7966871, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.22}
+{"ts": 1789141193.292087, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789141193.361005, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.66}
+{"ts": 1789141196.5430279, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "select", "rotated": false}
+{"ts": 1789141196.608043, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.42}
+{"ts": 1789141199.2422872, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141212.795323, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789141212.858071, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.47}
+{"ts": 1789141215.647139, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789141215.691135, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.64}
+{"ts": 1789141222.061549, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}
+{"ts": 1789141582.5297348, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789141582.611156, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.41}
+{"ts": 1789141585.128913, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141585.2552571, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.71}
+{"ts": 1789141588.54455, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141588.62375, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.35}
+{"ts": 1789141591.161974, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141591.305581, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.67}
+{"ts": 1789141594.0427918, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141594.1897018, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.78}
+{"ts": 1789141597.169865, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141597.4761002, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.5}
+{"ts": 1789141600.52542, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789141600.575944, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.4}
+{"ts": 1789141603.922511, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789141603.957008, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.02}
+{"ts": 1789141606.815383, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789141606.889248, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.1}
+{"ts": 1789141620.5242891, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789141620.57213, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.65}
+{"ts": 1789141623.6983502, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789141623.7412, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.48}
+{"ts": 1789141626.6082299, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789141626.656897, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.56}
+{"ts": 1789141629.608041, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789141629.6878562, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.53}
+{"ts": 1789141859.330752, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789141859.423721, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.36}
+{"ts": 1789141862.0061069, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141862.1363971, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.65}
+{"ts": 1789141865.099512, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141865.236355, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.55}
+{"ts": 1789141867.9173791, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141868.056777, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.73}
+{"ts": 1789141871.0638819, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789141871.204176, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789141874.099796, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789141874.1546738, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.63}
+{"ts": 1789141877.103574, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789141877.139433, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.65}
+{"ts": 1789141880.3775492, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789141880.451682, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.34}
+{"ts": 1789141895.8741171, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789141895.952616, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.58}
+{"ts": 1789141898.717697, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789141898.7549849, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.78}
+{"ts": 1789141901.7166562, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789141901.755719, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.78}
+{"ts": 1789141904.738697, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789141904.817863, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.72}
+{"ts": 1789142781.757078, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789142781.893613, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 0.81}
+{"ts": 1789142783.998178, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "type", "rotated": false}
+{"ts": 1789142784.18469, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.52}
+{"ts": 1789142788.189843, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789142790.143083, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "click", "rotated": false}
+{"ts": 1789142790.640186, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.27}
+{"ts": 1789142793.690186, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789142793.7560792, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.16}
+{"ts": 1789142796.5950878, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789142796.6726358, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.24}
+{"ts": 1789142799.6386728, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "stuck", "rotated": false}
+{"ts": 1789142799.786695, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.13}
+{"ts": 1789142813.744003, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "extract", "rotated": false}
+{"ts": 1789142815.078292, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "assert_state", "rotated": false}
+{"ts": 1789142815.157662, "run_id": "router", "step": null, "event": "provider_throttle", "provider": "openrouter", "wait_s": 1.64}
+{"ts": 1789142818.2431428, "run_id": "router", "step": null, "event": "llm_call", "provider": "openrouter", "model": "google/gemini-2.5-flash", "tool": "done", "rotated": false}

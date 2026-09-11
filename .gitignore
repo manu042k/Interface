@@ -24,7 +24,8 @@ venv/
 *.egg-info/
 build/
 dist/
-backend/.data/
+backend/.data/*.db-shm
+backend/.data/*.db-wal
 backend/playwright-report/
 
 # --- Node (frontend) ---
