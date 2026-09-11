@@ -288,8 +288,13 @@ function StepRow({
     (e) =>
       e.ok === false ||
       e.verdict === "block" ||
-      ["hard_failure", "stuck", "business_outcome"].includes(String(e.event)),
+      ["hard_failure", "stuck"].includes(String(e.event)),
   );
+  // A business_outcome event is a terminal classification of the run, not a
+  // per-step failure — the step's own action can (and usually does) still say
+  // ok: true. Show it as a distinct neutral/informational state, never "Failed".
+  const isOutcome =
+    !bad && block.events.some((e) => String(e.event) === "business_outcome");
   const warn = block.events.some(
     (e) =>
       e.drift_signal === true || String(e.event) === "recoverable_condition",
@@ -311,7 +316,7 @@ function StepRow({
   const drifted =
     loc?.drift_signal === true ||
     (typeof loc?.matched_rank === "number" && loc.matched_rank > 0);
-  const [open, setOpen] = useState(bad);
+  const [open, setOpen] = useState(bad || isOutcome);
 
   return (
     <div>
@@ -325,7 +330,7 @@ function StepRow({
           className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-md text-xs font-semibold ${
             bad
               ? "bg-destructive/12 text-destructive"
-              : warn
+              : warn || isOutcome
                 ? "bg-warning/12 text-warning"
                 : "bg-muted text-muted-foreground"
           }`}
@@ -346,7 +351,11 @@ function StepRow({
             )}
             <span
               className={`ml-auto inline-flex items-center gap-1 text-xs font-medium ${
-                bad ? "text-destructive" : "text-success"
+                bad
+                  ? "text-destructive"
+                  : isOutcome
+                    ? "text-warning"
+                    : "text-success"
               }`}
             >
               {bad ? (
@@ -354,7 +363,7 @@ function StepRow({
               ) : (
                 <Check className="h-3.5 w-3.5" />
               )}
-              {bad ? "Failed" : "Ok"}
+              {bad ? "Failed" : isOutcome ? "Outcome" : "Ok"}
             </span>
           </div>
           <p className="text-muted-foreground mt-0.5 line-clamp-2 text-sm leading-relaxed">
