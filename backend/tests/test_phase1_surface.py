@@ -240,6 +240,29 @@ async def test_extract_by_css_prefers_the_visible_match_over_a_hidden_twin(adapt
     assert "Transfer Complete" in r.extracted
 
 
+async def test_select_snapshot_reports_the_visible_label_not_the_raw_value(adapter, mockbank):
+    """A <select>'s .value is its OPTION's value attribute ("1"), not what a
+    person (or the agent that just called select({option: "SAVINGS"}))
+    actually sees. ParaBank's account-type dropdown is exactly this shape:
+    <option value="1">SAVINGS</option>. Echoing '1' back in 'CURRENT FORM
+    FIELD VALUES' looks unrelated to 'SAVINGS' and reads as still-unset, so
+    the discovery agent re-selects it over and over — a real, observed
+    thrash loop ('no progress: repeated select 3x with no screen change')
+    that is not actually stuck at all; the first select already worked."""
+    h = await adapter.open_session(f"{mockbank}/search")
+    page = adapter._sess(h).page
+    await page.set_content(
+        '<select id="type" name="type">'
+        '<option value="0">CHECKING</option>'
+        '<option value="1">SAVINGS</option>'
+        "</select>"
+    )
+    await page.select_option("#type", "1")
+    snap = await adapter.snapshot(h)
+    field = next(f for f in snap.form_values if f["name"] == "type")
+    assert field["value"] == "SAVINGS"
+
+
 async def test_near_disambiguates_identical_role_name_buttons(adapter, mockbank):
     """Several visually-identical buttons (one 'Submit' per repeated sub-form,
     like ParaBank's four 'FIND TRANSACTIONS' buttons) — role+name alone always

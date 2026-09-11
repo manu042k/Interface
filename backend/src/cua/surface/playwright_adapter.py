@@ -843,7 +843,17 @@ class PlaywrightAdapter(SurfaceAdapter):
                         name: e.name || null,
                         id: e.id || null,
                         label: (e.labels && e.labels[0] && e.labels[0].innerText.trim()) || null,
-                        value: (e.value || '').slice(0, 120),
+                        // A <select>'s .value is its OPTION'S value attribute
+                        // ("1"), not what a person (or the agent that just
+                        // called select({option: "SAVINGS"})) actually sees.
+                        // Echoing "1" back as confirmation looks unrelated to
+                        // "SAVINGS" and reads as "still unset" -> the agent
+                        // reselects it over and over, thrashing to a false
+                        // stuck report even though the first select worked.
+                        value: e.tagName === 'SELECT'
+                            ? ((e.selectedOptions[0] && e.selectedOptions[0].textContent.trim())
+                               || (e.value || '').slice(0, 120))
+                            : (e.value || '').slice(0, 120),
                         // Only for a <select> whose option 0 is a real
                         // placeholder — a text input's defaultValue is unreliable
                         // on server-rendered forms that echo the submitted value
