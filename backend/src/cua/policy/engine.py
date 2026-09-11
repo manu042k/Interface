@@ -52,7 +52,7 @@ _LIFECYCLE_RE = re.compile(
 # Generic commit verbs — risky ONLY when the route is also a mutation route,
 # so a plain "Submit" on a search form does not trip.
 _COMMIT_VERB_RE = re.compile(
-    r"\b(submit|confirm|post|apply|authoriz\w*|approve|finaliz\w*|"
+    r"\b(submit|confirm|post|apply|authoriz\w*|approve|finaliz\w*|update|save|"
     r"complete\s+(order|transfer|payment|purchase)|place\s+order)\b",
     re.I,
 )

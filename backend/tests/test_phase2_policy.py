@@ -143,3 +143,13 @@ def test_typing_the_amount_then_cancelling_are_not_commits():
     assert typing.verdict == PolicyVerdict.ALLOW  # filling a field is not a commit
     cancel = eng.check(ActionContext("default", ActionType.CLICK, tgt, extra={"target": "Cancel"}))
     assert cancel.verdict == PolicyVerdict.ALLOW  # no money-move / commit verb
+
+
+def test_update_profile_commit_verb_is_gated():
+    """'Update Profile' on the identity-of-record mutation route must gate too —
+    a generic commit verb (update/save), not just submit/confirm/apply."""
+    eng = _engine()
+    tgt = "https://parabank.parasoft.com/parabank/updateprofile.htm"
+    eng.allow_target("default", tgt)
+    d = eng.check(ActionContext("default", ActionType.CLICK, tgt, extra={"target": "Update Profile"}))
+    assert d.verdict == PolicyVerdict.REQUIRE_CONFIRMATION
