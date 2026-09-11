@@ -144,3 +144,48 @@ async def test_replay_hard_failure_proposes_a_drift_patch_draft(client):
     assert latest.known_outcomes and latest.known_outcomes[-1].code.startswith("unclassified_")
     # the approved version is untouched
     assert system.store.latest_approved("drift_gw_cap", "mockbank").version == art.version
+
+
+async def test_artifact_runs_links_discovery_origin_and_replay_invocations(client):
+    """The capability<-run parent/child view: the discovery run that created it
+    plus every replay invocation, resolved across the whole version family."""
+    from cua.models import RunMode, RunStatus
+
+    app = client._transport.app  # type: ignore[attr-defined]
+    system = app.state.system
+
+    run, transcript = await system.orchestrator.run_discovery(
+        goal="look up member 12345 and read their current savings balance",
+        target=f"{client._mockbank}/search",
+        params={"member_id": "12345"},
+        run=None,
+    )
+    assert run.status == RunStatus.COMPLETED, run.detail
+    art = system.record(transcript, name="linkage_cap", vendor_app_id="mockbank")
+    system.store.promote(art.artifact_id, art.version, "approve", reviewer="alice")
+    # register the discovery run in the gateway's run map (real flow does this
+    # via POST /runs; here we drive the orchestrator directly)
+    run.artifact_id, run.artifact_version = art.artifact_id, art.version
+    app.state.runs[run.run_id] = run
+
+    # two replay invocations
+    for _ in range(2):
+        r = await client.post(
+            f"/replays/{art.artifact_id}/invoke",
+            json={"params": {"member_id": "12345"}, "version": art.version},
+        )
+        assert r.status_code == 200, r.text
+
+    got = await client.get(f"/artifacts/{art.artifact_id}/runs")
+    assert got.status_code == 200, got.text
+    body = got.json()
+    assert body["capability"]["name"] == "linkage_cap"
+    assert body["created_from_run_id"] == run.run_id
+    assert body["counts"] == {"origin": 1, "invocations": 2}
+    assert body["origin_runs"][0]["run_id"] == run.run_id
+    assert body["origin_runs"][0]["mode"] == RunMode.DISCOVERY
+    assert all(iv["mode"] == RunMode.REPLAY for iv in body["invocations"])
+    assert all(iv["record_outcome"] == "reused" for iv in body["invocations"])
+
+    missing = await client.get("/artifacts/nope/runs")
+    assert missing.status_code == 404

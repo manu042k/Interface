@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -14,7 +15,12 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api, type Capability, type ReplayResult } from "@/lib/api";
+import {
+  api,
+  type Capability,
+  type ReplayResult,
+  type LinkedRun,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -27,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/page-header";
 import { sentenceCase } from "@/lib/text";
-import { OutcomeBadge, RiskBadge } from "@/components/badges";
+import { OutcomeBadge, RiskBadge, StatusBadge } from "@/components/badges";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -234,6 +240,7 @@ function CapabilityDetail({
               <TabsList className="mx-5 mt-3 w-fit">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="steps">Steps ({cap.steps.length})</TabsTrigger>
+                <TabsTrigger value="runs">Runs</TabsTrigger>
                 <TabsTrigger value="invoke">Invoke</TabsTrigger>
               </TabsList>
 
@@ -472,6 +479,16 @@ function CapabilityDetail({
                 </ScrollArea>
               </TabsContent>
 
+              {/* Runs — the capability's parent/child view */}
+              <TabsContent
+                value="runs"
+                className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+              >
+                <ScrollArea className="h-full">
+                  <RunsPanel cap={cap} />
+                </ScrollArea>
+              </TabsContent>
+
               {/* Invoke */}
               <TabsContent
                 value="invoke"
@@ -644,5 +661,98 @@ function InvokePanel({ cap }: { cap: Capability }) {
         </Button>
       </div>
     </>
+  );
+}
+
+/* ---- runs panel: the capability's parent/child view --------------- */
+
+function RunRow({ r }: { r: LinkedRun }) {
+  const dur =
+    r.ended_at != null ? `${Math.max(0, Math.round(r.ended_at - r.started_at))}s` : "—";
+  return (
+    <TableRow>
+      <TableCell className="py-2">
+        <Link
+          href={`/runs/${r.run_id}`}
+          className="text-primary font-mono text-xs hover:underline"
+        >
+          {r.run_id.slice(0, 12)}
+        </Link>
+      </TableCell>
+      <TableCell className="py-2">
+        <StatusBadge status={r.status} />
+      </TableCell>
+      <TableCell className="text-muted-foreground py-2 tabular-nums">
+        {r.artifact_version != null ? `v${r.artifact_version}` : "—"}
+      </TableCell>
+      <TableCell className="text-muted-foreground py-2 tabular-nums">
+        {r.step_count}
+      </TableCell>
+      <TableCell className="text-muted-foreground py-2 tabular-nums">{dur}</TableCell>
+      <TableCell className="text-muted-foreground max-w-[220px] truncate py-2 text-xs">
+        {r.record_outcome ?? r.detail ?? ""}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function RunsTable({ rows }: { rows: LinkedRun[] }) {
+  if (rows.length === 0)
+    return <p className="text-muted-foreground px-1 text-sm">None yet.</p>;
+  return (
+    <div className="overflow-x-auto">
+      <Table className="min-w-[560px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Run</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Version</TableHead>
+            <TableHead>Steps</TableHead>
+            <TableHead>Duration</TableHead>
+            <TableHead>Note</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => (
+            <RunRow key={r.run_id} r={r} />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function RunsPanel({ cap }: { cap: Capability }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["artifact-runs", cap.artifact_id],
+    queryFn: () => api.artifactRuns(cap.artifact_id),
+    refetchInterval: 5000,
+  });
+
+  if (isLoading || !data)
+    return <p className="text-muted-foreground p-5 text-sm">Loading linked runs…</p>;
+
+  return (
+    <div className="space-y-6 p-5">
+      <p className="text-muted-foreground text-sm">
+        Every run linked to this capability — the discovery run that recorded it,
+        and every deterministic replay invocation. Resolved across versions{" "}
+        {data.capability.versions.map((v) => `v${v}`).join(", ")}.
+      </p>
+
+      <section className="space-y-2">
+        <h3 className="font-heading text-sm font-medium">
+          Origin — discovery ({data.counts.origin})
+        </h3>
+        <RunsTable rows={data.origin_runs} />
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="font-heading text-sm font-medium">
+          Replay invocations ({data.counts.invocations})
+        </h3>
+        <RunsTable rows={data.invocations} />
+      </section>
+    </div>
   );
 }

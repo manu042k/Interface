@@ -358,6 +358,59 @@ def create_app(config: Config | None = None) -> FastAPI:
         except KeyError as exc:
             raise HTTPException(404, str(exc)) from exc
 
+    @app.get("/artifacts/{artifact_id}/runs")
+    async def artifact_runs(artifact_id: str) -> dict[str, Any]:
+        """Every run linked to this capability — the discovery run(s) that
+        created its versions (the origin), plus every replay invocation of any
+        version. `artifact_id` may be any version's id; the whole
+        (name, vendor_app_id, scope) family is resolved so the parent-child
+        view is stable across re-recordings and version bumps."""
+        fam = app.state.system.store.list()
+        me = next((a for a in fam if a.artifact_id == artifact_id), None)
+        if me is None:
+            raise HTTPException(404, f"no artifact {artifact_id}")
+        versions = [
+            a for a in fam
+            if a.name == me.name and a.vendor_app_id == me.vendor_app_id
+            and a.tenant_scope.kind == me.tenant_scope.kind
+        ]
+        fam_ids = {a.artifact_id for a in versions}
+        origin_run_ids = {a.created_from_run_id for a in versions if a.created_from_run_id}
+
+        def _row(r: RunRecord) -> dict[str, Any]:
+            return {
+                "run_id": r.run_id,
+                "mode": r.mode,
+                "status": r.status,
+                "artifact_version": r.artifact_version,
+                "record_outcome": r.record_outcome,
+                "started_at": r.started_at,
+                "ended_at": r.ended_at,
+                "step_count": r.step_count,
+                "detail": r.detail,
+                "params": r.params,
+            }
+
+        linked = [
+            r for r in app.state.runs.values()
+            if (r.artifact_id in fam_ids) or (r.run_id in origin_run_ids)
+        ]
+        linked.sort(key=lambda r: r.started_at, reverse=True)
+        origin = [_row(r) for r in linked if r.mode == RunMode.DISCOVERY]
+        invocations = [_row(r) for r in linked if r.mode == RunMode.REPLAY]
+        return {
+            "capability": {
+                "name": me.name,
+                "vendor_app_id": me.vendor_app_id,
+                "versions": sorted(a.version for a in versions),
+                "artifact_ids": sorted(fam_ids),
+            },
+            "created_from_run_id": me.created_from_run_id,
+            "origin_runs": origin,
+            "invocations": invocations,
+            "counts": {"origin": len(origin), "invocations": len(invocations)},
+        }
+
     @app.post("/artifacts/{artifact_id}/versions/{version}/promote")
     async def promote(artifact_id: str, version: int, req: PromoteRequest) -> dict[str, Any]:
         if req.decision is None:

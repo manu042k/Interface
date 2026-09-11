@@ -311,6 +311,35 @@ export const api = {
     }),
 
   metrics: () => j<Metrics>(`/metrics`),
+
+  artifactRuns: (artifactId: string) =>
+    j<ArtifactRuns>(`/artifacts/${artifactId}/runs`),
+};
+
+export type LinkedRun = {
+  run_id: string;
+  mode: "discovery" | "replay";
+  status: string;
+  artifact_version: number | null;
+  record_outcome: string | null;
+  started_at: number;
+  ended_at: number | null;
+  step_count: number;
+  detail: string | null;
+  params: Record<string, unknown> | null;
+};
+
+export type ArtifactRuns = {
+  capability: {
+    name: string;
+    vendor_app_id: string;
+    versions: number[];
+    artifact_ids: string[];
+  };
+  created_from_run_id: string | null;
+  origin_runs: LinkedRun[];
+  invocations: LinkedRun[];
+  counts: { origin: number; invocations: number };
 };
 
 export type MetricSeriesPoint = {
