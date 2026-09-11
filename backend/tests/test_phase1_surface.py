@@ -138,3 +138,39 @@ async def test_resolve_legacy_form_field_by_name_attr(adapter, mockbank):
     )
     assert r.ok, r.error
     assert await page.locator('input[name="address"]').input_value() == "742 Evergreen Terrace"
+
+
+async def test_near_disambiguates_identical_role_name_buttons(adapter, mockbank):
+    """Several visually-identical buttons (one 'Submit' per repeated sub-form,
+    like ParaBank's four 'FIND TRANSACTIONS' buttons) — role+name alone always
+    matched the FIRST one and silently ignored `near`. It must now pick the
+    occurrence positioned at/after the landmark instead."""
+    h = await adapter.open_session(f"{mockbank}/search")
+    page = adapter._sess(h).page
+    await page.set_content(
+        """
+        <div>Find by Transaction ID:<input name="txnId">
+          <button>Submit</button></div>
+        <div style="margin-top:400px">Find by Amount:<input name="amount">
+          <button>Submit</button></div>
+        <div style="margin-top:800px">Find by Date:<input name="date">
+          <button>Submit</button></div>
+        """
+    )
+    loc, why = await adapter._resolve(
+        page, {"role": "button", "text": "Submit", "near": "Find by Amount:"}
+    )
+    assert "near=" in why
+    # it must be the SECOND button (the one under "Find by Amount:"), not .first
+    all_buttons = page.get_by_role("button", name="Submit")
+    target_handle = await loc.element_handle()
+    second_handle = await all_buttons.nth(1).element_handle()
+    assert await target_handle.evaluate(
+        "(el, other) => el === other", second_handle
+    )
+
+    # without `near`, behaviour is unchanged: plain .first
+    loc2, _ = await adapter._resolve(page, {"role": "button", "text": "Submit"})
+    first_handle = await all_buttons.nth(0).element_handle()
+    picked_handle = await loc2.element_handle()
+    assert await picked_handle.evaluate("(el, other) => el === other", first_handle)

@@ -234,6 +234,36 @@ class PlaywrightAdapter(SurfaceAdapter):
             sig = ""
         return hashlib.sha1(f"{page.url}\n{sig}".encode()).hexdigest()[:16]
 
+    async def _nearest_after(self, page: Page, loc: Locator, n: int, near: str) -> int | None:
+        """Among the first `n` matches of `loc`, the index of the one positioned
+        at/just below the `near` landmark's own position — for a page with
+        several visually-identical controls (a "Submit" per repeated sub-form,
+        e.g. ParaBank's four "FIND TRANSACTIONS" buttons). Layout-based, so it
+        works even when the target is below the fold — bounding_box() doesn't
+        require the element to be in the current viewport, only laid out.
+        Returns None if the landmark or every candidate's position is unusable,
+        so the caller falls back to its default (.first)."""
+        anchor = page.get_by_text(near, exact=True)
+        if not await anchor.count():
+            anchor = page.get_by_text(near, exact=False)
+        if not await anchor.count():
+            return None
+        a_box = await anchor.first.bounding_box()
+        if not a_box:
+            return None
+        best_i, best_dy = None, None
+        for i in range(min(n, 20)):
+            try:
+                box = await loc.nth(i).bounding_box()
+            except Exception:  # noqa: BLE001
+                continue
+            if not box:
+                continue
+            dy = box["y"] - a_box["y"]
+            if dy >= -4 and (best_dy is None or dy < best_dy):  # closest at-or-below
+                best_dy, best_i = dy, i
+        return best_i
+
     async def _resolve(self, page: Page, desc: Any) -> tuple[Locator, str]:
         """Best-effort description -> Locator for the discovery path.
 
@@ -271,13 +301,24 @@ class PlaywrightAdapter(SurfaceAdapter):
         # don't fall through to "the first element of this role" on the page.
         acc_name = name or text
         if role and acc_name:
-            loc = page.get_by_role(role, name=acc_name, exact=False)
-            if await loc.count():
-                return loc.first, f"role={role} name={acc_name!r}"
-            # exact, in case a shorter name (e.g. a nav link) also matched loosely
-            loc = page.get_by_role(role, name=acc_name, exact=True)
-            if await loc.count():
-                return loc.first, f"role={role} name={acc_name!r} (exact)"
+            for loc, why in (
+                (page.get_by_role(role, name=acc_name, exact=False), f"role={role} name={acc_name!r}"),
+                # exact, in case a shorter name (e.g. a nav link) also matched loosely
+                (page.get_by_role(role, name=acc_name, exact=True), f"role={role} name={acc_name!r} (exact)"),
+            ):
+                n = await loc.count()
+                if not n:
+                    continue
+                if n > 1 and near:
+                    # Several identical controls (e.g. one "Submit" button per
+                    # repeated sub-form) — `near` disambiguates by picking the
+                    # match positioned at/just after the landmark, not just the
+                    # first one in the DOM. Falls through to .first if the
+                    # landmark can't be found or nothing sits after it.
+                    picked = await self._nearest_after(page, loc, n, near)
+                    if picked is not None:
+                        return loc.nth(picked), f"{why} near={near!r}"
+                return loc.first, why
 
         # 2b. form-control name / id attribute. Legacy table forms put the label
         # in a separate <td> with no <label for=...> / aria-label, so the input
