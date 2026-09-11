@@ -18,7 +18,6 @@ import { sentenceCase } from "@/lib/text";
  * to the artifact's own example when a param isn't listed here.
  */
 const KNOWN_GOOD: Record<string, Record<string, string>> = {
-  parabank_login_failure: { password: "wrongpass123" },
   parabank_open_checking_account: {
     customer_address_street: "742 Evergreen Terrace",
     customer_password: "TestPass123!",
@@ -83,7 +82,13 @@ export default function PrefillRunsPage() {
     queryFn: api.capabilities,
   });
 
-  const caps = (data ?? []).filter((c) => c.name.startsWith("parabank_"));
+  // parabank_login_failure is excluded: it pins a negative-outcome check
+  // to a credential on ParaBank's live, publicly shared account, and that
+  // credential has drifted from "wrong" to actually valid since this
+  // capability was recorded — see the run against inv_e5fe70677a14.
+  const caps = (data ?? []).filter(
+    (c) => c.name.startsWith("parabank_") && c.name !== "parabank_login_failure",
+  );
 
   function pick(cap: Capability) {
     const q = new URLSearchParams({
