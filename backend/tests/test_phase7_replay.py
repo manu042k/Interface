@@ -59,6 +59,24 @@ async def test_replay_permission_denied_is_business_outcome(sys_with_capability,
     assert result.business_outcome_code == "permission_denied"
 
 
+async def test_business_outcome_detail_falls_back_to_the_rules_own_message():
+    """A caller relying on a capability specifically to report an error's exact
+    text (a login-failure capability, say) must not get outcome_detail: None
+    just because the rule has no live detail_selector — the rule's own
+    recorded `message` is real content and must not be silently dropped."""
+    from cua.models import BusinessOutcomeRule, Condition
+    from cua.replay.executor import ReplayExecutor
+
+    rule = BusinessOutcomeRule(
+        code="account_not_verified",
+        when=Condition(kind="text_present", params={"text": "x"}),
+        message="observed live: The username and password could not be verified.",
+        detail_selector=None,
+    )
+    detail = await ReplayExecutor._outcome_detail(object(), rule, "unused-session")
+    assert detail == rule.message
+
+
 # --- ST-033: recoverable condition, then success ------------------
 async def test_replay_recovers_from_interstitial(sys_with_capability, monkeypatch):
     system, art, mockbank = sys_with_capability

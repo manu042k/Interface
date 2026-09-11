@@ -393,15 +393,22 @@ class ReplayExecutor:
         return None
 
     async def _outcome_detail(self, rule, session: str) -> str | None:
-        """The host's actionable error text for this outcome, if the rule
-        declares where to find it (e.g. the <ul> of failed validation rules)."""
+        """The host's actionable error text for this outcome. Prefers the live
+        text at `detail_selector` (e.g. the <ul> of failed validation rules);
+        falls back to the rule's own recorded `message` — never bare `None` —
+        so a caller relying on the outcome for its actual content (e.g. a
+        capability whose whole point is reporting the exact error text) still
+        gets something, even when no selector was declared or it didn't
+        resolve live."""
         sel = getattr(rule, "detail_selector", None)
-        if not sel:
-            return None
-        try:
-            return await self.adapter.read_text(session, sel)
-        except Exception:  # noqa: BLE001
-            return None
+        if sel:
+            try:
+                text = await self.adapter.read_text(session, sel)
+                if text:
+                    return text
+            except Exception:  # noqa: BLE001
+                pass
+        return getattr(rule, "message", None)
 
     async def _maybe_recover(self, artifact, session, state, step_index, log) -> tuple[SurfaceState, list[str]]:
         applied: list[str] = []
