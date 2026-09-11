@@ -115,6 +115,26 @@ def _visible_controls(state: SurfaceState | None) -> str:
     return ", ".join(f"[{x}]" for x in labels[:12])
 
 
+_FIELD_TAG_RE = re.compile(r"<(?:input|select|textarea)\b[^>]*>", re.I)
+_FIELD_ATTR_RE = re.compile(r"\b(?:name|id)\s*=\s*[\"']([^\"']{1,60})[\"']", re.I)
+
+
+def _form_fields(state: SurfaceState | None) -> str:
+    """The name/id of every <input>/<select>/<textarea> in the DOM excerpt — fed
+    back when a `type`/`select` target won't resolve so the model can pick a real
+    field instead of blind-retrying a wrong name (e.g. `criteria.amount` when the
+    field is `amount`)."""
+    if state is None:
+        return ""
+    seen: list[str] = []
+    for tag in _FIELD_TAG_RE.findall((state.dom_excerpt or "") + "\n" + (state.ax_summary or "")):
+        for n in _FIELD_ATTR_RE.findall(tag):
+            n = n.strip()
+            if n and n not in seen:
+                seen.append(n)
+    return ", ".join(seen[:20])
+
+
 def _condition_usable(cond: dict[str, Any]) -> bool:
     """A condition the evaluator can actually act on — `kind` set AND the
     params it needs are present (not `text_present` with empty params)."""
@@ -838,6 +858,13 @@ class Orchestrator:
                             "Use one of those EXACT labels."
                             if ctrls else ""
                         )
+                        if call.tool in ("type", "select"):
+                            fields = _form_fields(state)
+                            if fields:
+                                ctrl_hint = (
+                                    f" The form fields (name/id) actually on this screen are: "
+                                    f"{fields}. Target one of THOSE exact names."
+                                )
                         if resolve_fails >= 2:
                             # Retrying the same control with new identifiers is
                             # the classic thrash — the control is very likely

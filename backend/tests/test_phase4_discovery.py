@@ -362,3 +362,19 @@ def test_salvage_from_state_recognises_recorded_and_applied_confirmations():
     cond = _salvage_from_state(s)
     assert cond and cond["kind"] == "text_present"
     assert "HOLD RECORDED" in cond["params"]["any"]
+
+
+def test_form_fields_lists_input_names_for_resolve_feedback():
+    from cua.discovery.orchestrator import _form_fields
+    from cua.models import SurfaceState
+
+    st = SurfaceState(
+        url="u",
+        dom_excerpt='<form><select name="accountId">..</select>'
+                    '<input type="text" id="amount" name="criteria.amount"/>'
+                    '<input name="transactionId"><textarea name="notes"></textarea></form>',
+    )
+    out = _form_fields(st)
+    assert "accountId" in out and "amount" in out and "criteria.amount" in out
+    assert "transactionId" in out and "notes" in out
+    assert _form_fields(None) == ""
