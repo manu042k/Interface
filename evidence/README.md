@@ -28,7 +28,41 @@ no model in the loop** — one bundle per outcome class.
 
 Every `ReplayOutcome` in the contract is represented:
 `recoverable_then_success` (`02`), `business_outcome` with both codes (`03`, `04`),
-`hard_failure` (`05`). A pure `success` with zero recoveries, and the
-discovery/replay escalation → live-session handoff → resume path, are covered by
-the test suite (`backend/tests/test_phase7_replay.py`,
-`test_phase8_escalation.py`).
+`hard_failure` (`05`). A pure `success` with zero recoveries is covered by
+the test suite, not a separate bundle here.
+
+## `06-discovery-handoff` — genuine stuck → live-session handoff → resume
+
+A **real** LLM-driven discovery run (`openrouter` / `google/gemini-2.5-flash`)
+against a goal it cannot finish alone — *"open a new sub-account; you cannot
+decide the account type and deposit amount yourself"* — demonstrating brief
+§3.6 end to end, not a mock:
+
+1. **Detect & route** (`step 7`) — after three `stuck` calls (it correctly
+   never guesses the type/amount itself, exactly as instructed), the
+   orchestrator opens a real `InterventionRequest` carrying the reason, the
+   current step, and a context bundle.
+2. **Take control of the SAME live session** — `EscalationService.take_control`
+   transfers the `SessionBroker`'s CAS+TTL lease from automation to the
+   operator on the identical `session_id` (not a fresh one).
+3. **A human acts** — four real actions through `OperatorConsole.perform`
+   (select the account type, type the deposit, click Review, click Confirm
+   creation) against the live MockBank session, each recorded to
+   `human_actions_log`. A fifth entry (`by: "detected"`) shows the *passive*
+   detection path also firing — even a raw DOM navigation the operator makes
+   without going through the recorded-actions API gets logged.
+4. **Hand back** — `release_control` → `resume()` re-acquires automation's
+   lease on the same session.
+5. **Resume & complete** — the agent re-observes rather than assuming the
+   goal is done (`assert_state`, then several `extract` calls), finds the
+   real confirmation screen the human's actions produced, and finishes:
+   `completed` — *"goal already satisfied — the screen shows: Sub-account
+   created."*
+
+`summary.json.human_actions` is the direct record of what the human did;
+`events.jsonl` carries the full `intervention_opened → intervention_claimed →
+control_transferred → human_action ×6 → intervention_resolved →
+operator_handed_back` sequence in order. The stuck-replay (as opposed to
+stuck-discovery) escalation path is structurally identical — same
+`EscalationService`/`SessionBroker`, same lease/resume mechanics — and is
+covered by `backend/tests/test_phase8_escalation.py`.

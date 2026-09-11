@@ -63,6 +63,44 @@ Every discovery turn is logged in `events.jsonl` as
 so a run correlates back to the provider/model that served each decision;
 `provider_throttle` events show the client-side RPM pacing.
 
+## `evidence/06-discovery-handoff` — genuine stuck → handoff → resume
+
+This one isn't reproducible with the `cua` CLI alone — the CLI has no
+subcommand to claim/take-control/resume an intervention (only `cua serve` +
+the gateway's REST API, or the console, can do that), so the bundle was
+generated with a small script that drives the *real* orchestrator +
+`EscalationService`/`OperatorConsole` directly, the same code path `cua
+serve` uses:
+
+```bash
+cd backend && source .venv/bin/activate
+cua serve-mock &                                  # fresh process — MockBank's
+                                                    # duplicate-submission guard
+                                                    # is in-memory per process
+```
+
+```bash
+CUA_USE_SANDBOX=0 python3 scripts/gen_handoff_evidence.py
+```
+
+[`scripts/gen_handoff_evidence.py`](./scripts/gen_handoff_evidence.py) does,
+in order: `build_system(load_config())` (the same composition root the
+CLI/gateway use) → `asyncio.create_task(orchestrator.run_discovery(...,
+handoff_wait_s=120))` (a real block-and-wait, like a live operator session) →
+polls `escalation.list_interventions(status="open")` until one appears →
+`console.claim` / `console.take_control` (real CAS+TTL lease transfer onto
+the SAME `session_id`) → four `console.perform(...)` calls against the live
+session (select the account type, type the deposit, click Review, click
+Confirm creation) → `console.release_control` (hands back; automation
+resumes on the same session and, per §5, re-verifies rather than assuming
+success) → dumps evidence with `cua.cli._dump_run_evidence`, the same helper
+the CLI itself uses.
+
+MockBank's sub-account creation has a real duplicate-submission guard keyed
+on `(member_id, account_type, amount)` — restart `cua serve-mock` fresh
+before regenerating, or pick a combination that hasn't been created yet in
+the running process.
+
 ## No-key demo path (offline, not committed as evidence)
 
 The same pipeline runs fully offline with `CUA_LLM_PROVIDERS=scripted` — a

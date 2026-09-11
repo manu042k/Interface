@@ -54,7 +54,16 @@ stops FAILED — no point spinning). Replay never touches this.
   Mutating clicks to `/create|submit|confirm/…` routes default to non-idempotent.
 - **`ValueBinding`** — typed values are parameterised: a typed value equal to a
   supplied param becomes a `param` binding; a secret-looking literal is refused
-  and forced to a param; URLs are canonicalised to `{param}` templates.
+  and forced to a param; URLs are canonicalised to `{param}` templates. A third
+  binding, `from_output`, chains a step's input to an **earlier step's own
+  extracted output** within the same run — "select the account you just
+  opened" as a later step's target, a value that doesn't exist until this run
+  creates it, so it can be neither a literal (breaks every future run) nor a
+  caller-supplied param (the caller can't know it in advance). The recorder
+  detects this automatically: a typed/selected value that exactly matches an
+  earlier extract's raw result gets `from_output` instead of falling through
+  to a param or a stale literal; replay resolves it from the run's live
+  `outputs` dict, not the caller's `params`.
 - **`input_schema` / `output_schema`** — JSON Schema (draft 2020-12). Params are
   validated *before any action touches the surface*; extracted outputs validated
   before return.
@@ -179,6 +188,20 @@ separate knob from discovery's; a deployment opts a replay path INTO waiting
 on a human explicitly). Either way that it fires, the run transitions to
 `stuck` and its session is **held, not torn down**.
 
+**A second, lighter gate: risk approval.** Not every escalation is "the agent
+is stuck." When policy returns `REQUIRE_CONFIRMATION` for a genuinely
+risky/irreversible action the agent otherwise knows how to perform (§6),
+full session takeover is overkill — the human doesn't need to drive the
+browser, they need to see *what's about to happen* and say yes or no.
+`EscalationService.open_risk_approval()` raises a second `InterventionRequest`
+kind (`risk_approval`, distinct from `handoff`) carrying the proposed action
+in plain language, with no session lock transfer at all; `decide(approved=…)`
+resolves it. Two rejections of the same proposed action `dead_end` the run
+rather than looping the agent back to try the identical rejected step again.
+This is the mechanism that actually implements §3.4's "require confirmation"
+disposition day to day — full handoff is reserved for when a human must
+*act*, not just *decide*.
+
 **Route.** `EscalationService.open_intervention()` acquires the automation lock
 via the `SessionBroker`, captures a context bundle (screenshot, DOM, transcript
 tail, current URL, capability/goal/step) into evidence, and creates an
@@ -222,14 +245,19 @@ unparseable target, a broken allowlist file, or an exception inside the check al
 resolve to **BLOCK** — fail closed, always.
 
 **Risk class.** Actions are `safe_reversible` by default; `risky_irreversible` if
-the step declares it, the action type is on the tenant's risky list, or the
-target route matches a risky pattern (`/sub-account/create$`). The risky class is
-dispositioned by tenant policy — default `require_confirmation` rather than silent
-execution. During discovery, an unconfirmed risky action is fed back to the model
-("needs human confirmation — pick a safe alternative or call stuck"). During
-replay, the **human review that promoted the artifact to `approved` is the
-confirmation** for its risky steps; unattended replay of a non-approved artifact
-is refused at the gateway.
+the step declares it, the action type is on the tenant's risky list, or a
+*mutating* action (click/type/select/press_key — never a passive
+extract/assert_state/wait_for/navigate/scroll, which can't be irreversible no
+matter which route it's on) lands on a route matching a risky pattern
+(`/sub-account/create$`). The risky class is dispositioned by tenant policy —
+default `require_confirmation` rather than silent execution. During
+discovery, with no escalation service wired the risky action is fed back to
+the model to route around ("pick a safe alternative or call stuck"); with one
+wired, it opens the lightweight **risk-approval gate** (§5) instead — the
+human sees the proposed action and approves or rejects it, no session
+takeover. During replay, the **human review that promoted the artifact to
+`approved` is the confirmation** for its risky steps; unattended replay of a
+non-approved artifact is refused at the gateway.
 
 **Data handling.** A pure `redact()` on every write path (artifact store, log
 sink, evidence metadata): full account numbers (12–17 digits, epoch-timestamp
