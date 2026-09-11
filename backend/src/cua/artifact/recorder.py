@@ -126,6 +126,7 @@ class ArtifactRecorder:
         forced_params: dict[str, str] = {}
         derived_params: dict[str, str] = {}  # values the user wrote into the goal
         positional_params: dict[str, str] = {}  # a record id selected by position, not named in the goal
+        prior_outputs: dict[str, str] = {}  # field -> raw extracted value, for later steps to chain onto
         idx = 0
 
         actionable = [
@@ -137,11 +138,15 @@ class ArtifactRecorder:
         for entry in actionable:
             step = self._entry_to_step(
                 entry, idx, transcript.params, param_props, forced_params,
-                derived_params, transcript.goal, positional_params,
+                derived_params, transcript.goal, positional_params, prior_outputs,
             )
             if entry.tool_call.tool == "extract" and step.output_binding:
                 shape = step.output_binding.shape
                 output_props[step.output_binding.field] = {"type": _json_type(shape), "x-shape": shape}
+                extracted = entry.action_result.get("extracted")
+                raw = extracted.get("raw") if isinstance(extracted, dict) else extracted
+                if isinstance(raw, str) and raw.strip():
+                    prior_outputs[step.output_binding.field] = raw.strip()
             steps.append(step)
             idx += 1
 
@@ -230,6 +235,7 @@ class ArtifactRecorder:
         derived: dict[str, str],
         goal: str,
         positional: dict[str, str],
+        prior_outputs: dict[str, str] | None = None,
     ) -> Step:
         tool = entry.tool_call.tool
         args = entry.tool_call.args
@@ -250,16 +256,28 @@ class ArtifactRecorder:
 
         if tool == "type":
             raw = str(args.get("value", ""))
-            value_binding = _bind_value(
-                raw, params, forced_params, derived,
-                field_hint=_target_hint(args.get("target")), goal=goal,
-            )
+            from_output = _matches_prior_output(raw, prior_outputs)
+            if from_output:
+                # This exact value was extracted by an EARLIER step in this
+                # same run (e.g. "the account number just opened") — it
+                # cannot be a literal (baked-in, breaks every future run) or
+                # a caller param (the caller can't know it in advance; it
+                # doesn't exist until this run creates it).
+                value_binding = ValueBinding(from_output=from_output)
+            else:
+                value_binding = _bind_value(
+                    raw, params, forced_params, derived,
+                    field_hint=_target_hint(args.get("target")), goal=goal,
+                )
         elif tool == "select":
             opt = str(args.get("option", ""))
+            from_output = _matches_prior_output(opt, prior_outputs)
             # bind to a param when the chosen option is a supplied value (a
             # share id, a branch) so the caller's input actually drives it
             bound = next((pk for pk, pv in params.items() if str(pv) == opt), None)
-            if bound:
+            if from_output:
+                value_binding = ValueBinding(from_output=from_output)
+            elif bound:
                 value_binding = ValueBinding(param=bound)
             elif opt and _value_in_goal(opt, goal):
                 taken = {**{k: str(v) for k, v in params.items()}, **forced_params, **derived}
@@ -693,6 +711,18 @@ def _value_in_goal(v: str, goal: str) -> bool:
 _RECORD_SELECTOR_HINT_RE = re.compile(
     r"account|acct|share|member|customer|loan|card|profile|payee", re.I
 )
+
+
+def _matches_prior_output(value: str, prior_outputs: dict[str, str] | None) -> str | None:
+    """Does `value` equal something an EARLIER step in this same run already
+    extracted (e.g. "the account number just opened")? Returns that output's
+    field name, or None. Guards against a coincidental short-value match the
+    same way `_locator_param_for` does — a value under 3 chars, or a bare
+    number under 4 digits, is too common to trust as identity."""
+    v = value.strip()
+    if not prior_outputs or len(v) < 3 or (v.isdigit() and len(v) < 4):
+        return None
+    return next((field for field, out in prior_outputs.items() if out == v), None)
 
 
 def _looks_like_a_record_selector(field_hint: str, value: str) -> bool:

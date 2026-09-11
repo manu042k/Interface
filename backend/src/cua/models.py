@@ -189,17 +189,24 @@ class RecoverableRule(BaseModel):
 class ValueBinding(BaseModel):
     """Where a step's input value comes from.
 
-    Exactly one of `literal` / `param` is set. A discovered credential-like
-    literal is rejected at record time and must become a `param` (ST-024).
+    Exactly one of `literal` / `param` / `from_output` is set. A discovered
+    credential-like literal is rejected at record time and must become a
+    `param` (ST-024). `from_output` chains a later step's input to an
+    EARLIER step's own extracted output within the same run — e.g. "select
+    the account just opened" as the transfer destination, where that
+    account id doesn't exist until this run creates it, so it can never be
+    a literal OR a caller-supplied param.
     """
 
     literal: str | None = None
     param: str | None = None
+    from_output: str | None = None
 
     @model_validator(mode="after")
     def _exactly_one(self) -> ValueBinding:
-        if (self.literal is None) == (self.param is None):
-            raise ValueError("ValueBinding needs exactly one of {literal, param}")
+        set_count = sum(x is not None for x in (self.literal, self.param, self.from_output))
+        if set_count != 1:
+            raise ValueError("ValueBinding needs exactly one of {literal, param, from_output}")
         return self
 
 

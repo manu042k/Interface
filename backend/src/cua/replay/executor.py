@@ -298,7 +298,7 @@ class ReplayExecutor:
             matched_strategy = res.matched_strategy
 
         # guardrail
-        target_url = self._step_url(step, params) or state.url
+        target_url = self._step_url(step, params, outputs) or state.url
         decision = self.policy.check(ActionContext(
             tenant_id=artifact.tenant_scope.tenant_id or "default",
             action_type=step.action_type,
@@ -318,7 +318,7 @@ class ReplayExecutor:
             # non-approved artifact is refused at the Gateway (ST-025).
             log.event(step.step_index, "risk_preauthorized_by_approval", reason=decision.reason)
 
-        action = self._to_action(step, concrete_target, params)
+        action = self._to_action(step, concrete_target, params, outputs)
 
         attempts = 0
         while True:
@@ -469,15 +469,18 @@ class ReplayExecutor:
                 errs.append(f"{field}: {outputs[field]!r} is not a valid {shape}")
         return errs
 
-    def _step_url(self, step: Step, params: dict[str, Any]) -> str | None:
+    def _step_url(self, step: Step, params: dict[str, Any], outputs: dict[str, Any] | None = None) -> str | None:
         if step.action_type != ActionType.NAVIGATE or step.value_binding is None:
             return None
-        return self._resolve_value(step.value_binding, params)
+        return self._resolve_value(step.value_binding, params, outputs)
 
-    def _to_action(self, step: Step, concrete_target: dict[str, Any] | None, params: dict[str, Any]) -> Action:
+    def _to_action(
+        self, step: Step, concrete_target: dict[str, Any] | None, params: dict[str, Any],
+        outputs: dict[str, Any] | None = None,
+    ) -> Action:
         t = step.action_type
         if t == ActionType.NAVIGATE:
-            return Action(type=t, value=self._resolve_value(step.value_binding, params))
+            return Action(type=t, value=self._resolve_value(step.value_binding, params, outputs))
         if t == ActionType.WAIT_FOR:
             c = step.step_checkpoint
             cond = {"kind": c.kind, "params": c.params} if c else {}
@@ -487,16 +490,31 @@ class ReplayExecutor:
             return Action(type=t, condition={"kind": c.kind, "params": c.params} if c else {})
         if t == ActionType.EXTRACT:
             return Action(type=t, target_description=concrete_target, expected_shape=step.output_binding.shape if step.output_binding else "string")
-        value = self._resolve_value(step.value_binding, params) if step.value_binding else None
+        value = self._resolve_value(step.value_binding, params, outputs) if step.value_binding else None
         if t == ActionType.SCROLL and value and value not in {"down", "up", "top", "bottom"}:
             # a recorded scroll-to-text step
             return Action(type=t, target_description={"text": value}, value="down")
         return Action(type=t, target_description=concrete_target, value=value)
 
     @staticmethod
-    def _resolve_value(binding, params: dict[str, Any]) -> str:
+    def _resolve_value(binding, params: dict[str, Any], outputs: dict[str, Any] | None = None) -> str:
         if binding is None:
             return ""
+        if binding.from_output is not None:
+            # Chains this step's input to an EARLIER step's own extracted
+            # output within the same run — e.g. "select the account just
+            # opened" as a transfer destination, a value that doesn't exist
+            # until THIS run creates it, so it can never be a literal or a
+            # caller-supplied param.
+            if not outputs or binding.from_output not in outputs or outputs[binding.from_output] is None:
+                raise ReplayError(
+                    f"step depends on output {binding.from_output!r}, which was never extracted "
+                    f"(an earlier extract step must have failed or been skipped)"
+                )
+            val = outputs[binding.from_output]
+            # a currency/number extract yields a dict ({"raw": "$10.00", ...});
+            # a bare id/string extract is already the plain value.
+            return str(val["raw"]) if isinstance(val, dict) and "raw" in val else str(val)
         if binding.param is not None:
             if binding.param not in params:
                 raise ReplayError(f"missing required param {binding.param!r}")

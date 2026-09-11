@@ -428,3 +428,71 @@ def test_select_of_a_record_id_not_named_in_the_goal_becomes_a_param():
 
     filled = ReplayExecutor.apply_defaults(art, {step.value_binding.param: "99999"})
     assert filled[step.value_binding.param] == "99999"
+
+
+def test_select_of_a_just_extracted_value_chains_to_that_output_not_a_param():
+    """'open a new account, then select IT as the transfer destination' -
+    the destination id doesn't exist until THIS run creates it, so it can
+    never be a literal (breaks every future run) OR a caller-supplied param
+    (the caller can't know it in advance). It must chain to the earlier
+    extract step's own output instead."""
+    from cua.artifact.recorder import ArtifactRecorder
+    from cua.discovery.orchestrator import DiscoveryTranscript, TranscriptEntry
+    from cua.models import SurfaceState, ToolCall
+
+    st = SurfaceState(url="https://parabank.example.com/openaccount.htm")
+    extract_call = ToolCall(
+        tool="extract", args={"target": {"text": "13566"}, "as": "new_account_number"},
+        reasoning="Extract the new account number from the confirmation message.",
+    )
+    extract_entry = TranscriptEntry(
+        0, st, extract_call, None, True,
+        {"ok": True, "matched_strategy": "text='13566' (exact)", "extracted": "13566"},
+        "allow",
+    )
+    select_call = ToolCall(
+        tool="select", args={"target": {"name": "toAccountId"}, "option": "13566"},
+        reasoning="Select the newly created account as the destination.",
+    )
+    select_entry = TranscriptEntry(
+        1, st, select_call, None, True,
+        {"ok": True, "matched_strategy": "name/id=\"toAccountId\"", "risk_class": "safe_reversible"},
+        "allow",
+    )
+    transcript = DiscoveryTranscript(
+        run_id="r", goal="Open a new account, then transfer 20 to the newly opened account.",
+        target="https://parabank.example.com/openaccount.htm", tenant="default",
+    )
+    transcript.entries.extend([extract_entry, select_entry])
+
+    art = ArtifactRecorder().build_artifact(transcript, name="chain_test")
+    select_step = art.steps[1]
+    assert select_step.value_binding.from_output == "new_account_number"
+    assert select_step.value_binding.param is None
+    assert select_step.value_binding.literal is None
+    # never registered as a caller-facing param — the caller has no way to
+    # supply a value that doesn't exist until this run creates it
+    assert "toaccountid" not in art.input_schema.get("properties", {})
+
+
+def test_replay_resolves_a_from_output_binding_at_runtime():
+    """The replay executor must substitute an earlier step's own extracted
+    output into a later step's from_output binding, and fail loudly (not
+    silently) if that output was never produced."""
+    from cua.models import ValueBinding
+    from cua.replay.executor import ReplayError, ReplayExecutor
+
+    binding = ValueBinding(from_output="new_account_number")
+    resolved = ReplayExecutor._resolve_value(binding, {}, {"new_account_number": "13566"})
+    assert resolved == "13566"
+
+    # a currency-shaped extract yields {"raw": ..., "amount": ...} - the raw
+    # display string is what a <select>/<input> actually needs
+    resolved_currency = ReplayExecutor._resolve_value(
+        binding, {}, {"new_account_number": {"raw": "$1,234.00", "amount": 1234.0}}
+    )
+    assert resolved_currency == "$1,234.00"
+
+    import pytest
+    with pytest.raises(ReplayError, match="new_account_number"):
+        ReplayExecutor._resolve_value(binding, {}, {})
