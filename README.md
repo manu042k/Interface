@@ -108,43 +108,35 @@ cua serve                                         # http://127.0.0.1:8080/docs
 
 ### Frontend console (Next.js)
 
-Backend + frontend, no Docker — three processes, three terminals, all from the
-repo root:
+`start.sh` boots MockBank + the gateway + the console together (one Ctrl-C
+stops all three), reading `CUA_USE_SANDBOX` the same way the backend itself
+does — an explicit value on the invocation wins, else it falls back to
+`backend/.env`'s value, else `0`:
 
 ```bash
 cd frontend && npm install && cd ..              # once
-
-# terminal 1
-cd backend && .venv/bin/cua serve-mock            # MockBank :8799
-
-# terminal 2
-cd backend && .venv/bin/cua serve                 # gateway :8080 (CUA_USE_SANDBOX=0, the default)
-
-# terminal 3
-cd frontend && npm run dev                        # console :3000
+./start.sh                                       # no Docker: plain headless adapter
+CUA_USE_SANDBOX=1 ./start.sh                     # live noVNC sandbox (needs Docker running;
+                                                  #   builds cua-sandbox:latest on first use)
 ```
 
 Open `http://localhost:3000` → New run → submit → watch it live → Generate report.
-The plain headless adapter runs the browser and the console works fully — goal
-input, runs, capabilities, review, reports — just without the live noVNC canvas.
+Without the sandbox the console still works fully — goal input, runs,
+capabilities, review, reports — just without the live noVNC canvas or the
+in-browser sandbox terminal.
 
-### Live console with per-run sandbox (Next.js + Docker)
-
-The same console, plus a live noVNC canvas of the run, an in-browser terminal
-into the run's sandbox container, and click-to-take-over on a stuck run.
-`start.sh` runs all three processes above for you, with the sandbox on:
+Prefer three separate terminals instead of the script:
 
 ```bash
-bash backend/sandbox_image/build.sh              # once — builds cua-sandbox:latest (needs Docker running)
-cd frontend && npm install && cd ..              # once
-bash start.sh                                    # MockBank :8799 · gateway :8080 (CUA_USE_SANDBOX=1) · console :3000
-# open http://localhost:3000 → New run → submit → watch it live → Generate report
+cd backend && .venv/bin/cua serve-mock            # terminal 1 — MockBank :8799
+cd backend && .venv/bin/cua serve                 # terminal 2 — gateway :8080
+cd frontend && npm run dev                        # terminal 3 — console :3000
 ```
 
 ## Tests
 
 ```bash
-cd backend && pytest        # 154 tests (~55s); sandbox tests skip cleanly without Docker/image
+cd backend && pytest        # 156 tests (~80s); sandbox tests skip cleanly without Docker/image
 ruff check src tests
 cd ../frontend && npm run build
 ```
