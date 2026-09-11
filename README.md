@@ -106,20 +106,40 @@ cua serve                                         # http://127.0.0.1:8080/docs
 # POST /replays/{id}/invoke · GET /capabilities · /interventions/*
 ```
 
-### Live console with per-run sandbox (Next.js + Docker)
+### Frontend console (Next.js)
 
-Watch a discovery run in a live noVNC canvas, shell into the run's sandbox from an
-in-browser terminal, and take over a stuck run by clicking directly in the canvas.
+Backend + frontend, no Docker — three processes, three terminals, all from the
+repo root:
 
 ```bash
-bash backend/sandbox_image/build.sh              # once — builds cua-sandbox:latest (needs Docker)
-cd frontend && npm install && cd ..
+cd frontend && npm install && cd ..              # once
+
+# terminal 1
+cd backend && .venv/bin/cua serve-mock            # MockBank :8799
+
+# terminal 2
+cd backend && .venv/bin/cua serve                 # gateway :8080 (CUA_USE_SANDBOX=0, the default)
+
+# terminal 3
+cd frontend && npm run dev                        # console :3000
+```
+
+Open `http://localhost:3000` → New run → submit → watch it live → Generate report.
+The plain headless adapter runs the browser and the console works fully — goal
+input, runs, capabilities, review, reports — just without the live noVNC canvas.
+
+### Live console with per-run sandbox (Next.js + Docker)
+
+The same console, plus a live noVNC canvas of the run, an in-browser terminal
+into the run's sandbox container, and click-to-take-over on a stuck run.
+`start.sh` runs all three processes above for you, with the sandbox on:
+
+```bash
+bash backend/sandbox_image/build.sh              # once — builds cua-sandbox:latest (needs Docker running)
+cd frontend && npm install && cd ..              # once
 bash start.sh                                    # MockBank :8799 · gateway :8080 (CUA_USE_SANDBOX=1) · console :3000
 # open http://localhost:3000 → New run → submit → watch it live → Generate report
 ```
-
-Without Docker, set `CUA_USE_SANDBOX=0` (the default): the plain headless adapter
-runs and the console still works minus the live view.
 
 ## Tests
 
