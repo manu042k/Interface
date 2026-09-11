@@ -117,6 +117,7 @@ class ArtifactRecorder:
         param_props: dict[str, Any] = {}
         forced_params: dict[str, str] = {}
         derived_params: dict[str, str] = {}  # values the user wrote into the goal
+        positional_params: dict[str, str] = {}  # a record id selected by position, not named in the goal
         idx = 0
 
         actionable = [
@@ -128,7 +129,7 @@ class ArtifactRecorder:
         for entry in actionable:
             step = self._entry_to_step(
                 entry, idx, transcript.params, param_props, forced_params,
-                derived_params, transcript.goal,
+                derived_params, transcript.goal, positional_params,
             )
             if entry.tool_call.tool == "extract" and step.output_binding:
                 shape = step.output_binding.shape
@@ -164,6 +165,21 @@ class ArtifactRecorder:
                         "x-from-goal": True,
                     },
                 )
+
+        # a record selected by position (an account/share id) — same recorded
+        # value by default (unattended replay is unaffected), but overridable:
+        # a caller passing the CURRENT id survives the underlying data changing
+        # under a stale literal.
+        for k, v in positional_params.items():
+            param_props.setdefault(
+                k,
+                {
+                    "type": "string",
+                    "default": redact_text(str(v))[0],
+                    "example": redact_text(str(v))[0],
+                    "x-recorded-default": True,
+                },
+            )
 
         required = list(
             dict.fromkeys([*transcript.params, *forced_params, *derived_required])
@@ -205,6 +221,7 @@ class ArtifactRecorder:
         forced_params: dict[str, str],
         derived: dict[str, str],
         goal: str,
+        positional: dict[str, str],
     ) -> Step:
         tool = entry.tool_call.tool
         args = entry.tool_call.args
@@ -242,6 +259,20 @@ class ArtifactRecorder:
                     opt, _target_hint(args.get("target")), goal, taken
                 )
                 (forced_params if sensitive else derived)[key] = opt
+                value_binding = ValueBinding(param=key)
+            elif opt and _looks_like_a_record_selector(_target_hint(args.get("target")), opt):
+                # The chosen option (an account/share/record id) is neither a
+                # supplied param nor written into the goal — the goal said "the
+                # first account" / "the second account", not the literal id. A
+                # bare literal here bakes IN the recording session's specific
+                # account and hard-fails every replay once that id no longer
+                # exists (a real ParaBank case: "select fromAccountId=12345"
+                # stops working the moment the account list changes). Capture it
+                # as an overridable parameter instead — same recorded value by
+                # default, but a caller can pass the CURRENT id.
+                taken = {**{k: str(v) for k, v in params.items()}, **forced_params, **derived, **positional}
+                key, _sensitive = _derive_param_name(opt, _target_hint(args.get("target")), goal, taken)
+                positional[key] = opt
                 value_binding = ValueBinding(param=key)
             else:
                 value_binding = ValueBinding(literal=opt)
@@ -629,6 +660,24 @@ def _value_in_goal(v: str, goal: str) -> bool:
     if len(v) < 2 or (v.isdigit() and len(v) < 2):
         return False
     return re.search(r"(?<![\w-])" + re.escape(v) + r"(?![\w-])", goal, re.I) is not None
+
+
+_RECORD_SELECTOR_HINT_RE = re.compile(
+    r"account|acct|share|member|customer|loan|card|profile|payee", re.I
+)
+
+
+def _looks_like_a_record_selector(field_hint: str, value: str) -> bool:
+    """A `select` value that names a specific record (an account/share/member
+    id) rather than a fixed business choice ("Checking" vs "Savings") — the
+    kind of thing that is valid in THIS recording session and stops existing
+    the moment the underlying data changes. Recognised by the field's own name
+    (an "...AccountId"-shaped select) or by the value itself being a bare
+    numeric id with no words (a real business enum reads as text)."""
+    v = value.strip()
+    if _RECORD_SELECTOR_HINT_RE.search(field_hint or ""):
+        return True
+    return bool(re.fullmatch(r"\d{3,}", v))
 
 
 def _derive_param_name(

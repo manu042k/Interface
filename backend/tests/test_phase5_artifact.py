@@ -341,3 +341,45 @@ async def test_recorder_captures_params_written_into_the_goal(system, mockbank):
     from cua.replay.executor import ReplayExecutor
 
     assert ReplayExecutor.validate_params(art, ReplayExecutor.apply_defaults(art, {})) == []
+
+
+def test_select_of_a_record_id_not_named_in_the_goal_becomes_a_param():
+    """'select the first account as From' picks a literal account id the goal
+    never mentions (it says "first account", not "12345"). Baking that id in
+    means the artifact hard-fails the moment that account no longer exists
+    (a real ParaBank case). It must become an overridable parameter instead —
+    same recorded value by default, so unattended replay is unaffected."""
+    from cua.artifact.recorder import ArtifactRecorder
+    from cua.discovery.orchestrator import DiscoveryTranscript, TranscriptEntry
+    from cua.models import SurfaceState, ToolCall
+
+    st = SurfaceState(url="https://parabank.example.com/transfer.htm")
+    call = ToolCall(
+        tool="select",
+        args={"target": {"name": "fromAccountId"}, "option": "12345"},
+        reasoning="Select the first account from the dropdown.",
+    )
+    entry = TranscriptEntry(
+        0, st, call, None, True,
+        {"ok": True, "matched_strategy": "name/id=\"fromAccountId\"", "risk_class": "safe_reversible"},
+        "allow",
+    )
+    transcript = DiscoveryTranscript(
+        run_id="r", goal="Transfer 250 from the first account to the second account.",
+        target="https://parabank.example.com/transfer.htm", tenant="default",
+    )
+    transcript.entries.append(entry)
+
+    art = ArtifactRecorder().build_artifact(transcript, name="acct_select_test")
+    step = art.steps[0]
+    assert step.value_binding.param is not None, "must not bake the account id in as a literal"
+    prop = art.input_schema["properties"][step.value_binding.param]
+    assert prop.get("x-recorded-default") is True
+    assert prop.get("default") == "12345"
+    assert step.value_binding.param not in art.input_schema["required"]
+
+    # a caller CAN override it with the account id that actually exists now
+    from cua.replay.executor import ReplayExecutor
+
+    filled = ReplayExecutor.apply_defaults(art, {step.value_binding.param: "99999"})
+    assert filled[step.value_binding.param] == "99999"
