@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Plus, X, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -46,8 +46,9 @@ type Reach =
   | { state: "ok"; status: number; redirected: boolean }
   | { state: "warn"; detail: string };
 
-export default function NewRunPage() {
+function NewRunForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [goalName, setGoalName] = useState("");
   const [description, setDescription] = useState("");
   const [target, setTarget] = useState("");
@@ -58,6 +59,28 @@ export default function NewRunPage() {
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState<{ goal?: boolean; target?: boolean }>({});
   const [reach, setReach] = useState<Reach>({ state: "idle" });
+
+  // Prefilled from /prefill-runs ("pick a capability, review, hit Run here")
+  // — one-time on mount, the user can still edit everything before running.
+  useEffect(() => {
+    const pGoalName = searchParams.get("goalName");
+    const pDescription = searchParams.get("description");
+    const pTarget = searchParams.get("target");
+    const pParams = searchParams.get("params");
+    if (pGoalName) setGoalName(pGoalName);
+    if (pDescription) setDescription(pDescription);
+    if (pTarget) setTarget(pTarget);
+    if (pParams) {
+      try {
+        const obj = JSON.parse(pParams) as Record<string, string>;
+        const rows = Object.entries(obj).map(([k, v]) => ({ k, v: String(v) }));
+        if (rows.length) setParams(rows);
+      } catch {
+        // malformed prefill data — leave the form at its defaults
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const descErr = goalError(description);
   const targetErr = targetError(target);
@@ -290,5 +313,13 @@ export default function NewRunPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function NewRunPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewRunForm />
+    </Suspense>
   );
 }

@@ -1,27 +1,21 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Play } from "lucide-react";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronRight } from "lucide-react";
 import { api, type Capability } from "@/lib/api";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/page-header";
-import { OutcomeBadge, RiskBadge } from "@/components/badges";
+import { RiskBadge } from "@/components/badges";
 import { sentenceCase } from "@/lib/text";
 
 /**
- * Known-good values for ParaBank capabilities, verified live during manual
+ * Known-good param values for ParaBank capabilities, verified live during
  * testing this session — not just each artifact's recorded `example`, which
  * can go stale (an account id, a password chosen at record time). Falls back
- * to the artifact's own example when a param isn't listed here, so every
- * field always starts filled, never blank.
+ * to the artifact's own example when a param isn't listed here.
  */
 const KNOWN_GOOD: Record<string, Record<string, string>> = {
   parabank_login_failure: { password: "wrongpass123" },
@@ -73,7 +67,7 @@ const KNOWN_GOOD: Record<string, Record<string, string>> = {
   parabank_contact_us: {},
 };
 
-function prefillFor(cap: Capability): Record<string, string> {
+function prefillParams(cap: Capability): Record<string, string> {
   const known = KNOWN_GOOD[cap.name] ?? {};
   const out: Record<string, string> = {};
   for (const p of cap.inputs) {
@@ -83,6 +77,7 @@ function prefillFor(cap: Capability): Record<string, string> {
 }
 
 export default function PrefillRunsPage() {
+  const router = useRouter();
   const { data, isLoading } = useQuery({
     queryKey: ["capabilities"],
     queryFn: api.capabilities,
@@ -90,17 +85,27 @@ export default function PrefillRunsPage() {
 
   const caps = (data ?? []).filter((c) => c.name.startsWith("parabank_"));
 
+  function pick(cap: Capability) {
+    const q = new URLSearchParams({
+      goalName: sentenceCase(cap.name),
+      description: cap.goal,
+      target: cap.entry_url,
+      params: JSON.stringify(prefillParams(cap)),
+    });
+    router.push(`/?${q.toString()}`);
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Prefill runs"
-        description="Every ParaBank capability, ready to run — fields are pre-filled with known-good values from live testing. Edit anything you like, or just hit Run."
+        description="Pick a ParaBank capability — its goal, target, and known-good params fill the New run form. Review and hit Run there."
       />
 
       {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full" />
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
       ) : caps.length === 0 ? (
@@ -108,96 +113,34 @@ export default function PrefillRunsPage() {
           No ParaBank capabilities found.
         </p>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {caps.map((cap) => (
-            <PrefillCard key={`${cap.artifact_id}-${cap.version}`} cap={cap} />
+            <Card
+              key={`${cap.artifact_id}-${cap.version}`}
+              className="hover:border-primary/40 cursor-pointer transition-colors"
+              onClick={() => pick(cap)}
+            >
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-heading text-sm font-semibold tracking-tight">
+                      {sentenceCase(cap.name)}
+                    </h3>
+                    <RiskBadge risk={cap.risk_class} />
+                    <Badge variant="outline" className="text-muted-foreground text-[10px]">
+                      v{cap.version}
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground line-clamp-1 text-xs">
+                    {cap.summary || cap.goal}
+                  </p>
+                </div>
+                <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
     </div>
-  );
-}
-
-function PrefillCard({ cap }: { cap: Capability }) {
-  const router = useRouter();
-  const [params, setParams] = useState<Record<string, string>>(() => prefillFor(cap));
-
-  const mut = useMutation({
-    // wait_seconds: 0 - jump straight to the live run view, same UX as the
-    // Capabilities page's own Invoke panel.
-    mutationFn: () => api.invoke(cap.artifact_id, cap.version, null, params, "default", 0),
-    onSuccess: (r) => {
-      if (r.invocation_id) router.push(`/runs/${r.invocation_id}`);
-    },
-    onError: (e) => toast.error(String((e as Error).message)),
-  });
-
-  return (
-    <Card>
-      <CardContent className="space-y-4 p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-heading text-base font-semibold tracking-tight">
-                {sentenceCase(cap.name)}
-              </h3>
-              <RiskBadge risk={cap.risk_class} />
-              <Badge variant="outline" className="text-muted-foreground text-[10px]">
-                v{cap.version}
-              </Badge>
-            </div>
-            <p className="text-muted-foreground line-clamp-2 text-sm">
-              {cap.summary || cap.goal}
-            </p>
-          </div>
-          <Button
-            onClick={() => mut.mutate()}
-            disabled={mut.isPending}
-            className="shrink-0 gap-1.5"
-          >
-            <Play className="h-3.5 w-3.5" />
-            {mut.isPending ? "Running…" : "Run"}
-          </Button>
-        </div>
-
-        {cap.inputs.length > 0 && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {cap.inputs.map((p) => (
-              <div key={p.name} className="space-y-1.5">
-                <Label className="flex items-center gap-1.5">
-                  {p.name}
-                  {p.sensitive && (
-                    <Badge
-                      variant="outline"
-                      className="text-warning border-warning/30 text-[10px]"
-                    >
-                      sensitive
-                    </Badge>
-                  )}
-                </Label>
-                <Input
-                  type={p.sensitive ? "password" : "text"}
-                  value={params[p.name] ?? ""}
-                  onChange={(e) =>
-                    setParams((s) => ({ ...s, [p.name]: e.target.value }))
-                  }
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {mut.data && !mut.data.invocation_id && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border p-3">
-            <OutcomeBadge outcome={mut.data.outcome} />
-            {mut.data.business_outcome_code && (
-              <code className="text-warning text-xs">
-                {mut.data.business_outcome_code}
-              </code>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 }
