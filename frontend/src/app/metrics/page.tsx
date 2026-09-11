@@ -57,20 +57,20 @@ function Body({ m }: { m: Metrics }) {
 
       <SectionHeading>Overview</SectionHeading>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Total runs" value={fmt.format(o.total_runs)}
+        <Stat icon={Activity} label="Total runs" value={fmt.format(o.total_runs)}
           sub={`${o.discovery_runs} discovery · ${o.replay_invocations} replay`} />
-        <Stat label="Tokens (in / out)" value={fmt.format(o.tokens_total)}
+        <Stat icon={Coins} label="Tokens (in / out)" value={fmt.format(o.tokens_total)}
           sub={`${fmt.format(o.tokens_in)} in · ${fmt.format(o.tokens_out)} out · ${o.llm_calls} calls`} />
-        <Stat label="Est. LLM cost" value={usd(o.est_cost_usd)}
+        <Stat icon={DollarSign} label="Est. LLM cost" value={usd(o.est_cost_usd)}
           sub={`@ $${o.cost_rate_per_mtok.in}/$${o.cost_rate_per_mtok.out} per Mtok`} />
-        <Stat label="Saved by replay" value={usd(e.est_cost_saved_usd)} accent="success"
+        <Stat icon={PiggyBank} label="Saved by replay" value={usd(e.est_cost_saved_usd)} accent="success"
           sub={`${fmt.format(e.tokens_saved_by_replay)} tokens not re-reasoned`} />
       </div>
 
       <SectionHeading>Efficiency &amp; reliability</SectionHeading>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Efficiency per discovery run</CardTitle></CardHeader>
+          <CardHeader><CardTitle><TitleIcon icon={Gauge} />Efficiency per discovery run</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
             <Row k="Avg tokens / discovery" v={fmt.format(e.avg_tokens_per_discovery)} />
             <Row k="Avg LLM calls / discovery" v={String(e.avg_llm_calls_per_discovery)} />
@@ -81,7 +81,7 @@ function Body({ m }: { m: Metrics }) {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Reliability</CardTitle></CardHeader>
+          <CardHeader><CardTitle><TitleIcon icon={ShieldCheck} />Reliability</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div>
               <p className="text-muted-foreground mb-1 text-xs uppercase tracking-wide">Discovery</p>
@@ -107,7 +107,7 @@ function Body({ m }: { m: Metrics }) {
       <SectionHeading>Trends by day</SectionHeading>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Avg tokens per discovery, by day</CardTitle></CardHeader>
+          <CardHeader><CardTitle><TitleIcon icon={Coins} />Avg tokens per discovery, by day</CardTitle></CardHeader>
           <CardContent>
             <LineChart
               series={m.series}
@@ -118,7 +118,7 @@ function Body({ m }: { m: Metrics }) {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Replay share of invocations, by day</CardTitle></CardHeader>
+          <CardHeader><CardTitle><TitleIcon icon={Percent} />Replay share of invocations, by day</CardTitle></CardHeader>
           <CardContent>
             <LineChart
               series={m.series}
@@ -130,7 +130,7 @@ function Body({ m }: { m: Metrics }) {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Runs per day</CardTitle></CardHeader>
+        <CardHeader><CardTitle><TitleIcon icon={BarChart3} />Runs per day</CardTitle></CardHeader>
         <CardContent>
           <StackedBars series={m.series} />
         </CardContent>
@@ -140,6 +140,10 @@ function Body({ m }: { m: Metrics }) {
 }
 
 /* ---------- small pieces ---------- */
+
+function TitleIcon({ icon: Icon }: { icon: LucideIcon }) {
+  return <Icon className="text-muted-foreground mr-2 inline-block h-4 w-4 -translate-y-px" />;
+}
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -171,11 +175,13 @@ function TrendBanner({ trend }: { trend: Metrics["trend"] }) {
 }
 
 function Stat({
+  icon: Icon,
   label,
   value,
   sub,
   accent,
 }: {
+  icon?: LucideIcon;
   label: string;
   value: string;
   sub?: string;
@@ -184,7 +190,10 @@ function Stat({
   return (
     <Card size="sm">
       <CardContent>
-        <p className="text-muted-foreground text-xs">{label}</p>
+        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          {Icon && <Icon className="h-3.5 w-3.5" />}
+          <span>{label}</span>
+        </div>
         <p className={cn("font-heading mt-1 text-2xl font-medium tabular-nums", accent === "success" && "text-success")}>
           {value}
         </p>
