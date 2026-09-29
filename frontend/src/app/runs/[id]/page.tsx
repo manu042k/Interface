@@ -147,6 +147,9 @@ export default function RunPage() {
   const { data: run, refetch } = useQuery({
     queryKey: ["run", id],
     queryFn: () => api.run(id),
+    // Poll while the run is live (this is the main "watch it happen" view,
+    // so fast enough to feel real-time); stop polling entirely once the run
+    // reaches a TERMINAL status — nothing about a finished run changes.
     refetchInterval: (q) =>
       q.state.data && TERMINAL.has(q.state.data.status) ? false : 1500,
   });
@@ -159,12 +162,26 @@ export default function RunPage() {
     queryFn: () => api.artifact(run!.artifact_id!, run!.artifact_version!),
     enabled: !!run?.artifact_id && run.artifact_version != null,
   });
-  const goal =
-    run?.goal ||
-    (typeof artifact?.goal_description === "string"
+  const isReplay = run?.mode === "replay";
+  const goalDescription =
+    typeof artifact?.goal_description === "string"
       ? artifact.goal_description
-      : null) ||
-    null;
+      : null;
+  // On a replay run, show the same short capability summary /capabilities
+  // shows (agent_summary, falling back to the goal text if the capability
+  // has none) instead of the full recorded discovery goal - the goal text
+  // is discovery-run wording (step-by-step instructions to the model), not
+  // a description of what this replay invocation just did.
+  //
+  // `run.goal` is NOT reliably empty on a replay run (some invocation
+  // records still carry the recorded artifact's goal text verbatim), so for
+  // replay the summary must be checked BEFORE run.goal, not after it, or a
+  // populated run.goal always wins and the summary is never shown.
+  const agentSummary =
+    typeof artifact?.agent_summary === "string" ? artifact.agent_summary : null;
+  const goal = isReplay
+    ? agentSummary || goalDescription || run?.goal || null
+    : run?.goal || goalDescription || null;
   const artifactStatus =
     typeof artifact?.status === "string" ? artifact.status : null;
 
@@ -185,7 +202,6 @@ export default function RunPage() {
   const ended = !!run && TERMINAL.has(run.status);
   const ok = run?.status === "completed";
   const tokens = (run?.tokens_in ?? 0) + (run?.tokens_out ?? 0);
-  const isReplay = run?.mode === "replay";
   // Drafts go to Review; once approved (or this run only reused one) the
   // catalog is the right place.
   const artifactHref =

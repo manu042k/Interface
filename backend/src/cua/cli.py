@@ -29,6 +29,10 @@ from .models import RunStatus
 app = typer.Typer(add_completion=False, help=__doc__)
 console = Console()
 
+# parents[3] walks cua/ -> src/ -> backend/ -> repo root, so this only
+# resolves correctly as long as this file stays at backend/src/cua/cli.py;
+# moving it a directory deeper/shallower silently repoints "evidence" at the
+# wrong place instead of raising.
 _EVIDENCE_DEFAULT = Path(__file__).resolve().parents[3] / "evidence"
 
 
@@ -161,6 +165,9 @@ def replay(
     art = system.store.get(artifact_id, version)
 
     async def _go():
+        # A throwaway run id for this one-off CLI invocation only — not the
+        # same id-generation path the gateway/orchestrator use for a real
+        # tracked run; good enough for a unique evidence directory name.
         rid = f"replay-{art.artifact_id[:8]}-{int(__import__('time').time())}"
         result = await system.replay.execute(
             art, _kv(params), target=target, tenant=tenant, run_id=rid, idempotency_key=idempotency_key

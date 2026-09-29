@@ -29,6 +29,10 @@ def offline_fallback(system: str, user: str) -> tuple[str, dict[str, Any], str]:
     mid_m = _MEMBER_ID_RE.search(goal)
     member_id = mid_m.group(1) if mid_m else "12345"
 
+    # These are all fragile substring checks against the RAW prompt text (the
+    # same string the real LLM would read), not a parsed state object — this
+    # pilot has no access to structured state, only the same text a model
+    # sees, so it must recognize screens/history the same crude way.
     typed_already = "type into" in user
     opened_record = bool(re.search(r"/member/\d+", url))
     on_search = url.endswith("/search")
@@ -66,10 +70,16 @@ def offline_fallback(system: str, user: str) -> tuple[str, dict[str, Any], str]:
     # 2b. open a sub-account
     if wants_sub_account and opened_record and "New Sub-Account" not in user and "Open a new sub-account" in user:
         return "click", {"target": {"text": "Open a new sub-account"}}, "start the new sub-account flow"
+    # only the ACTION HISTORY section (not the whole prompt, which may
+    # legitimately mention "select" elsewhere) must be free of a prior
+    # "select" action, or this step would re-fire every turn.
     if "New Sub-Account" in user and "select" not in user.lower().split("action history")[-1]:
         acct = _ACCT_TYPE_RE.search(goal)
         acct_type = acct.group(1).strip() if acct else "Holiday Club"
         return "select", {"target": {"label": "Account type"}, "option": acct_type}, "choose the requested account type"
+    # same idempotency guard as above, keyed on the literal history-section
+    # marker instead of "action history" — matches whatever casing the
+    # transcript renderer actually uses for this prompt section.
     if "New Sub-Account" in user and "Review" not in user.split("ACTION HISTORY")[-1]:
         return "click", {"target": {"role": "button", "name": "Review"}}, "submit the sub-account form"
     if "Sub-account created" in user:

@@ -39,7 +39,7 @@ from ..models import ActionType, ArtifactStatus, RunMode, RunRecord, RunStatus
 from ..policy.engine import ActionContext, PolicyVerdict
 from .run_store import RunStore
 
-_MASH_RE = re.compile(r"^(.)\1*$|^(..)\2*$")  # "aaaa", "asasas"
+_MASH_RE = re.compile(r"^(.)\1*$|^(..)\2*$")  # catches keyboard-mash placeholder goals: a single repeated char ("aaaa") or a repeated 2-char pair ("asasas")
 
 
 def _clean_goal(v: str) -> str:
@@ -60,6 +60,8 @@ def _clean_target(v: str) -> str:
     p = urlparse(t)
     if p.scheme not in {"http", "https"} or not p.hostname:
         raise ValueError("target must be an absolute http(s) URL, e.g. https://app.example.com/search")
+    # a bare word with no dot ("foo") is almost always a typo, not a real host —
+    # except "localhost", the one dot-less hostname that's actually legitimate
     if "." not in p.hostname and p.hostname != "localhost":
         raise ValueError(f"target host {p.hostname!r} is not a valid hostname")
     return t
@@ -133,7 +135,16 @@ class InvokeRequest(BaseModel):
     # point the same capability at a different host (multi-tenant).
     target: str | None = None
     tenant: str = "default"
+    # lets a caller safely retry an invoke (e.g. after a network timeout on
+    # their side) without risking a second real transfer/post — the executor
+    # is expected to de-dupe on this key.
     idempotency_key: str | None = None
+    # this is a LONG-POLL budget, not the replay's own timeout: the HTTP
+    # request blocks up to this long for a same-request result, then falls
+    # back to the {"status": "running", "poll": ...} response below so the
+    # replay itself (which keeps running via asyncio.shield) can be polled
+    # separately. Capped at 120s so one slow replay can't pin an HTTP worker
+    # indefinitely.
     wait_seconds: float = Field(default=30.0, ge=0, le=120)
 
 
@@ -441,6 +452,23 @@ def create_app(config: Config | None = None) -> FastAPI:
             raise HTTPException(409, str(exc)) from exc
         return {"artifact_id": art.artifact_id, "version": art.version, "status": art.status}
 
+    @app.post("/artifacts/{artifact_id}/versions/{version}/delete")
+    async def delete_capability(artifact_id: str, version: int, req: PromoteRequest) -> dict[str, Any]:
+        """"Delete" a capability from the /capabilities catalog. Takes any one
+        of its (artifact_id, version) pairs — the one the caller has on
+        hand, usually the latest — looks up its (name, vendor_app_id), and
+        retires EVERY currently-approved version under that pair, since
+        /capabilities always shows the highest-still-approved one and
+        retiring only one leaves an older version to take its place."""
+        try:
+            art = app.state.system.store.get(artifact_id, version)
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        retired = app.state.system.store.retire_all_approved(
+            art.name, art.vendor_app_id, reviewer=req.reviewer, notes=req.notes
+        )
+        return {"name": art.name, "vendor_app_id": art.vendor_app_id, "retired_versions": retired}
+
     @app.post("/artifacts/{artifact_id}/versions/{version}/set-default")
     async def set_default_version(artifact_id: str, version: int) -> dict[str, Any]:
         try:
@@ -543,6 +571,11 @@ def create_app(config: Config | None = None) -> FastAPI:
 
         task = asyncio.create_task(_do())
         try:
+            # `shield` matters here: if wait_seconds elapses first, the
+            # TimeoutError must only cancel THIS request's wait — the replay
+            # itself (task) has to keep running in the background so the
+            # caller can poll GET /replays/{id} for the eventual result,
+            # instead of the replay being killed by a slow HTTP client.
             await asyncio.wait_for(asyncio.shield(task), timeout=req.wait_seconds)
         except TimeoutError:
             return {"invocation_id": invocation_id, "status": "running", "poll": f"/replays/{invocation_id}"}
@@ -1038,6 +1071,10 @@ _STOPWORDS = {
 
 
 def _slug(text: str) -> str:
+    """Fallback capability name when the caller doesn't supply one: the first
+    few meaningful words of the goal, filtered/truncated so it reads as a
+    name rather than a sentence fragment ("open a new account for member
+    12345" -> "open_new_account_member")."""
     import re
 
     words = [w for w in re.split(r"[^a-z0-9]+", text.lower()) if w and w not in _STOPWORDS]

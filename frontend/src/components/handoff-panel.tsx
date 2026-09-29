@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
+// A throwaway per-tab operator identity - there's no login here, this panel
+// just needs *some* stable-for-this-session id to attribute claims/decisions
+// to (the backend records who claimed/decided an intervention).
 const OPERATOR = "op_" + Math.random().toString(36).slice(2, 6);
 
 type Iv = {
@@ -30,6 +33,10 @@ export function HandoffPanel({
   const [iv, setIv] = useState<Iv | null>(null);
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState<string[]>([]);
+  // Set the instant decide()/handBack() fires, before the backend has
+  // necessarily caught up. Guards the poll below from clobbering the
+  // just-cleared `iv` with a stale response that still shows the old
+  // intervention as open, which would flash the panel back open for a beat.
   const releasing = useRef(false);
 
   useEffect(() => {

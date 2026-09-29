@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -13,6 +13,7 @@ import {
   Crosshair,
   CheckCircle2,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -63,6 +64,8 @@ export default function CapabilitiesPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["capabilities"],
     queryFn: api.capabilities,
+    // A newly-approved artifact (Review page) should show up here without a
+    // manual refresh.
     refetchInterval: 4000,
   });
   const [sel, setSel] = useState<Capability | null>(null);
@@ -102,6 +105,36 @@ export default function CapabilitiesPage() {
   );
 }
 
+/* ---- shared delete mutation (card + detail dialog both use it) ------- */
+
+// Retires every currently-approved version of the capability, not just the
+// one passed in - /capabilities groups by name and always surfaces the
+// highest still-approved version, so leaving an older one approved would
+// just make it reappear in this one's place.
+function useDeleteCapability() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cap: Capability) =>
+      api.deleteCapability(
+        cap.artifact_id,
+        cap.version,
+        "operator",
+        "deleted from /capabilities",
+      ),
+    onSuccess: (_r, cap) => {
+      toast.success(`${sentenceCase(cap.name)} deleted`);
+      qc.invalidateQueries({ queryKey: ["capabilities"] });
+    },
+    onError: (e) => toast.error(String((e as Error).message)),
+  });
+}
+
+function confirmDelete(cap: Capability): boolean {
+  return window.confirm(
+    `Delete "${sentenceCase(cap.name)}"? It's removed from Capabilities and can no longer be invoked, but every version stays in the store and can be re-approved from Review's artifact history.`,
+  );
+}
+
 /* ---- compact card ---------------------------------------------------- */
 
 function CapabilityCard({
@@ -111,6 +144,7 @@ function CapabilityCard({
   cap: Capability;
   onOpen: () => void;
 }) {
+  const del = useDeleteCapability();
   return (
     <Card
       onClick={onOpen}
@@ -148,10 +182,33 @@ function CapabilityCard({
               {cap.confirmations}×
             </span>
           )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive hover:text-destructive ml-auto"
+                disabled={del.isPending}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirmDelete(cap)) del.mutate(cap);
+                }}
+              >
+                {del.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Delete - retires every approved version, reversible from
+              Review&apos;s artifact history.
+            </TooltipContent>
+          </Tooltip>
           <Button
             size="sm"
             variant="outline"
-            className="ml-auto"
             onClick={(e) => {
               e.stopPropagation();
               onOpen();
@@ -175,6 +232,7 @@ function CapabilityDetail({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState("overview");
+  const del = useDeleteCapability();
 
   return (
     <Dialog
@@ -223,13 +281,50 @@ function CapabilityDetail({
                   </Tooltip>
                 )}
               </div>
-              <p className="text-muted-foreground font-mono text-xs">
-                v{cap.version}
-                {cap.supersedes != null && ` · supersedes v${cap.supersedes}`}
-                {cap.older_versions > 0 && ` · ${cap.older_versions} older`}
-                {" · "}
-                {cap.vendor_app_id} {cap.app_version}
-              </p>
+              {/* Below the title row, not in it - DialogContent renders its
+                  own auto close-X absolutely at top-2 right-2, and an
+                  ml-auto button in the title row above sat right under it,
+                  overlapping. This row is clear of that zone. */}
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-muted-foreground font-mono text-xs">
+                  v{cap.version}
+                  {cap.supersedes != null && ` · supersedes v${cap.supersedes}`}
+                  {cap.older_versions > 0 && ` · ${cap.older_versions} older`}
+                  {" · "}
+                  {cap.vendor_app_id} {cap.app_version}
+                </p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive h-7 gap-1.5 px-2"
+                      disabled={del.isPending}
+                      onClick={() => {
+                        if (confirmDelete(cap)) {
+                          del.mutate(cap, {
+                            onSuccess: () => {
+                              onClose();
+                              setTab("overview");
+                            },
+                          });
+                        }
+                      }}
+                    >
+                      {del.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                      Delete
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Retires every approved version - reversible from
+                    Review&apos;s artifact history, not a hard delete.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </DialogHeader>
 
             <Tabs
@@ -736,6 +831,9 @@ function RunsPanel({ cap }: { cap: Capability }) {
   const { data, isLoading } = useQuery({
     queryKey: ["artifact-runs", cap.artifact_id],
     queryFn: () => api.artifactRuns(cap.artifact_id),
+    // This dialog can be left open while an invoke started from the Invoke
+    // tab is still running — poll so the new run appears in this list once
+    // it lands, not just after reopening the dialog.
     refetchInterval: 5000,
   });
 

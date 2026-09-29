@@ -62,6 +62,10 @@ class RunLogger:
 
 
 def _mask_typed_value(tool: str, args: dict[str, Any]) -> dict[str, Any]:
+    # Only "type" is masked: it's the one tool that free-types arbitrary text
+    # (a password has no delimiter for redact_text to key on). Other tools
+    # (select, click, ...) only ever carry a choice from a finite, visible
+    # set of options — never a secret.
     if tool != "type" or "value" not in args:
         return args
     val = args.get("value")

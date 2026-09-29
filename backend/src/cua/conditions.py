@@ -75,10 +75,16 @@ async def evaluate(
         needles = p.get("any") or [p.get("text", "")]
         return all(not n or _norm_ws(n).lower() not in haystack.lower() for n in needles)
     if kind == "element_present":
+        # No live probe available (e.g. evaluating off a cached/offline
+        # SurfaceState with no adapter attached) -> can't confirm presence,
+        # so fail safe toward "not present".
         if probe is None:
             return False
         return await probe(p.get("target", p))
     if kind == "element_absent":
+        # Symmetric fail-safe direction: can't confirm absence either, so
+        # default toward "is absent" (True) rather than blocking a checkpoint
+        # that's asserting a negative on unverifiable state.
         if probe is None:
             return True
         return not await probe(p.get("target", p))

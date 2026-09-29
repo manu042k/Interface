@@ -27,7 +27,7 @@ const KNOWN_GOOD: Record<string, Record<string, string>> = {
   parabank_bill_pay: {
     password: "demo",
     username: "john",
-    payee_address_street: "123 Main St",
+    payee_address_street: "500 Main St",
     payee_name: "Acme Utilities",
     payee_address_city: "Springfield",
     payee_address_state: "IL",
@@ -38,18 +38,21 @@ const KNOWN_GOOD: Record<string, Record<string, string>> = {
   },
   parabank_request_loan_denied: { password: "demo" },
   parabank_request_loan_approved: { password: "demo" },
+  // fromaccountid/toaccountid deliberately omitted: this capability's goal
+  // transfers to "the newly opened second account" (created mid-run), not a
+  // fixed id - an override here previously set both to the same "13344",
+  // a self-transfer. Falls back to the artifact's own distinct recorded
+  // example (fromaccountid 13344, toaccountid 13566) via prefillParams.
   parabank_transfer_between_two_accounts: {
     username: "john",
     password: "demo",
-    fromaccountid: "13344",
-    toaccountid: "13344",
   },
   parabank_transfer_gate_approve: {
     username: "john",
     password: "demo",
-    amount: "50",
+    amount: "250",
     fromaccountid: "13344",
-    toaccountid: "13344",
+    toaccountid: "42537",
   },
   parabank_transfer_gate_approve_v2: {
     username: "john",
@@ -86,8 +89,13 @@ export default function PrefillRunsPage() {
   // to a credential on ParaBank's live, publicly shared account, and that
   // credential has drifted from "wrong" to actually valid since this
   // capability was recorded — see the run against inv_e5fe70677a14.
+  //
+  // parabank_transfer_gate_approve_v2 is excluded: it's a duplicate of
+  // parabank_transfer_gate_approve (same flow, same input schema — recorded
+  // twice under different names instead of versioning the original).
+  const EXCLUDED = new Set(["parabank_login_failure", "parabank_transfer_gate_approve_v2"]);
   const caps = (data ?? []).filter(
-    (c) => c.name.startsWith("parabank_") && c.name !== "parabank_login_failure",
+    (c) => c.name.startsWith("parabank_") && !EXCLUDED.has(c.name),
   );
 
   function pick(cap: Capability) {

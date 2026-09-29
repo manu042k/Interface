@@ -143,11 +143,20 @@ def load_config(
     used by tests that assert on env-only config behaviour.
     """
     if not use_dotenv:
-        pass
+        pass  # explicit no-op branch: tests assert env-only behaviour, no .env read at all
     elif dotenv_path is not None:
+        # override=False everywhere here: a var already set in the process
+        # environment (e.g. exported before invocation) always wins over the
+        # .env file's value — lets a one-off shell override work without
+        # editing .env.
         load_dotenv(dotenv_path, override=False)
     else:
-        # Load backend/.env if present, quietly.
+        # Load backend/.env if present, quietly. Walks up from THIS FILE's
+        # location (not the process cwd), so it finds backend/.env regardless
+        # of where `cua` is invoked from; stops at the first .env found, so a
+        # nested checkout inside another project's tree would pick up ITS
+        # .env first if one existed higher up — acceptable here since this
+        # file always lives at a fixed depth under backend/.
         here = Path(__file__).resolve()
         for parent in here.parents:
             candidate = parent / ".env"

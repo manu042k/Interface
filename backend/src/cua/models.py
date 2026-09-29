@@ -485,7 +485,14 @@ class ActionResult(BaseModel):
 
 
 class ToolCall(BaseModel):
-    """A single structured decision from the discovery agent (TDD §1.3)."""
+    """A single structured decision from the discovery agent (TDD §1.3).
+
+    `tool` is a superset of `ActionType`: "observe" (look before acting,
+    never becomes a Step), "done" and "stuck" (control-flow signals that end
+    the run) have no ActionType equivalent at all. Only the actionable tools
+    that actually executed successfully get turned into recorded Steps by
+    the artifact recorder — see artifact/recorder.py's tool-name checks.
+    """
 
     tool: Literal[
         "observe",

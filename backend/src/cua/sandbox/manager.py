@@ -92,6 +92,10 @@ class SandboxManager:
             await self._await_cdp(handle)
             return handle
         except Exception:
+            # the container is already running at this point (docker run
+            # succeeded) — if anything after that fails (port lookup, CDP
+            # never comes up), tear it down here rather than leaking a
+            # running container that nothing else will ever stop.
             await self.stop_by_name(name)
             raise
 

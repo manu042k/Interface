@@ -179,6 +179,8 @@ def _dom_outline(html: str, max_chars: int) -> str:
         closing, tag = m.group(1), m.group(2).lower()
         text = re.sub(r"\s+", " ", html[pos:m.start()]).strip()
         pos = m.end()
+        # text deeper than 12 nesting levels is almost always layout chrome
+        # (nested divs), not content worth showing the model.
         if text and depth <= 12:
             out.append(f"{'  ' * min(depth, 8)}{text[:160]}")
         if tag not in _INTERESTING_TAGS:
@@ -188,6 +190,9 @@ def _dom_outline(html: str, max_chars: int) -> str:
         else:
             attrs = _keep_attrs(m.group(0))
             out.append(f"{'  ' * min(depth, 8)}<{tag}{attrs}>")
+            # void-ish elements for this outline's purposes: an <option> or
+            # <input> never wraps further interesting content, so don't
+            # indent past it (and there is no matching close tag to pop back).
             if tag not in {"input", "option"}:
                 depth += 1
         if sum(len(x) for x in out) > max_chars:
@@ -210,5 +215,9 @@ def _fingerprint(raw: RawSnapshot) -> str:
     Stable across content changes, sensitive to layout/markup drift."""
     skeleton = "".join(sorted(t.lower() for _, t in _TAG_RE.findall(raw.html)))
     names = "".join(sorted(re.findall(r'name\s*=\s*"([^"]+)"', raw.html)))
+    # A record id embedded in the path ("/members/100234") must not change the
+    # fingerprint — every /members/<id> page has the same structure, and the
+    # locator cache (keyed by fingerprint) is only useful if it's shared
+    # across records, not re-computed per member.
     path = re.sub(r"\d+", "#", raw.url.split("?")[0])
     return hashlib.sha1(f"{path}\n{skeleton}\n{names}".encode()).hexdigest()[:16]

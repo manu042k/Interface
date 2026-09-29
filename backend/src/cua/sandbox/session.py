@@ -74,6 +74,11 @@ async def close_run_surface(
     logger: Any | None = None,
 ) -> None:
     hold = run.status == RunStatus.STUCK
+    # `close_session` only disconnects THIS adapter's CDP client / Playwright
+    # handle — it does not touch the sandbox container below. On a stuck run
+    # that distinction matters: automation lets go of the browser here, and
+    # the container (with the real browser process + noVNC feed) is kept
+    # running so an operator can attach to the exact same live session.
     try:
         await adapter.close_session(surface.session_handle)
     except Exception:  # noqa: BLE001

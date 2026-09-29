@@ -57,6 +57,11 @@ class ProviderHealth:
         self.recent_errors = [t for t in self.recent_errors if now - t < 120] + [now]
 
     def error_rate(self, now: float) -> float:
+        # `served` is a lifetime counter, not windowed like `recent_errors` -
+        # so this ratio is deliberately biased toward 0 the longer a provider
+        # has been healthy, and only spikes when errors are actually recent.
+        # A provider with a long clean history won't get flagged `degraded`
+        # off one bad 2-minute stretch the way a fresh one would.
         recent = [t for t in self.recent_errors if now - t < 120]
         window = max(self.served + len(recent), 1)
         return len(recent) / window

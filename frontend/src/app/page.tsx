@@ -20,6 +20,10 @@ function goalError(v: string): string | null {
   if (g.length < 12) return "Too short — say what the agent should do (~12+ characters).";
   const words = g.split(/\s+/).filter((w) => w.length >= 2);
   if (words.length < 3) return "Write a sentence — at least 3 words.";
+  // `/^(.)\1*$/` matches a string made of a single character repeated
+  // (whitespace stripped first) — catches "xxxxxxxxxxxx"/"aaaaaaaaaaaa"-style
+  // keyboard-mashing placeholder text that would otherwise pass the length
+  // and word-count checks above.
   if (!/[A-Za-z]/.test(g) || /^(.)\1*$/.test(g.replace(/\s+/g, "")))
     return "That looks like placeholder text.";
   return null;
@@ -317,6 +321,9 @@ function NewRunForm() {
 }
 
 export default function NewRunPage() {
+  // Next.js requires any component that calls useSearchParams() to be
+  // wrapped in a Suspense boundary (it can bail into a client-only render
+  // path) — without this the page fails to build/prerender.
   return (
     <Suspense fallback={null}>
       <NewRunForm />

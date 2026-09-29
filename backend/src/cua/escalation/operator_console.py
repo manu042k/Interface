@@ -105,6 +105,10 @@ class OperatorConsole:
     async def release_control(
         self, intervention_id: str, operator: str, *, goal_checkpoint: Any | None = None
     ) -> dict[str, Any]:
+        # Log the release attempt BEFORE calling resume(): if resume() raises
+        # or the lease handoff itself fails, `human_actions_log` still shows
+        # the operator tried to hand back — that record must not depend on
+        # what happens next.
         self._esc.record_human_action(intervention_id, {"type": "release_control", "by": operator})
         outcome = await self._esc.resume(intervention_id, goal_checkpoint=goal_checkpoint)
         self._sessions.pop(intervention_id, None)

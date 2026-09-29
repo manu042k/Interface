@@ -5,6 +5,8 @@ async function j<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(API_BASE + path, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    // This is a live backend, not a static asset — Next's fetch cache would
+    // otherwise happily serve a stale run/capability list across requests.
     cache: "no-store",
   });
   const text = await res.text();
@@ -226,6 +228,27 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ decision, reviewer, notes }),
     }),
+  // Pulls ONE approved version out of /capabilities and replay - stays in
+  // the store, re-approvable later. Rarely what you want directly: if any
+  // older version of the same capability is still approved, it just takes
+  // this one's place in the (name, vendor_app_id)-grouped /capabilities
+  // list. Use `deleteCapability` for "remove this capability" instead.
+  retire: (id: string, v: number, reviewer: string, notes?: string) =>
+    j(`/artifacts/${id}/versions/${v}/retire`, {
+      method: "POST",
+      body: JSON.stringify({ reviewer, notes }),
+    }),
+  // "Delete" a capability: retires EVERY currently-approved version sharing
+  // its (name, vendor_app_id), not just the one passed in - so it actually
+  // disappears from /capabilities and can't be invoked, rather than an
+  // older approved version silently reappearing in its place. No data is
+  // destroyed; every retired version can be individually re-approved from
+  // its Review/artifact history if needed.
+  deleteCapability: (id: string, v: number, reviewer: string, notes?: string) =>
+    j<{ name: string; vendor_app_id: string; retired_versions: number[] }>(
+      `/artifacts/${id}/versions/${v}/delete`,
+      { method: "POST", body: JSON.stringify({ reviewer, notes }) },
+    ),
   invoke: (
     id: string,
     version: number,
@@ -416,6 +439,10 @@ export type Metrics = {
   series: MetricSeriesPoint[];
 };
 
+// Live views (event stream, noVNC) need a websocket, but API_BASE is
+// configured as one http(s) origin for the whole app — derive ws(s):// from
+// it here rather than requiring a second env var that's always in lockstep
+// with the first.
 export function wsUrl(path: string): string {
   const base = API_BASE.replace(/^http/, "ws");
   return base + path;

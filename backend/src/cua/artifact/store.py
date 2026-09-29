@@ -59,6 +59,9 @@ class ArtifactStore:
     def _connect(self) -> sqlite3.Connection:
         con = sqlite3.connect(self._path, timeout=10)
         con.row_factory = sqlite3.Row
+        # WAL: readers (list/get, hit constantly by the UI) don't block on a
+        # concurrent writer (promote/save_draft), which a plain rollback
+        # journal would serialize.
         con.execute("PRAGMA journal_mode=WAL")
         con.execute("PRAGMA foreign_keys=ON")
         return con
@@ -133,6 +136,9 @@ class ArtifactStore:
         return art
 
     def _clear_default(self, con, name, vendor_app_id, scope_kind, tenant_id, *, except_version):
+        """Exactly one approved version of a capability is ever the default
+        (the one an unpinned invoke resolves to) — so promoting/pinning a new
+        one must demote whichever sibling version held that flag before."""
         rows = con.execute(
             """SELECT version, body FROM artifacts
                WHERE name = ? AND vendor_app_id = ? AND scope_kind = ? AND IFNULL(tenant_id,'') = IFNULL(?,'')
@@ -168,6 +174,31 @@ class ArtifactStore:
                         (ArtifactStatus.RETIRED, reviewer, art.reviewed_at, notes, art.model_dump_json(),
                          artifact_id, version))
         return art
+
+    def retire_all_approved(
+        self, name: str, vendor_app_id: str, *, reviewer: str, notes: str | None = None
+    ) -> list[int]:
+        """"Delete a capability" — retire every currently-approved version of
+        it, not just one. Each version has its own artifact_id (versions of
+        one capability are NOT rows sharing one id), and callers like
+        /capabilities group by (name, vendor_app_id) and always surface the
+        highest still-APPROVED version — retiring only that one just makes
+        the next-highest approved version reappear in its place. Returns the
+        versions retired.
+
+        Queries for the target rows under the lock, then releases it before
+        calling `retire()` per row (which takes the lock itself) — `_lock`
+        is a plain, non-reentrant `threading.Lock`."""
+        with self._lock, self._connect() as con:
+            rows = con.execute(
+                "SELECT artifact_id, version FROM artifacts WHERE name = ? AND vendor_app_id = ? AND status = ?",
+                (name, vendor_app_id, ArtifactStatus.APPROVED),
+            ).fetchall()
+        retired: list[int] = []
+        for row in rows:
+            self.retire(row["artifact_id"], row["version"], reviewer=reviewer, notes=notes)
+            retired.append(row["version"])
+        return retired
 
     def set_default(self, artifact_id: str, version: int) -> CapabilityArtifact:
         """Pin which approved version an unpinned invoke resolves to."""
@@ -363,6 +394,9 @@ class ArtifactStore:
                 rule.observed = True
                 if run_id not in rule.observed_run_ids:
                     rule.observed_run_ids.insert(0, run_id)
+                    # keep only the 10 most recent confirming runs — this is
+                    # evidence for a review UI, not an audit log; unbounded
+                    # growth would bloat every future read of this artifact.
                     rule.observed_run_ids[:] = rule.observed_run_ids[:10]
                 con.execute(
                     "UPDATE artifacts SET body = ? WHERE artifact_id = ? AND version = ?",

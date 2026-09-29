@@ -32,6 +32,24 @@ from .base import Action, RawSnapshot, SurfaceAdapter, SurfaceError
 _WS_RE = re.compile(r"\s+")
 _SHAPED = set(SHAPE_PATTERNS)  # shapes with a recognisable text pattern
 
+# A recorded option label like "100987-S0001 - Regular Shares ($50.00)" bakes
+# in that share's balance AT DISCOVERY TIME. Replay against the same or a
+# different record whose balance has since moved (a prior step in the same
+# capability, an earlier invocation, ordinary account activity) then fails
+# with "no <option> matches" even though the option is unambiguously the same
+# one — only the trailing price changed. Strip a trailing "(...$...)" before
+# comparing so the match is keyed on the stable id/name prefix, not a balance
+# that is expected to drift.
+_PRICE_SUFFIX_RE = re.compile(r"\s*\([^()]*[$£€][^()]*\)\s*$")
+
+
+def _strip_price_suffix(s: str) -> str:
+    """Drop a trailing '(...$...)' (or £/€) parenthetical, e.g. turns
+    "100987-S0001 - Regular Shares ($50.00)" into
+    "100987-S0001 - Regular Shares". A no-op string in, no-op string out —
+    safe to call on values that never had a price suffix."""
+    return _PRICE_SUFFIX_RE.sub("", s)
+
 
 def _match_option(want: str, opts: list[dict[str, str]]) -> dict[str, str] | None:
     """Best <option> for the model's requested value. Legacy selects have
@@ -49,6 +67,16 @@ def _match_option(want: str, opts: list[dict[str, str]]) -> dict[str, str] | Non
         for o in opts:  # substring either way
             lab = o["label"].lower()
             if w in lab or lab in w or (o["value"] and w in o["value"].lower()):
+                return {"value": o["value"]} if o["value"] else {"label": o["label"]}
+        # Fallback pass: only reached if the raw substring check above found
+        # nothing. Same comparison, but with any trailing price stripped from
+        # both sides first — covers "want" carrying a stale recorded price
+        # that no longer appears anywhere in the live option label (a fresh
+        # balance), or vice versa.
+        for o in opts:
+            w2 = _strip_price_suffix(w)
+            lab2 = _strip_price_suffix(o["label"].lower())
+            if w2 and (w2 in lab2 or lab2 in w2):
                 return {"value": o["value"]} if o["value"] else {"label": o["label"]}
     if w.isdigit():
         # "branch 1" almost always means the FIRST branch, not option value "1"

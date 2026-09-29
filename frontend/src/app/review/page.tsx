@@ -30,6 +30,8 @@ export default function ReviewPage() {
   const { data } = useQuery({
     queryKey: ["drafts"],
     queryFn: () => api.artifacts("draft"),
+    // A discovery run elsewhere can finish and drop a new draft at any time
+    // — poll so it shows up here without a manual refresh.
     refetchInterval: 4000,
   });
   const [open, setOpen] = useState<ArtifactSummary | null>(null);
@@ -37,6 +39,10 @@ export default function ReviewPage() {
   const rows = data ?? [];
   const paged = usePaged(rows);
 
+  // The list query only returns summaries (name/goal/risk/step count) — the
+  // full artifact (every step's locator chain, handles, contract) is fetched
+  // lazily, only for whichever row's dialog is actually open, not for all
+  // rows up front.
   const full = useQuery({
     queryKey: ["artifact", open?.artifact_id, open?.version],
     queryFn: () => api.artifact(open!.artifact_id, open!.version),

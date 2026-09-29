@@ -275,6 +275,11 @@ class EscalationService:
             except Exception:  # noqa: BLE001
                 pass
         human_lease = self.broker.acquire(session_id, Holder.HUMAN, ttl=600)
+        # Single-slot, not keyed by session_id (unlike `_auto_leases`): this
+        # service only ever tracks ONE outstanding human takeover at a time.
+        # Fine for the current single-operator-console use case; a second
+        # concurrent handoff would silently clobber this before `resume()`
+        # reads it back via `getattr(self, "_human_lease", None)`.
         self._human_lease = human_lease
 
         handle = self.broker.session_handle(session_id) or session_id

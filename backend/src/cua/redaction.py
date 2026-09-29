@@ -20,7 +20,12 @@ from typing import Any
 
 REDACTION_MARKER = "«REDACTED:{kind}»"
 
-# Ordered (label, compiled pattern). First match wins per span.
+# Ordered (label, compiled pattern). First match wins per span. Order matters:
+# each pattern's `.sub()` runs over the text already rewritten by the ones
+# before it (see redact_text's loop), so the narrower/more-specific patterns
+# (card, an explicit "secret"-shaped key=value) must come before the broad
+# bare-digit-run "account" catch-all, or "account" would swallow a card
+# number's digits before "card" ever got a chance to Luhn-check them.
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     # Common secret-bearing keys in JSON-ish text: "password": "hunter2"
     ("secret", re.compile(
@@ -64,6 +69,10 @@ _SENSITIVE_KEYS = {
 
 
 def _luhn_ok(digits: str) -> bool:
+    """Luhn checksum (mod-10, doubling every 2nd digit from the right) — the
+    standard validity check for card numbers. Used to avoid redacting a
+    13-19 digit run that merely LOOKS like a card (an order id, a phone
+    number) but wouldn't pass a real card issuer's check digit."""
     d = [int(c) for c in digits if c.isdigit()]
     if len(d) < 13:
         return False

@@ -29,6 +29,9 @@ const NAV = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  // Polls for a live-run indicator (the pulse dot on "Runs" below) - 3s is
+  // frequent enough to feel live without hammering the gateway from every
+  // open tab.
   const { data: active } = useQuery({
     queryKey: ["active-run"],
     queryFn: api.activeRun,
@@ -91,6 +94,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="no-print bg-background/85 sticky top-0 z-10 flex h-12 shrink-0 items-center gap-3 border-b px-6 backdrop-blur md:px-10">
           <Breadcrumbs />
+          {/* Hidden on "/" (already the new-run form) and on a run detail
+              page (/runs/:id) - the latter has its own primary actions
+              (cancel, claim/handoff) and offering a second "start something
+              new" shortcut there invites navigating away mid-run by
+              accident. */}
           {path !== "/" && !/^\/runs\/.+/.test(path) && (
             <Link
               href="/"

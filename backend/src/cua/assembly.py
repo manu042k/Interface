@@ -158,6 +158,11 @@ def build_system(config: Config, *, extra: dict[str, Any] | None = None) -> Syst
     perception = Perception()
     policy = PolicyEngine.from_path(str(config.allowlist_path))
 
+    # "router"/"locator" below are pseudo run_ids, not real run ids — these
+    # loggers emit cross-run events (provider throttling, locator cache
+    # stats) that don't belong to any single run, so they get their own
+    # fixed, greppable pseudo-run log file instead of being silently dropped
+    # or attributed to whichever run happens to be active.
     router_logger = RunLogger(sink, "router")
     router = LLMRouter(_build_providers(config), logger=router_logger)
     agent = DiscoveryAgent(router)

@@ -30,15 +30,27 @@ class TenantPolicy(BaseModel):
     risk_policy: RiskPolicy = Field(default_factory=RiskPolicy)
 
     def allows_domain(self, host: str) -> bool:
+        # `.endswith("." + d)` means every subdomain of an allowlisted domain
+        # is implicitly allowed too (allowlisting "example.com" also allows
+        # "evil.example.com" if that ever resolves there) — deliberate for
+        # legacy apps split across subdomains, but a config author listing a
+        # domain here is allowlisting its whole subdomain tree, not just that
+        # one host.
         return any(host == d or host.endswith("." + d) for d in self.domains)
 
     def allows_route(self, path_q: str) -> bool:
+        # `re.search`, not `fullmatch` or `match` — a pattern matches if it
+        # appears ANYWHERE in path+query, not just at the start. A config
+        # author who wants "only exactly this path" must anchor their own
+        # regex with ^...$; an unanchored pattern is intentionally permissive
+        # (matches "/foo" written to allow "/foo" and "/foo/123" alike).
         return any(re.search(p, path_q) for p in self.routes)
 
     def allows_action(self, action_type: str) -> bool:
         return action_type in self.action_types
 
     def route_is_risky(self, path_q: str) -> bool:
+        # Same unanchored `re.search` semantics as `allows_route` above.
         return any(re.search(p, path_q) for p in self.risk_policy.risky_route_patterns)
 
 

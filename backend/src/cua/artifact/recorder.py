@@ -270,7 +270,14 @@ class ArtifactRecorder:
                     field_hint=_target_hint(args.get("target")), goal=goal,
                 )
         elif tool == "select":
-            opt = str(args.get("option", ""))
+            # An option label like "100987-S0001 - Regular Shares ($50.00)"
+            # bakes in that share's balance at record time — stale the moment
+            # the balance moves, even though the option itself (same id, same
+            # name) is unchanged. Strip it before it becomes the recorded
+            # literal/default so replay matches on the stable id/name prefix
+            # (the adapter's own `_match_option` also tolerates a stale price
+            # on either side, but a clean recorded value is the better fix).
+            opt = _strip_price_suffix(str(args.get("option", "")))
             from_output = _matches_prior_output(opt, prior_outputs)
             # bind to a param when the chosen option is a supplied value (a
             # share id, a branch) so the caller's input actually drives it
@@ -536,6 +543,36 @@ def _locator_param_for(value: Any, params: dict[str, Any] | None) -> str | None:
     )
 
 
+def _locator_param_substr_for(value: Any, params: dict[str, Any] | None) -> tuple[str, str] | None:
+    """Like `_locator_param_for`, but for a landmark/text anchor that merely
+    EMBEDS a run param's value inside a longer, otherwise-stable string — e.g.
+    the model anchors an extract on the row landmark "100234-S0001" (a share
+    id), which contains the `for_member` param "100234" as a prefix. A bare
+    equality check misses this (recorder.py:_locator_param_for), so the
+    anchor is captured as a raw literal that only ever resolves for the
+    member it was recorded against — the second observed replay failure
+    class alongside the SELECT-price bug above.
+
+    Returns `(param_key, matched_substring)` so the caller can substitute
+    just that substring at replay time (`_bind_locator_params`,
+    replay/executor.py) rather than overwrite the whole anchor — the rest of
+    the compound id ("-S0001") is real, stable structure, not per-run data.
+
+    Guards: the param value must be >=4 chars (no bare "1"/"2" branch/page
+    numbers coincidentally appearing inside longer strings) and a strict
+    substring, not equal to the whole value (equality is already handled,
+    more cheaply, by `_locator_param_for`)."""
+    if not params or not isinstance(value, str) or len(value) < 4:
+        return None
+    for k, v in params.items():
+        if v is None:
+            continue
+        sv = str(v)
+        if len(sv) >= 4 and sv != value and sv in value:
+            return k, sv
+    return None
+
+
 def _rank_locators(
     target: Any, matched: str | None, params: dict[str, Any] | None = None
 ) -> list[LocatorStrategy]:
@@ -648,9 +685,23 @@ def _rank_locators(
     # gets a `<key>_param` sibling so replay substitutes the caller's value.
     for strat in cands:
         for k in ("near", "text", "name", "label", "placeholder"):
-            pk = _locator_param_for(strat.params.get(k), params)
+            val = strat.params.get(k)
+            pk = _locator_param_for(val, params)
             if pk:
                 strat.params[f"{k}_param"] = pk
+                # exact match already tagged this key; skip the (more
+                # expensive, looser) substring fallback below for it and move
+                # on to the next key in this same strategy's params.
+                continue
+            # only landmark/text anchors are table-row style compound strings
+            # ("100234-S0001") worth generalizing by substring; a role/label
+            # name is normally the whole accessible name already.
+            if k in ("near", "text"):
+                sub = _locator_param_substr_for(val, params)
+                if sub:
+                    pk2, orig = sub
+                    strat.params[f"{k}_param"] = pk2
+                    strat.params[f"{k}_param_orig"] = orig
     if matched:
         cands[0].params.setdefault("_discovery_matched", matched)
     return cands
@@ -809,6 +860,21 @@ def _bind_value(
         return ValueBinding(param=key)
     safe, _ = redact_text(raw)
     return ValueBinding(literal=safe)
+
+
+# Mirrors surface/playwright_adapter._PRICE_SUFFIX_RE — kept separate (not
+# imported) because the artifact layer shouldn't depend on a surface adapter's
+# internals; both sides independently agreeing to ignore a stale trailing
+# price is the actual fix, not a shared import.
+_PRICE_SUFFIX_RE = re.compile(r"\s*\([^()]*[$£€][^()]*\)\s*$")
+
+
+def _strip_price_suffix(s: str) -> str:
+    """Drop a trailing '(...$...)' (or £/€) parenthetical before it's baked in
+    as a recorded select literal/default, e.g. "100987-S0001 - Regular Shares
+    ($50.00)" -> "100987-S0001 - Regular Shares". A no-op on a string with no
+    such suffix."""
+    return _PRICE_SUFFIX_RE.sub("", s)
 
 
 def _bind_url(url: str, params: dict[str, Any]) -> ValueBinding:

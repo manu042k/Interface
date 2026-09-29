@@ -12,6 +12,9 @@ export function usePaged<T>(rows: T[], size: number = PAGE_SIZE) {
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(rows.length / size));
 
+  // If the underlying list shrinks (a filter narrows it, a row gets
+  // deleted) while sitting on the last page, `page` can end up past the new
+  // last index - clamp back rather than render a blank page.
   useEffect(() => {
     if (page > pageCount - 1) setPage(pageCount - 1);
   }, [page, pageCount]);

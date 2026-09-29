@@ -22,6 +22,10 @@ function crumbsFor(pathname: string): Crumb[] {
   let href = "";
   return parts.map((seg) => {
     href += `/${seg}`;
+    // Unmapped segments are route params - typically a run/artifact id
+    // (a long uuid/hash). Elide long ones to "first8…last4" so the
+    // breadcrumb bar stays scannable; short segments (a slug, a short id)
+    // are shown as-is.
     const label =
       LABELS[seg] ??
       (seg.length > 14 ? `${seg.slice(0, 8)}…${seg.slice(-4)}` : seg);

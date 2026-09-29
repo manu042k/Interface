@@ -29,6 +29,9 @@ export default function MetricsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["metrics"],
     queryFn: api.metrics,
+    // These are aggregates over every run ever recorded, not a single run's
+    // live status — a much slower poll than the runs/interventions pages is
+    // fine and cheaper on the backend.
     refetchInterval: 15000,
   });
 
@@ -86,7 +89,6 @@ function Body({ m }: { m: Metrics }) {
             <div>
               <p className="text-muted-foreground mb-1 text-xs uppercase tracking-wide">Discovery</p>
               <Row k="Completed" v={`${m.reliability.discovery.completed} (${m.reliability.discovery.success_rate_pct}%)`} />
-              <Row k="Needed a human" v={`${m.reliability.discovery.needs_human} (${m.reliability.discovery.escalation_rate_pct}%)`} />
               <Row k="Business outcome" v={String(m.reliability.discovery.business_outcome)} />
               <Row k="Dead-end / failed" v={String(m.reliability.discovery.dead_end_or_failed)} />
             </div>
@@ -212,6 +214,10 @@ function Row({ k, v }: { k: string; v: string }) {
   );
 }
 
+// A minimal hand-rolled sparkline (no charting library) — one SVG path
+// scaled to the series' own min/max, so a chart of "tokens per discovery"
+// and one of "replay share %" both fill the same box regardless of their
+// very different value ranges.
 function LineChart({
   series,
   pick,
@@ -223,6 +229,8 @@ function LineChart({
   fmtY: (n: number) => string;
   lowerIsBetter?: boolean;
 }) {
+  // A day with no runs yet reports 0, which would otherwise flatten the
+  // whole chart to the axis — drop those points rather than plot them.
   const pts = series.map((p) => ({ date: p.date, y: pick(p) })).filter((p) => p.y > 0);
   if (pts.length < 2) {
     return <p className="text-muted-foreground text-sm">Not enough data yet.</p>;
@@ -233,12 +241,17 @@ function LineChart({
   const ys = pts.map((p) => p.y);
   const min = Math.min(...ys);
   const max = Math.max(...ys);
-  const span = max - min || 1;
+  const span = max - min || 1; // avoid /0 when every point is identical
   const x = (i: number) => pad.l + (i / (pts.length - 1)) * (W - pad.l - pad.r);
+  // SVG y grows downward, so a HIGHER metric value must map to a SMALLER y
+  // — hence the `1 - ...` inversion.
   const y = (v: number) => pad.t + (1 - (v - min) / span) * (H - pad.t - pad.b);
   const d = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${x(i)} ${y(p.y)}`).join(" ");
   const first = pts[0].y;
   const last = pts[pts.length - 1].y;
+  // "good" (green vs. red line) depends on which direction improves this
+  // particular metric — token usage trending down is good, replay share
+  // trending up is good, so the caller tells us which via `lowerIsBetter`.
   const good = lowerIsBetter ? last <= first : last >= first;
 
   return (

@@ -53,4 +53,8 @@ async def summarize(artifact: CapabilityArtifact, router) -> str:
     text = (text or "").strip()
     if not text:
         return ""
+    # redact_text returns (cleaned_text, found_secrets) — this summary is
+    # catalog-facing text, so only the cleaned string matters here. Capped at
+    # 800 chars: it's a 2-3 sentence blurb, not a place for a runaway model
+    # response to end up stored forever.
     return redact_text(text)[0][:800]

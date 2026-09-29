@@ -20,6 +20,9 @@ import { Pager, usePaged } from "@/components/pager";
 import { PageHeader } from "@/components/page-header";
 import { sentenceCase } from "@/lib/text";
 
+// "stuck" counts as live (not finished) — it's a run awaiting a human
+// intervention, not a terminal state; it belongs in the Live tab so an
+// operator notices it needs attention, not in a "done" list.
 const LIVE = new Set(["pending", "running", "stuck"]);
 
 function ago(ts: number) {
@@ -81,6 +84,13 @@ export default function RunsPage() {
   );
 }
 
+// A deterministic replay invocation (`RunRow.mode === "replay"`) doesn't
+// carry its own `goal` — only the discovery run that originally produced the
+// capability recorded one. So a replay row's goal has to be recovered by
+// joining back to a capability: first by artifact_id (exact, if the row has
+// one), then by name (covers a replay whose row predates the artifact_id
+// field), then by borrowing another run's recorded goal for the same name.
+// Falls through in that order; `null` means genuinely unknown.
 function useGoalLookup(runs: RunRow[], caps?: Capability[]) {
   return useMemo(() => {
     const byName = new Map<string, string>();

@@ -21,6 +21,9 @@ export function PageHeader({
     >
       <div className="min-w-0">
         <h1 className="font-heading truncate text-3xl font-medium tracking-tight">
+          {/* A raw string title (often a snake_case name from the API) gets
+              auto-formatted; a caller passing JSX (e.g. a title with an
+              inline badge) is rendered as-is, untouched. */}
           {typeof title === "string" ? sentenceCase(title) : title}
         </h1>
         {description ? (

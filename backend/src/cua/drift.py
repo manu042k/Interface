@@ -49,6 +49,9 @@ def _rule_phrases(cond: Condition) -> list[str]:
         try:
             out += _rule_phrases(Condition(**sub) if isinstance(sub, dict) else sub)
         except Exception:  # noqa: BLE001
+            # A malformed nested condition (hand-edited by a reviewer, or from
+            # an older schema) must not block drift detection for the rest of
+            # this artifact's rules — skip just this one sub-condition.
             pass
     return [s for s in out if isinstance(s, str)]
 
@@ -88,6 +91,9 @@ def propose_patch(
     try:
         latest = store.latest(artifact.name, artifact.vendor_app_id)
     except Exception:  # noqa: BLE001
+        # No existing row, or the store backend raised looking it up — either
+        # way, there's simply no draft to reuse; fall through and patch the
+        # artifact we were actually called with.
         latest = None
     reuse = (
         latest is not None

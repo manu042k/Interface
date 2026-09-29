@@ -116,6 +116,10 @@ class OpenAICompatProvider:
         return _parse_openai_tool_call(data, self.name)
 
     async def complete_text(self, system: str, user: str) -> str:
+        # Used for the human-readable run summary, not tool-calling: a little
+        # temperature reads more naturally, and it never needs more than a
+        # sentence or two, hence the much smaller token budget than
+        # `complete()`'s 1200 (which has to fit a structured tool call).
         payload = {
             "model": self._model,
             "messages": [
@@ -175,6 +179,9 @@ def _parse_openai_tool_call(data: dict[str, Any], provider: str) -> ModelRespons
         if not calls:
             # some models answer with content instead of a tool call
             raise ProviderError(f"{provider}: model returned no tool call")
+        # The agent loop executes one action per turn and re-observes before
+        # deciding the next one, so only the first call matters even if a
+        # model batches several — silently dropping the rest is intentional.
         fn = calls[0]["function"]
         args = fn.get("arguments") or "{}"
         parsed = json.loads(args) if isinstance(args, str) else args

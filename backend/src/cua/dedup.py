@@ -109,6 +109,9 @@ async def semantic_twin(
     ]
     # newest version per name; then consider APPROVED capabilities first so the
     # flag points at the canonical one, not another unreviewed draft.
+    # Mechanism: sort ascending by version, then let each name's later dict
+    # write clobber the earlier one — the dict is left holding only the
+    # highest-version row per name, no explicit max() needed.
     by_name: dict[str, CapabilityArtifact] = {}
     for c in sorted(candidates, key=lambda x: x.version):
         by_name[c.name] = c

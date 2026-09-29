@@ -30,11 +30,17 @@ function pathOf(url: unknown): string {
   }
 }
 
+// Depends on the evidence filename convention the backend writes
+// (`stepN-...png`/`.html`) - see artifact/recorder.py / replay/executor.py's
+// evidence dump.
 function stepOfEvidence(path: string): number | null {
   const m = path.match(/\/step(\d+)-/);
   return m ? Number(m[1]) : null;
 }
 
+// A step can log more than one event of the same kind (e.g. a
+// locator_resolution retried after a fallback) - the LAST one is the one
+// that actually determined the step's outcome, so search from the end.
 function pickEvent(
   events: Record<string, unknown>[],
   name: string,
@@ -72,6 +78,11 @@ function buildBlocks(
     else shotsByStep.set(s, [...(shotsByStep.get(s) ?? []), e]);
   }
 
+  // The raw timeline is a flat, chronological event log with several events
+  // per step (decision, guardrail, action, tokens, ...). Collapse RUNS of
+  // consecutive same-step events into one block per step, in the order they
+  // occurred - this is a fold over adjacent entries, not a global groupBy,
+  // so events never get reordered across steps.
   const blocks: StepBlock[] = [];
   for (const e of timeline) {
     const step = typeof e.step === "number" ? e.step : null;
@@ -316,6 +327,8 @@ function StepRow({
   const drifted =
     loc?.drift_signal === true ||
     (typeof loc?.matched_rank === "number" && loc.matched_rank > 0);
+  // Auto-expand only the steps worth immediately looking at; a long clean
+  // run should render collapsed so the report is scannable.
   const [open, setOpen] = useState(bad || isOutcome);
 
   return (
@@ -490,6 +503,10 @@ export function RunReport({
       : []
   );
   const stepMeta = new Map(artifactSteps.map((s) => [s.step_index, s]));
+  // Params flagged `x-sensitive` in the artifact's own input schema (a
+  // password, an address) get masked in the Inputs list below regardless of
+  // whether the API response happened to redact them server-side too -
+  // belt-and-braces, since this report can be printed/exported.
   const sensitive = new Set(
     Object.entries(
       (
@@ -502,11 +519,20 @@ export function RunReport({
       .map(([k]) => k),
   );
   const replays = (rep.replays ?? []) as ReplayRow[];
+  // Two different pages render this component: a single invocation's own
+  // report (id IS that invocation - show one "Result" card), and an
+  // artifact/capability's report aggregating ALL its invocations (id is the
+  // artifact/run id, not any one invocation's - show a numbered list
+  // instead). The replays array is the same API shape either way.
   const thisInvocation =
     replays.length === 1 && replays[0]?.invocation_id === id
       ? replays[0]
       : null;
 
+  // `rep.artifact` is typed loosely on RunReportData (its shape varies by
+  // artifact status/version), so it's narrowed with local `as {...}` casts
+  // at each point of use rather than one big interface - each cast only
+  // claims the handful of fields that specific block actually reads.
   const art = rep.artifact as
     | { status?: string; duplicate_of?: string | null }
     | null;

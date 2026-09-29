@@ -70,6 +70,8 @@ const BASE: Record<string, Style> = {
 };
 
 function styleFor(e: Ev): Style {
+  // "guardrail" isn't in BASE because its color depends on the outcome
+  // (verdict), not the event kind itself — same event, different meaning.
   if (e.event === "guardrail") {
     return e.verdict === "block" || e.verdict === "require_confirmation"
       ? { ...ROSE, Icon: ShieldAlert }
@@ -79,6 +81,7 @@ function styleFor(e: Ev): Style {
 }
 
 function clock(ts?: number): string {
+  // Backend event timestamps are unix seconds, not ms — hence *1000.
   const d = ts ? new Date(ts * 1000) : new Date();
   return d.toLocaleTimeString([], {
     hour: "2-digit",
@@ -94,13 +97,17 @@ export function EventTimeline({ runId }: { runId: string }) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // No reconnect logic: the socket closing just means the run's event
+    // stream ended (run finished, or the page navigated away) — the "live"
+    // dot going dark is the intended signal, not an error state to recover
+    // from.
     const ws = new WebSocket(wsUrl(`/ws/runs/${runId}/events`));
     ws.onopen = () => setLive(true);
     ws.onclose = () => setLive(false);
     ws.onmessage = (m) => {
       try {
         const ev = JSON.parse(m.data) as Ev;
-        if (ev.event === "ping") return;
+        if (ev.event === "ping") return; // keepalive only, not a real event
         setEvents((prev) => [...prev, ev]);
       } catch {
         /* ignore */
@@ -109,6 +116,8 @@ export function EventTimeline({ runId }: { runId: string }) {
     return () => ws.close();
   }, [runId]);
 
+  // Keyed on length (not the `events` array itself) so this only re-runs when
+  // a new event actually arrives, not on every render.
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [events.length]);
@@ -144,13 +153,21 @@ export function EventTimeline({ runId }: { runId: string }) {
               typeof e.url_after === "string" && e.url_after
                 ? (() => {
                     try {
+                      // Show path+query only — the host is always the same
+                      // target site and just adds noise to every line.
                       const u = new URL(e.url_after as string);
                       return `→ ${u.pathname}${u.search}`;
                     } catch {
+                      // Not a parseable absolute URL (relative path, or a
+                      // malformed value from a bad step) — show it verbatim
+                      // rather than dropping the info.
                       return `→ ${e.url_after}`;
                     }
                   })()
                 : null;
+            // Compact one-line inline summary: whichever of these optional
+            // fields the event actually carries, in a fixed priority order;
+            // filter(Boolean) drops the ones this event doesn't have.
             const meta = [
               typeof e.tool === "string" ? e.tool : null,
               typeof e.verdict === "string" ? e.verdict : null,

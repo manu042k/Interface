@@ -73,6 +73,9 @@ class SessionWatchdog:
     def sweep(self) -> list[SessionMeter]:
         doomed: list[SessionMeter] = []
         for meter in self._meters.values():
+            # already-killed sessions never re-appear in `doomed` — sweep()
+            # is safe to call repeatedly (e.g. on a polling loop) without
+            # re-triggering teardown for the same session.
             if meter.killed:
                 continue
             reason = meter.over_budget()

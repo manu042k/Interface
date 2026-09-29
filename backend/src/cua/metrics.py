@@ -28,6 +28,8 @@ def _pct(n: int, d: int) -> float:
 
 
 def _percentile(xs: list[float], p: float) -> float:
+    """Nearest-rank percentile (no interpolation) — fine for the run counts
+    this dashboard actually sees; not a statistically rigorous estimator."""
     if not xs:
         return 0.0
     s = sorted(xs)
@@ -45,8 +47,11 @@ def compute_metrics(
     artifacts_total: int = 0,
     artifacts_approved: int = 0,
     artifacts_draft: int = 0,
-    cost_per_mtok_in: float = 0.15,
-    cost_per_mtok_out: float = 0.60,
+    cost_per_mtok_in: float = 0.15,  # default ballpark rate (USD/million input tokens)
+    cost_per_mtok_out: float = 0.60,  # default ballpark rate (USD/million output tokens)
+    # for a small/cheap model class — callers with a real provider contract
+    # should pass their actual per-mtok rates; these are display defaults,
+    # not a billing source of truth.
 ) -> dict[str, Any]:
     runs = sorted(runs, key=lambda r: r.started_at)
     disc = [r for r in runs if r.mode == RunMode.DISCOVERY]
@@ -115,6 +120,11 @@ def compute_metrics(
             half + len([r for r in rep if r.started_at <= disc[half - 1].started_at]),
         )
         delta = round(((late - early) / early * 100.0), 1) if early else 0.0
+        # "Improving" means EITHER signal moved the right way: discovery got
+        # cheaper per successful run (late < early), OR more of the traffic
+        # shifted from discovery to free-replay since the early half (a
+        # capability maturing enough to stop needing a live model). Either
+        # one alone is a legitimate improvement story even if the other is flat.
         better = (late and early and late < early) or replay_share > early_share
         trend = {
             "direction": "improving" if better else ("regressing" if delta > 10 else "flat"),

@@ -52,6 +52,10 @@ type Artifact = {
 
 /* ---- humanisers ---------------------------------------------------------- */
 
+// Mirrors the Condition `kind`s the backend can produce (see
+// backend/src/cua/conditions.py and models.py) - this switch needs a case
+// added whenever a new condition kind is introduced there, or it silently
+// falls through to the raw-JSON default below.
 function phraseCondition(c?: Condition | null): string {
   if (!c?.kind) return "-";
   const p = c.params ?? {};
@@ -72,6 +76,9 @@ function phraseCondition(c?: Condition | null): string {
       return `${s("selector")} is present`;
     case "element_absent":
       return `${s("selector")} is absent`;
+    // `field` and `as` are alternate names for the same "which output" param
+    // across different places the backend constructs this condition -
+    // whichever one is actually present wins.
     case "extract_equals":
       return `${s("field") !== "…" ? s("field") : s("as")} equals “${s("value")}”`;
     case "extract_matches":
@@ -89,6 +96,12 @@ function phraseCondition(c?: Condition | null): string {
 
 function locatorParams(params?: Record<string, unknown>): string {
   if (!params) return "";
+  // Underscore-prefixed keys (e.g. `_discovery_matched`) are the recorder's
+  // own bookkeeping (see backend/src/cua/artifact/recorder.py) - internal to
+  // how the artifact was built, not part of what a human reviewer needs to
+  // see to judge this locator. Note this does NOT hide the separate
+  // `<key>_param`/`<key>_param_orig` re-binding keys the same recorder adds
+  // (no underscore prefix) - those are left visible.
   return Object.entries(params)
     .filter(([k]) => !k.startsWith("_"))
     .map(([k, v]) => {
@@ -160,6 +173,10 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
         <ContractRow label="Done when">
           <span className="text-foreground break-words">
             {phraseCondition(artifact.checkpoint)}
+            {/* `_weak` is set by the recorder when the only checkpoint it could
+                derive was a URL match - it can't tell success from a page that
+                merely LOOKS right, so this nudges the reviewer to check for a
+                stronger assertion before approving unattended replay. */}
             {artifact.checkpoint?.params?.["_weak"] === true && (
               <span className="text-warning">
                 {" "}
@@ -236,6 +253,10 @@ export function ArtifactView({ artifact }: { artifact: Artifact }) {
                       <div className="text-muted-foreground mb-1 flex items-center gap-1 text-xs font-medium">
                         <Crosshair className="h-3 w-3" /> Finds the element by
                       </div>
+                      {/* Rendered in the order the backend returns it, which is
+                          already rank-sorted (rank 0 first) - no client-side
+                          sort here, so the first list item is always what
+                          replay tries first. */}
                       <ol className="space-y-1">
                         {s.locator_spec.map((l, li) => (
                           <li

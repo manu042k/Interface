@@ -754,7 +754,13 @@ def _bind_locator_params(
     """Re-bind any locator value the recorder tagged as coming from a run param
     (`<key>_param`) to THIS caller's value, so "the Select link in the row near
     <member_number>" resolves for whatever member is being replayed — not the
-    member the capability was recorded against."""
+    member the capability was recorded against.
+
+    A `<key>_param_orig` sibling means the recorded value only EMBEDS the
+    param (e.g. landmark "100234-S0001" embeds `for_member` "100234"), not
+    equals it outright — substitute just that substring so the rest of the
+    compound anchor ("-S0001") survives, instead of overwriting the whole
+    value with the bare new member number."""
     out: list[LocatorStrategy] = []
     for strat in locator_spec:
         p = dict(strat.params)
@@ -763,9 +769,21 @@ def _bind_locator_params(
             base = pk[:-len("_param")]
             name = p[pk]
             if name in params and params[name] is not None:
-                p[base] = str(params[name])
+                orig_key = f"{base}_param_orig"
+                orig = p.get(orig_key)
+                if isinstance(orig, str) and isinstance(p.get(base), str) and orig in p[base]:
+                    # substring case ("_param_orig" present and still found
+                    # inside the recorded value): swap just that piece, e.g.
+                    # "100234-S0001" -> "100987-S0001", not "100987".
+                    p[base] = p[base].replace(orig, str(params[name]))
+                else:
+                    # equality case (recorder.py:_locator_param_for): the
+                    # whole recorded value WAS the param, so the whole value
+                    # is replaced outright.
+                    p[base] = str(params[name])
                 changed = True
             p.pop(pk, None)
+            p.pop(f"{base}_param_orig", None)
         out.append(strat.model_copy(update={"params": p}) if changed or p != strat.params else strat)
     return out
 

@@ -79,6 +79,11 @@ class SessionBroker:
         now = time.time()
         with self._mu:
             lock = self._locks.setdefault(session_id, ControlLock(session_id))
+            # Only a genuine conflict (someone ELSE holds an unexpired lease)
+            # raises. The same holder re-acquiring is allowed through and just
+            # mints a fresh token/expiry — this is how a caller re-takes a
+            # lease it already owns without a separate "renew with same
+            # holder" special case.
             if not lock.is_free(now) and lock.held_by != holder:
                 raise LockError(
                     f"session {session_id} is held by {lock.held_by} until {lock.lease_expires_at:.0f}"
@@ -102,6 +107,11 @@ class SessionBroker:
             lock = self._locks.get(lease.session_id)
             if lock is None:
                 return
+            # The token check is what makes this safe against a caller
+            # holding a STALE lease object: if the lease already expired and
+            # was reaped, or was reassigned to someone else, `lock.token` has
+            # moved on and this caller must not be allowed to release (or
+            # silently reset) another holder's live lock.
             if lock.token != lease.token:
                 raise LockError("cannot release: not the current lease holder")
             lock.held_by = Holder.NONE
@@ -109,6 +119,12 @@ class SessionBroker:
             lock.lease_expires_at = 0.0
 
     def reap_expired(self) -> list[str]:
+        # Called by a periodic sweep, not on the hot acquire/release path:
+        # `holder()` already treats a lapsed lease as free on read, so this
+        # is only needed to actually reset `held_by` for holders that never
+        # come back to read/renew/release it themselves (a crashed worker, an
+        # abandoned handoff) — otherwise the lock dict would grow stale
+        # entries that merely LOOK free forever without ever being cleared.
         now = time.time()
         reaped: list[str] = []
         with self._mu:

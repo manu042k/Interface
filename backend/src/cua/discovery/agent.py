@@ -246,6 +246,9 @@ class DiscoveryAgent:
         params: dict[str, Any] | None,
         note: str | None,
     ) -> str:
+        # last 12 actions only — enough for the "don't repeat/don't re-click a
+        # confirmed dropdown value" progress-discipline rules above to see
+        # recent history, without the prompt growing unbounded over a long run.
         hist = "\n".join(f"  {i+1}. {h}" for i, h in enumerate(history[-12:])) or "  (none yet)"
         parts = [
             f"GOAL: {goal}",
@@ -269,5 +272,9 @@ class DiscoveryAgent:
 
 
 def _indent(text: str, n: int) -> str:
+    # capped at 60 lines: the ax/dom outlines can be long on a busy legacy
+    # page; the model only needs enough of the top of the outline to find
+    # the control it's after, and an unbounded dump would blow up token cost
+    # every single turn of a run.
     pad = " " * n
     return "\n".join(pad + line for line in (text or "").splitlines()[:60])

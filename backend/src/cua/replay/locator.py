@@ -51,6 +51,12 @@ class LocatorResolutionEngine:
     def __init__(self, *, cache_size: int = 512, logger: Any | None = None) -> None:
         self._cache: dict[tuple, Resolution] = {}
         self._order: list[tuple] = []
+        # One asyncio.Lock per key, for singleflight coalescing (see
+        # `resolve()`). Note this dict is NOT pruned when `_cache` entries are
+        # evicted or `invalidate()`d — a long-lived process accumulates one
+        # stale Lock per distinct key ever seen. Cheap (an unlocked Lock is
+        # small) and harmless correctness-wise, just an unbounded-by-design
+        # side table worth knowing about if key cardinality is ever huge.
         self._locks: dict[tuple, asyncio.Lock] = {}
         self._cache_size = cache_size
         self._log = logger
@@ -71,6 +77,11 @@ class LocatorResolutionEngine:
         return before - len(self._cache)
 
     def _cache_put(self, key: tuple, res: Resolution) -> None:
+        # FIFO eviction by insertion order, not LRU — a re-resolved key that's
+        # already cached is served straight from `self._cache` in `resolve()`
+        # and never re-appended here, so a hot key's original position in
+        # `_order` doesn't move and it can still be evicted first once
+        # `_cache_size` older-but-cold entries have piled up behind it.
         self._cache[key] = res
         self._order.append(key)
         while len(self._order) > self._cache_size:

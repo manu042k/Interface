@@ -36,6 +36,10 @@ export function LiveFeed({
   interactive: boolean;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  // Starts at 0 (not 1) so the full-size 1280x720 iframe stays invisible
+  // (scale(0)) until the ResizeObserver below reports the wrapper's real
+  // width and computes the correct scale - avoids a one-frame flash of the
+  // iframe at native size before it's scaled down to fit.
   const [scale, setScale] = useState(0);
 
   useEffect(() => {
@@ -70,6 +74,10 @@ export function LiveFeed({
         }}
       />
       {!interactive && (
+        // A transparent click-blocking layer on top of the iframe, not just
+        // `pointerEvents: "none"` on the iframe itself - noVNC's own canvas
+        // can otherwise still grab focus/scroll in some browsers even when
+        // the iframe is styled non-interactive.
         <div
           className="absolute inset-0"
           aria-hidden

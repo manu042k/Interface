@@ -92,6 +92,8 @@ def _salvage_from_state(state: SurfaceState | None) -> dict[str, Any] | None:
         if any(w in c.lower().split() for w in _DONE_WORDS):
             hits.append(c)
     seen = list(dict.fromkeys(hits))
+    # cap at 4 candidate phrases — this becomes an `any_of` OR-match; more than
+    # a handful invites a false-positive match on unrelated screen chrome.
     return {"kind": "text_present", "params": {"any": seen[:4]}} if seen else None
 
 
@@ -460,6 +462,11 @@ class Orchestrator:
                     _skip = {"branch", "tenant", "operator", "password"}
                     form_params = {
                         k for k, v in params.items()
+                        # >=4 chars: skip trivially-short values (a "1"-digit
+                        # branch code, a blank) that could coincidentally
+                        # never appear verbatim in the transcript even though
+                        # they were genuinely used (e.g. picked from a dropdown
+                        # by label, not typed as this exact literal).
                         if k not in _skip and len(str(v)) >= 4
                     }
                     missed = sorted(form_params - used_params)
@@ -1243,7 +1250,11 @@ class Orchestrator:
         else:
             return None
         phrase = phrase.strip().strip('"').strip()[:160]
-        # the model must ground its answer in text actually on the screen
+        # the model must ground its answer in text actually on the screen —
+        # reject a hallucinated phrase by requiring at least 2 tokens AND at
+        # least 60% of them to appear verbatim in the observed page text.
+        # Anything looser lets the model invent a plausible-sounding outcome
+        # phrase that was never actually shown to the user.
         toks = re.findall(r"[a-z0-9]{3,}", phrase.lower())
         hay = haystack.lower()
         if not phrase or len(toks) < 2 or sum(t in hay for t in toks) < max(2, len(toks) * 0.6):
@@ -1273,6 +1284,9 @@ class Orchestrator:
                   proposed_action=phrase, wait_s=wait_s)
 
         end = time.time() + wait_s
+        # 1.5s poll cadence (repeated at every await-operator wait in this
+        # file): fast enough to feel responsive once a human acts, slow enough
+        # not to hammer the escalation store while waiting.
         while time.time() < end:
             await asyncio.sleep(1.5)
             try:
@@ -1552,6 +1566,10 @@ def _describe_call(call: ToolCall) -> str:
     return f"{call.tool} {a.get('target') or a.get('condition') or ''}".strip()
 
 
+# Matches an action whose intent is to undo/reverse an already-posted
+# transaction (the SYSTEM_PROMPT banking-safety rules in agent.py forbid this
+# outright) — used together with `_call_intent_text` to block the model from
+# "fixing" a completed irreversible mutation by reversing it itself.
 _REVERSAL_RE = re.compile(
     r"\b(revers\w*|refund\w*|charge\s*back|undo|roll\s*back|void\w*|"
     r"cancel\s+(the\s+)?(transfer|payment|transaction|order|deposit|withdrawal)|"

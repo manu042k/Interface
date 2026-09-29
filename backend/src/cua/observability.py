@@ -72,6 +72,11 @@ class FileSink:
 
     # -- A5: in-process live stream (backs the /ws/runs/{id}/events endpoint) --
     def _publish(self, run_id: str, record: dict[str, Any]) -> None:
+        # log_event() can be called from a worker thread (a sync surface
+        # adapter call, a background task) while the subscriber's queue
+        # belongs to ITS OWN event loop — call_soon_threadsafe is required to
+        # hand the item over safely instead of touching the queue directly
+        # from a different thread.
         for loop, queue in list(self._subs.get(run_id, [])):
             try:
                 loop.call_soon_threadsafe(queue.put_nowait, record)
@@ -139,5 +144,10 @@ class NullSink:
         return []
 
     async def subscribe(self, run_id: str):  # noqa: D401
+        # `if False: yield` is the standard trick to make this an async
+        # generator (matching FileSink.subscribe's type) that immediately
+        # completes without ever yielding anything - a plain `return` alone
+        # would make this a coroutine, not an async generator, and break at
+        # the call site's `async for`.
         if False:  # pragma: no cover - empty async generator
             yield {}

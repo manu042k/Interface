@@ -19,6 +19,9 @@ export default function InterventionsPage() {
   const { data } = useQuery({
     queryKey: ["interventions"],
     queryFn: () => api.interventions("open"),
+    // A run can get stuck (and need a human) at any moment, not just while
+    // this tab is being looked at — poll rather than wait for a manual
+    // refresh so a newly-opened intervention shows up promptly.
     refetchInterval: 3000,
   });
   const rows = data ?? [];

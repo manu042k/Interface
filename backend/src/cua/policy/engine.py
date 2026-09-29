@@ -135,6 +135,10 @@ class PolicyEngine:
         if tenant is None:
             tenant = TenantPolicy(action_types=list(_DEFAULT_ACTIONS))
             self._allowlist.tenants[tenant_id] = tenant
+        # Mutates the live TenantPolicy object in place (not a copy) — this
+        # widening is permanent for the process's lifetime, not scoped to one
+        # run. A second run against a different host for the same tenant_id
+        # accumulates another allowed domain rather than replacing this one.
         if not tenant.allows_domain(host):
             tenant.domains.append(host)
         if "^/" not in tenant.routes:

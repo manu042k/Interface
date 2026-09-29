@@ -321,6 +321,8 @@ def sub_account_new(mid: str):
 
 
 def _valid_amount(raw: str) -> float | None:
+    # The 1,000,000 cap is arbitrary but must match the wording of the error
+    # message shown on submit ("under 1,000,000") - change one, change both.
     try:
         v = float(raw.replace("$", "").replace(",", "").strip() or "0")
     except ValueError:
