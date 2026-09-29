@@ -8,7 +8,6 @@ response, then we treat it as `stuck` rather than looping on garbage.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from ..llm.router import LLMRouter
@@ -131,6 +130,7 @@ Rules:
 - If a field has no accessible role/label (a legacy table-form input with just a `name`/`id` and a plain `<td>` of text next to it, no `<label for>`), ALSO pass that adjacent text as `near` alongside the name, even for click/type — not only for extract. That row-label text is what gets recorded as a second, independent way to relocate the same control if the `name`/`id` ever drifts; passing only `name` records a single-strategy chain with no fallback.
 - If a control you expect is not in the observation, it is not on this page: do NOT click a heading or nav link that merely contains the word. Re-read, act on a control that IS shown, or call stuck.
 - Never enter real credentials or invent data. Use only values from the goal/params.
+- PARAMS are authoritative inputs, not background color — actively check them against every field you fill, not just the ones the goal happens to spell out. Before you type or select a value for a field, ask: does a PARAMS key name this field (by its field name/id, its label, or an obvious semantic match — e.g. a param `toaccountid` or `to_account` corresponds to a "To Account" select, `amount` to an "Amount" field)? If yes, you MUST use that param's exact value for it — even when the goal text only describes the same field vaguely or positionally ("the second account", "the new address"). A positional/qualitative phrase in the goal ("the first account", "the second account") is your instruction ONLY when no PARAMS key matches that field; it is never a reason to ignore a param that does. Do not silently pick an option by its position in a list when a param supplying that field's value is sitting right there in PARAMS.
 - Bounded waits only. If a control is missing or the screen is unexpected and you cannot safely proceed, call stuck with a clear reason.
 - Transient errors: if the screen shows a server/app error ("unexpected error", "please retry", a 500 page, "temporarily unavailable", "try again"), that is usually transient. Navigate to the SAME url again (or re-click the control that led here) ONCE - if it clears, carry on. Only call stuck if it persists after that retry.
 - If the control or value you need is below the fold, scroll first. Do not repeat the same extract - once you have read a value it is captured; move on.
@@ -250,9 +250,19 @@ class DiscoveryAgent:
         # confirmed dropdown value" progress-discipline rules above to see
         # recent history, without the prompt growing unbounded over a long run.
         hist = "\n".join(f"  {i+1}. {h}" for i, h in enumerate(history[-12:])) or "  (none yet)"
+        # One line per param, not a raw JSON dump - a system-prompt rule tells
+        # the model to actively cross-check each field it fills against these
+        # keys (by name/label match), so each one needs to actually be
+        # readable/scannable here, not buried in a single compact {...} blob
+        # easy to skim past.
+        params_block = (
+            "\n".join(f"  {k} = {v!r}" for k, v in (params or {}).items())
+            or "  (none supplied)"
+        )
         parts = [
             f"GOAL: {goal}",
-            f"PARAMS: {json.dumps(params or {})}",
+            "PARAMS (authoritative — use these values for any matching field, not the goal's own wording):",
+            params_block,
             f"STEPS REMAINING: {steps_left}",
             "",
             "CURRENT SCREEN",

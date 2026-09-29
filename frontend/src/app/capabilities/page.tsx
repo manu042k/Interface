@@ -69,6 +69,12 @@ export default function CapabilitiesPage() {
     refetchInterval: 4000,
   });
   const [sel, setSel] = useState<Capability | null>(null);
+  // One delete-confirm dialog for the whole page, not one per card - the
+  // card and the detail dialog both just call requestDelete(cap) to open it,
+  // instead of each running their own window.confirm() (a native dialog
+  // Chrome silently starts suppressing after a few uses on one page - "not
+  // working" was exactly that, not a bug in the delete call itself).
+  const [pendingDelete, setPendingDelete] = useState<Capability | null>(null);
 
   return (
     <div className="space-y-5">
@@ -96,16 +102,37 @@ export default function CapabilitiesPage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {data?.map((c) => (
-          <CapabilityCard key={c.artifact_id} cap={c} onOpen={() => setSel(c)} />
+          <CapabilityCard
+            key={c.artifact_id}
+            cap={c}
+            onOpen={() => setSel(c)}
+            onRequestDelete={() => setPendingDelete(c)}
+          />
         ))}
       </div>
 
-      <CapabilityDetail cap={sel} onClose={() => setSel(null)} />
+      <CapabilityDetail
+        cap={sel}
+        onClose={() => setSel(null)}
+        onRequestDelete={() => sel && setPendingDelete(sel)}
+      />
+
+      <DeleteConfirmDialog
+        cap={pendingDelete}
+        onOpenChange={(o) => !o && setPendingDelete(null)}
+        onDeleted={(deleted) => {
+          setPendingDelete(null);
+          // the detail dialog, if open, was showing the capability that
+          // just got deleted - close it too rather than leaving it open on
+          // data that's no longer in the approved list.
+          setSel((s) => (s?.artifact_id === deleted.artifact_id ? null : s));
+        }}
+      />
     </div>
   );
 }
 
-/* ---- shared delete mutation (card + detail dialog both use it) ------- */
+/* ---- delete: shared mutation + one in-app confirm dialog -------------- */
 
 // Retires every currently-approved version of the capability, not just the
 // one passed in - /capabilities groups by name and always surfaces the
@@ -129,9 +156,57 @@ function useDeleteCapability() {
   });
 }
 
-function confirmDelete(cap: Capability): boolean {
-  return window.confirm(
-    `Delete "${sentenceCase(cap.name)}"? It's removed from Capabilities and can no longer be invoked, but every version stays in the store and can be re-approved from Review's artifact history.`,
+function DeleteConfirmDialog({
+  cap,
+  onOpenChange,
+  onDeleted,
+}: {
+  cap: Capability | null;
+  onOpenChange: (open: boolean) => void;
+  onDeleted: (deleted: Capability) => void;
+}) {
+  const del = useDeleteCapability();
+  return (
+    <Dialog open={!!cap} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        {cap && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Delete {sentenceCase(cap.name)}?</DialogTitle>
+            </DialogHeader>
+            <p className="text-muted-foreground text-sm">
+              It&apos;s removed from Capabilities and can no longer be
+              invoked, but every version stays in the store and can be
+              re-approved from Review&apos;s artifact history - this isn&apos;t
+              a hard delete.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                disabled={del.isPending}
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={del.isPending}
+                onClick={() =>
+                  del.mutate(cap, { onSuccess: () => onDeleted(cap) })
+                }
+              >
+                {del.isPending ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                Delete
+              </Button>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -140,11 +215,12 @@ function confirmDelete(cap: Capability): boolean {
 function CapabilityCard({
   cap,
   onOpen,
+  onRequestDelete,
 }: {
   cap: Capability;
   onOpen: () => void;
+  onRequestDelete: () => void;
 }) {
-  const del = useDeleteCapability();
   return (
     <Card
       onClick={onOpen}
@@ -188,17 +264,12 @@ function CapabilityCard({
                 size="sm"
                 variant="ghost"
                 className="text-destructive hover:text-destructive ml-auto"
-                disabled={del.isPending}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (confirmDelete(cap)) del.mutate(cap);
+                  onRequestDelete();
                 }}
               >
-                {del.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
-                )}
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -227,12 +298,13 @@ function CapabilityCard({
 function CapabilityDetail({
   cap,
   onClose,
+  onRequestDelete,
 }: {
   cap: Capability | null;
   onClose: () => void;
+  onRequestDelete: () => void;
 }) {
   const [tab, setTab] = useState("overview");
-  const del = useDeleteCapability();
 
   return (
     <Dialog
@@ -299,23 +371,9 @@ function CapabilityDetail({
                       variant="ghost"
                       size="sm"
                       className="text-destructive hover:text-destructive h-7 gap-1.5 px-2"
-                      disabled={del.isPending}
-                      onClick={() => {
-                        if (confirmDelete(cap)) {
-                          del.mutate(cap, {
-                            onSuccess: () => {
-                              onClose();
-                              setTab("overview");
-                            },
-                          });
-                        }
-                      }}
+                      onClick={onRequestDelete}
                     >
-                      {del.isPending ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
+                      <Trash2 className="h-3.5 w-3.5" />
                       Delete
                     </Button>
                   </TooltipTrigger>

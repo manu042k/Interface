@@ -799,6 +799,63 @@ class _suppress:
         return True
 
 
+def _reconstruct_replay_result(
+    run_id: str, run: RunRecord, events: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Best-effort ReplayResult-shaped dict for a replay invocation whose
+    app.state.replays entry is gone (a server restart empties that dict) -
+    built from the run's own persisted record (runs.json) and its persisted
+    event log, not the live ReplayResult object that produced it.
+
+    `outputs` can NOT be recovered this way: the executor's run_finished
+    event only ever logs the output field NAMES, never their values, by the
+    same redaction discipline that keeps real extracted data (an amount, an
+    account number) out of the persisted log in the first place. Everything
+    else here - outcome, business outcome code/detail, failure detail,
+    recovered conditions, timing - is genuinely reconstructed from durable
+    state, not invented.
+    """
+    business_outcome_code = None
+    business_outcome_detail = None
+    failure_detail = None
+    recovered: list[str] = []
+    for e in events:
+        kind = e.get("event")
+        if kind == "business_outcome":
+            business_outcome_code = e.get("code")
+            business_outcome_detail = e.get("message")
+        elif kind == "hard_failure" and "expected" in e:
+            failure_detail = {
+                "step_index": e.get("step"),
+                "expected": e.get("expected"),
+                "observed": e.get("observed"),
+                "evidence_refs": e.get("evidence") or [],
+            }
+        elif kind == "recoverable_condition" and e.get("rule"):
+            recovered.append(e["rule"])
+
+    outcome_by_status = {
+        RunStatus.COMPLETED: "success",
+        RunStatus.BUSINESS_OUTCOME: "business_outcome",
+        RunStatus.FAILED: "hard_failure",
+        RunStatus.DEAD_END: "hard_failure",
+    }
+    return {
+        "invocation_id": run_id,
+        "params": run.params,
+        "outcome": outcome_by_status.get(run.status, "hard_failure"),
+        "outputs": None,
+        "business_outcome_code": business_outcome_code,
+        "business_outcome_detail": business_outcome_detail,
+        "recovered_conditions": recovered,
+        "failure_detail": failure_detail,
+        "evidence_refs": [],
+        "steps_executed": run.step_count,
+        "duration_seconds": (run.ended_at - run.started_at) if run.ended_at else 0.0,
+        "drift_candidate": None,
+    }
+
+
 def _build_report(app: FastAPI, run_id: str) -> dict[str, Any]:
     run = app.state.runs.get(run_id)
     if run is None:
@@ -830,12 +887,29 @@ def _build_report(app: FastAPI, run_id: str) -> dict[str, Any]:
         with _suppress():
             artifact = sys.store.get(run.artifact_id, run.artifact_version).model_dump()
 
+    # Scoped to THIS run only, not every invocation ever made against its
+    # artifact_id - the frontend's RunReport always renders one specific
+    # run's own page (never an artifact-wide aggregate; that view already
+    # exists separately as the capability's "Runs" tab, /artifacts/{id}/runs).
+    # Including every sibling invocation here broke that page's own
+    # single-result rendering the moment an artifact had been invoked more
+    # than once: 2+ replay rows for one run's report, not 1.
     replays = []
-    if run.artifact_id:
-        for inv_id, res in app.state.replays.items():
-            r = app.state.runs.get(inv_id)
-            if r and r.artifact_id == run.artifact_id:
-                replays.append({"invocation_id": inv_id, "params": r.params, **res.model_dump()})
+    res = app.state.replays.get(run_id)
+    if res is not None:
+        replays.append({"invocation_id": run_id, "params": run.params, **res.model_dump()})
+    elif run.mode == RunMode.REPLAY and run.status != RunStatus.RUNNING:
+        # app.state.replays is in-memory only, never persisted - a backend
+        # restart empties it, so any invocation from before that restart has
+        # nothing there even though it genuinely completed. The run RECORD
+        # (status/detail/timing) IS persisted (runs.json), and the event log
+        # is too, so reconstruct a best-effort result from those rather than
+        # showing nothing. `outputs` is the one thing that can't be
+        # recovered this way: run_finished only ever logged the output KEY
+        # NAMES (`outputs=list(outputs)`), not their values, by the same
+        # redaction discipline that keeps raw extracted data (an amount, an
+        # account number) out of the persisted event log in the first place.
+        replays.append(_reconstruct_replay_result(run_id, run, events))
 
     return {
         "run": _run_dict(run, sys.store),
